@@ -8,6 +8,10 @@ for the DPN messaging queue.
 This codebase deals with message routing related to the Academic
 Preservation Trust.
 
+**Currently** this only provides a simple logging consumer to 
+test and record messages from specific queues as well as a
+command line producer for convienence in sending messages.
+
 ## Running on Virtualenv
 
 This code can be run like any other python library but we recommend using
