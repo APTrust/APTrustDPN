@@ -32,3 +32,13 @@ To setup using pip just:
 2.  From the project root execute `pip install -r requirements`
 
 ## Use
+
+To setup a logging consumer just activate the appropriate environment if using
+virtual env and type:
+
+     >python consumer.py`
+
+if you wish to let this run in the background while you're logged out just use
+screen as in:
+
+    >screen python consumer.py
