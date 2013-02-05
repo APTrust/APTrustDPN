@@ -49,13 +49,13 @@ class LoggingConsumer(ConsumerMixin):
         return [Consumer(queues=[self.default_queue,], callbacks=[self.on_message,], auto_declare=False)]
         
     def on_message(self, body, msg):
-        logging.info("%r" % body)
-        print("%s %r" % (datetime.today(), body))
+        logging.info("%s" % body)
+        print("%s %s" % (datetime.today(), body))
         if self.ack:
             msg.ack()
             
 if __name__ == '__main__':
     conn = Connection(AMQPURL)
-    cnsmr = LoggingConsumer(conn, EXCHANGE, ROUTING_KEY, ack=True)
+    cnsmr = LoggingConsumer(conn, EXCHANGE, ROUTING_KEY)
     print("Logging messages from %s->%s->%s.  Press CTRL+C to exit." % (EXCHANGE, QUEUE, ROUTING_KEY))
     cnsmr.run()
