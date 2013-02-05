@@ -38,7 +38,8 @@ class LoggingConsumer(ConsumerMixin):
 
         """
         self.connection = conn
-        self.default_queue = Queue(QUEUE, exchange=Exchange(exchng), routing_key=rt_key)
+        self.xchng = Exchange(exchng, 'topic', durable=True)
+        self.queue = Queue(QUEUE, exchange=self.xchng, routing_key=rt_key)
         self.ack = ack
         # Setup appropriate logger
         logfilename = "%s_%s_%s.log" % (exchng, QUEUE, rt_key)
@@ -46,16 +47,16 @@ class LoggingConsumer(ConsumerMixin):
             datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
         
     def get_consumers(self, Consumer, chan):
-        return [Consumer(queues=[self.default_queue,], callbacks=[self.on_message,], auto_declare=False)]
+        return [Consumer(queues=[self.queue,], callbacks=[self.on_message,], auto_declare=False)]
         
     def on_message(self, body, msg):
-        logging.info("%s" % body)
-        print("%s %s" % (datetime.today(), body))
+        logging.info("\nMSG:HEADERS %s\nMSG:BODY %s" % (msg.headers, msg.body))
+        print("%s HEADERS:%s BODY:%s" % (datetime.today(), msg.headers, msg.body))
         if self.ack:
             msg.ack()
             
 if __name__ == '__main__':
-    conn = Connection(AMQPURL)
-    cnsmr = LoggingConsumer(conn, EXCHANGE, ROUTING_KEY)
-    print("Logging messages from %s->%s->%s.  Press CTRL+C to exit." % (EXCHANGE, QUEUE, ROUTING_KEY))
-    cnsmr.run()
+    with Connection(AMQPURL) as conn:
+        cnsmr = LoggingConsumer(conn, EXCHANGE, ROUTING_KEY, ack=True)
+        print("Logging messages from %s->%s->%s.  Press CTRL+C to exit." % (EXCHANGE, QUEUE, ROUTING_KEY))
+        cnsmr.run()

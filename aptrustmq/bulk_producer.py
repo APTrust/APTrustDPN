@@ -39,5 +39,5 @@ if __name__ == '__main__':
                 msg_template['extra'] = "Test message %s, please ignore." % num
                 print("Sent msg: %s" % json.dumps(msg_template))
                 producer.publish(msg_template, exchange=EXCHANGE, declare=[queue,], 
-                    routing_key=ROUTING_KEY)
+                    routing_key=ROUTING_KEY, headers={'header1': 'test', 'header2': 2})
                 time.sleep(2) # Adding a delay so I can follow messages manually.
