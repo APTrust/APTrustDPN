@@ -59,4 +59,8 @@ if __name__ == '__main__':
     with Connection(AMQPURL) as conn:
         cnsmr = LoggingConsumer(conn, EXCHANGE, ROUTING_KEY, ack=True)
         print("Logging messages from %s->%s->%s.  Press CTRL+C to exit." % (EXCHANGE, QUEUE, ROUTING_KEY))
-        cnsmr.run()
+        try:
+            cnsmr.run()
+        except KeyboardInterrupt:
+            conn.close()
+            print("Exiting application.")
