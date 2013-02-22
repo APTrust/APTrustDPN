@@ -14,6 +14,8 @@ import logging
 from kombu.mixins import ConsumerMixin
 from kombu import Connection, Queue, Exchange
 
+#from aptrustmq.dispatcher import MSG_REGISTRY
+
 try:
     from mqconfig import *
 except ImportError:
@@ -26,7 +28,7 @@ except ImportError:
 
 class LoggingConsumer(ConsumerMixin):
     
-    def __init__(self, conn, exchng, rt_key, ack=False):
+    def __init__(self, conn, exchng, rt_key):
         """Sets up a basic consumer that logs incomming messages.  Use this
         to listen for heartbeat and other test messages.
 
@@ -34,13 +36,11 @@ class LoggingConsumer(ConsumerMixin):
         :param exchng:  String of exchange to use on conn.
         :param rt_key:  String of routing key to use for message.
         :param logfile:  Sting of filename to use for logger.
-        :param ack:  Boolean of acknowlege flag for consumer.
 
         """
         self.connection = conn
         self.xchng = Exchange(exchng, 'topic', durable=True)
         self.queue = Queue(QUEUE, exchange=self.xchng, routing_key=rt_key)
-        self.ack = ack
         # Setup appropriate logger
         logfilename = "%s_%s_%s.log" % (exchng, QUEUE, rt_key)
         logging.basicConfig(filename=logfilename,format='%(asctime)s %(message)s', 
@@ -50,14 +50,17 @@ class LoggingConsumer(ConsumerMixin):
         return [Consumer(queues=[self.queue,], callbacks=[self.on_message,], auto_declare=False)]
         
     def on_message(self, body, msg):
+        try:
+            directive = msg.body.get('message', None)
+            print("Directive recieved: %s" % directive)
+        except AttributeError:
+            print("No JSON msg body. %s" % msg.body)
         logging.info("\nMSG:HEADERS %s\nMSG:BODY %s" % (msg.headers, msg.body))
-        print("%s HEADERS:%s BODY:%s" % (datetime.today(), msg.headers, msg.body))
-        if self.ack:
-            msg.ack()
+        # print("%s HEADERS:%s BODY:%s" % (datetime.today(), msg.headers, msg.body))
             
 if __name__ == '__main__':
     with Connection(AMQPURL) as conn:
-        cnsmr = LoggingConsumer(conn, EXCHANGE, ROUTING_KEY, ack=True)
+        cnsmr = LoggingConsumer(conn, EXCHANGE, ROUTING_KEY)
         print("Logging messages from %s->%s->%s.  Press CTRL+C to exit." % (EXCHANGE, QUEUE, ROUTING_KEY))
         try:
             cnsmr.run()

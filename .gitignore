@@ -1,6 +1,9 @@
 # Python Binaries
 *.py[cod]
 
+# Django Files
+localsettings.py
+
 # C extensions
 *.so
 
@@ -38,3 +41,6 @@ nosetests.xml
 
 # Project Specific Files
 aptrustmq/mqconfig.py
+
+# Other Files
+.DS_Store
