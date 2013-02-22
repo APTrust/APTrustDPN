@@ -1,12 +1,18 @@
-# APTrust Message Queue Library
+# DPN Node Project
 
-This is only prototype and testing code while we work on policies
-for the DPN messaging queue.
+This is a very early prototype for an application to manage
+functions needed to operate as a Node in the DPN project.
+
+For more information about DPN, see it's website at: http://www.dpn.org/
+
 
 ## Overview
 
-This codebase deals with message routing related to the Academic
-Preservation Trust.
+This project uses the Django Framework to wrap functions for a
+message exchange, celery worker processes and registry
+functionality.  It primarily uses Django and Django-Celery for
+task management and registry interaction.  Look up those
+projects for more information.
 
 **Currently** this only provides a simple logging consumer to 
 test and record messages from specific queues as well as a
@@ -37,12 +43,4 @@ To setup using pip just:
 
 ## Use
 
-To setup a logging consumer just activate the appropriate environment if using
-virtual env and type:
-
-     >python consumer.py`
-
-if you wish to let this run in the background while you're logged out just use
-screen as in:
-
-    >screen python consumer.py
+More to come.

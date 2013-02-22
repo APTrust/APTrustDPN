@@ -1,3 +1,4 @@
 kombu==2.5.4
 librabbitmq==1.0.1
 django==1.4.5
+django-celery==3.0.11
