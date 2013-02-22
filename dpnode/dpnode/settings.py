@@ -129,11 +129,11 @@ INSTALLED_APPS = (
 # To setup just copy localsettings_dist.py to localsettings.py and
 # set values as appropriate.
 try:
-    from mqconfig import *
+    from dpnode.localsettings import *
 except ImportError:
     import sys
-    print >>sys.stderr, '''Missing config!  Please configure a version of
-    mqconfig.py for this app.  See mqconfig_dist.py for details'''
+    print >>sys.stderr, '''Missing localsettings!  Please configure a version of
+    localsettings.py for this app.  See localsettings_dist.py for details'''
     del sys
 
 # A sample logging configuration. The only tangible logging

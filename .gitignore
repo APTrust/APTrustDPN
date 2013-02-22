@@ -23,9 +23,10 @@ lib
 lib64
 __pycache__
 
-# Installer logs ohter files
+# Installer logs and other files
 pip-log.txt
 *.log
+*.db
 
 # Unit test / coverage reports
 .coverage
