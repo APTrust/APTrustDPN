@@ -53,3 +53,23 @@ STATICFILES_DIRS = (
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.
 )
+
+# Celery Information.
+BROKER_URL = "amqp://guest:guest@localhost:5672//"
+
+# DPN AMQP Information
+
+DPNMQ = {
+    "BROADCAST": {
+        "BROKERURL": "amqp://guest:guest@localhost:5672//",
+        "QUEUE": "broadcast_queue",
+        "EXCHANGE": "exchange-name",
+        "ROUTINGKEY": "broadcastRoutingKey",
+    },
+    "LOCAL": {
+        "BROKERURL": "amqp://guest:guest@localhost:5672//",
+        "QUEUE": "local_queue",
+        "EXCHANGE": "exchange-name",
+        "ROUTINGKEY": "localroutingkey",
+    },
+}
