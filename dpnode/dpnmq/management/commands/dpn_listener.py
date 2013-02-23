@@ -21,5 +21,3 @@ class Command(BaseCommand):
 	        except KeyboardInterrupt:
 	            conn.close()
 	            print("Exiting application.")
-
-	        
