@@ -32,3 +32,23 @@ class DPNConsumer(ConsumerMixin):
             print("Directive recieved: %s" % directive)
         except AttributeError:
             print("No JSON msg body. %s" % body)
+
+class MessageRouter:
+
+    def __init__(self):
+        self._registry = {}
+
+    def register(self, key, klass, **options):
+        self._registry[key] = klass
+        pass
+
+    def unregister(self, key):
+        del self._registry[key]
+
+    def dispatch(self, key, msg):
+        handler = self._registry.get(key, None)
+        if handler:
+            handler(msg)
+
+router = MessageRouter()
+
