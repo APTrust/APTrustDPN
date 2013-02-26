@@ -2,7 +2,7 @@ DEBUG = False # Always make False by default.
 TEMPLATE_DEBUG = DEBUG
 
 ADMINS = (
-    # ('Your Name', 'your_email@example.com'),
+# ('Your Name', 'your_email@example.com'),
 )
 
 MANAGERS = ADMINS
@@ -10,11 +10,11 @@ MANAGERS = ADMINS
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.', # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'.
-        'NAME': '',                      # Or path to database file if using sqlite3.
-        'USER': '',                      # Not used with sqlite3.
-        'PASSWORD': '',                  # Not used with sqlite3.
-        'HOST': '',                      # Set to empty string for localhost. Not used with sqlite3.
-        'PORT': '',                      # Set to empty string for default. Not used with sqlite3.
+        'NAME': '', # Or path to database file if using sqlite3.
+        'USER': '', # Not used with sqlite3.
+        'PASSWORD': '', # Not used with sqlite3.
+        'HOST': '', # Set to empty string for localhost. Not used with sqlite3.
+        'PORT': '', # Set to empty string for default. Not used with sqlite3.
     }
 }
 
@@ -49,9 +49,9 @@ STATIC_URL = '/static/'
 
 # Additional locations of static files
 STATICFILES_DIRS = (
-    # Put strings here, like "/home/html/static" or "C:/www/django/static".
-    # Always use forward slashes, even on Windows.
-    # Don't forget to use absolute paths, not relative paths.
+# Put strings here, like "/home/html/static" or "C:/www/django/static".
+# Always use forward slashes, even on Windows.
+# Don't forget to use absolute paths, not relative paths.
 )
 
 # Celery Information.
@@ -60,16 +60,17 @@ BROKER_URL = "amqp://guest:guest@localhost:5672//"
 # DPN AMQP Information
 
 DPNMQ = {
-    "BROADCAST": {
-        "BROKERURL": "amqp://guest:guest@localhost:5672//",
-        "QUEUE": "broadcast_queue",
-        "EXCHANGE": "exchange-name",
-        "ROUTINGKEY": "broadcastRoutingKey",
-    },
-    "LOCAL": {
-        "BROKERURL": "amqp://guest:guest@localhost:5672//",
-        "QUEUE": "local_queue",
-        "EXCHANGE": "exchange-name",
-        "ROUTINGKEY": "localroutingkey",
-    },
+    "NODE": "node_name"
+            "BROKERURL":
+"amqp://guest:guest@localhost:5672//", # Central broker service.
+"BROADCAST": {# Details for handling DPN Broadcast messages.
+              "QUEUE": "broadcast_queue", # Broadcast queue name if you need to explicitly declare.
+              "EXCHANGE": "exchange-name", # Exchange to route all messages through.
+              "ROUTINGKEY": "broadcastRoutingKey", # Broadcast routing key.
+             },
+             "LOCAL": {
+                          "QUEUE": "local_queue", # Queue to use for direct messaing from DPN nodes.
+                          "EXCHANGE": "exchange-name", # Exchange is probably the same as broadcast above.
+                          "ROUTINGKEY": "localroutingkey", # Routing key to use for direct messages from DPN members.
+                      },
 }

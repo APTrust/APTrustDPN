@@ -1,1 +1,0 @@
-from dpnmq.consumer import router

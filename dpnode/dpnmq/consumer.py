@@ -1,54 +1,45 @@
-from datetime import datetime
-import logging
-
 from kombu.mixins import ConsumerMixin
-from kombu import Connection, Queue, Exchange
+from kombu import Queue, Exchange
 
-from dpnode.settings import DPNMQ
+from dpnmq.tasks import router
 
 
 class DPNConsumer(ConsumerMixin):
-    
-    def __init__(self, conn, exchng, queue, rt_key):
+    def __init__(self, conn, exchng, bcast_queue, bcast_rtkey, local_queue, local_rtkey):
         """Sets up a basic consumer that logs incomming messages.  Use this
         to listen for heartbeat and other test messages.
 
         :param conn:  Connection object to amqp server.
         :param exchng:  String of exchange to use on conn.
-        :param queue:  String of queue name to use.
-        :param rt_key:  String of routing key to use for message.
+        :param bcast_queue:  String of queue name to use.
+        :param bcast_rtkey:  String of routing key to use for message.
 
         """
         self.connection = conn
         self.xchng = Exchange(exchng, 'topic', durable=True)
-        self.queue = Queue(queue, exchange=self.xchng, routing_key=rt_key)
-        
+        self.bcast_queue = Queue(bcast_queue, exchange=self.xchng, routing_key=bcast_rtkey)
+        self.local_queue = Queue(local_queue, exchange=self.xchng, routing_key=local_rtkey)
+
     def get_consumers(self, Consumer, chan):
-        return [Consumer(queues=[self.queue,], callbacks=[self.on_message,], auto_declare=False)]
-        
-    def on_message(self, body, msg):
+        consumers = [
+            Consumer(queues=[self.bcast_queue, ], callbacks=[self.on_broadcast_message, ], auto_declare=False),
+            Consumer(queues=[self.local_queue, ], callbacks=[self.on_local_message, ], auto_declare=False)
+        ]
+        return consumers
+
+    def on_broadcast_message(self, body, msg):
         try:
-            directive = body.get('message', None)
-            print("Directive recieved: %s" % directive)
+            router.dispatch(body.get('message', 'default'), msg)
         except AttributeError:
             print("No JSON msg body. %s" % body)
 
-class MessageRouter:
+    def on_local_message(self, body, msg):
+        """
+        Callback for any message received to the locally configured channel.
+        :param body: Message.body object
+        :param msg:  Message object returned by Kombu
+        """
+        # TODO change this to logging instead of print
+        print("Recieved Local Msg %r" % msg)
 
-    def __init__(self):
-        self._registry = {}
-
-    def register(self, key, klass, **options):
-        self._registry[key] = klass
-        pass
-
-    def unregister(self, key):
-        del self._registry[key]
-
-    def dispatch(self, key, msg):
-        handler = self._registry.get(key, None)
-        if handler:
-            handler(msg)
-
-router = MessageRouter()
 

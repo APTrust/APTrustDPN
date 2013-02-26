@@ -36,9 +36,10 @@ nosetests.xml
 # Translations
 *.mo
 
-# Eclipse Projects
+# IDE files
 .project
 .pydevproject
+.idea
 
 # Project Specific Files
 aptrustmq/mqconfig.py
