@@ -1,8 +1,9 @@
 # For control flow requests to the DPN network.
 
 # Simple broadcaster
+from kombu import Connection
 
-def broadcast_message(msg):
+def send_message(msg):
     """
     Broadcasts msg object to the app
 

@@ -1,3 +1,7 @@
+import random
+
+from dpnmq.responses import ResponseForReplication
+
 class TaskRouter:
     def __init__(self):
         self._registry = {}
@@ -21,7 +25,6 @@ router = TaskRouter()
 def default_handler(msg):
     print("Default Message.")
 
-
 router.register('default', default_handler)
 
 
@@ -35,8 +38,11 @@ def info_handler(msg):
     print("PAYLOAD: %r" % msg.payload)
     print("-------------------------------")
 
-
 router.register('info', info_handler)
 
-# Temporary
-router.register('is_available_replication', info_handler)
+def query_for_replication_handler(msg):
+    available = random.choice([True, False])
+    response = ResponseForReplication(available)
+    response.reply()
+
+router.register('is_available_replication', query_for_replication_handler)
