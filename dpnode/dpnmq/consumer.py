@@ -6,13 +6,14 @@ from dpnmq.tasks import router
 
 class DPNConsumer(ConsumerMixin):
     def __init__(self, conn, exchng, bcast_queue, bcast_rtkey, local_queue, local_rtkey):
-        """Sets up a basic consumer that logs incomming messages.  Use this
-        to listen for heartbeat and other test messages.
+        """A basic consumer that listens on DPN broadcast and local queues.
 
         :param conn:  Connection object to amqp server.
         :param exchng:  String of exchange to use on conn.
-        :param bcast_queue:  String of queue name to use.
-        :param bcast_rtkey:  String of routing key to use for message.
+        :param bcast_queue:  String of broadcast queue name to use.
+        :param bcast_rtkey:  String of broadcast routing key to use for message.
+        :param local_queue:  String of the local queue name.
+        :param local_rtkey:  String of the local routing key to use
 
         """
         self.connection = conn
