@@ -1,6 +1,9 @@
 # Various utilities and helpers specific for DPN MQ
 # functions.
 
+from pytz import timezone
+
+from dpnode.settings import TIME_ZONE
 
 def dpn_strftime(dt):
     """
@@ -11,4 +14,5 @@ def dpn_strftime(dt):
 
     # "2013-01-18 09:49:28 -0800"
     fmt = "%Y-%m-%d %H:%M:%S %z"
-    return dt.strftime(fmt)
+    loc_dt = timezone(TIME_ZONE).localize(dt)
+    return loc_dt.strftime(fmt)

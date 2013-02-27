@@ -1,4 +1,4 @@
-import time
+import time, logging
 from optparse import make_option
 
 from django.core.management.base import BaseCommand
@@ -8,6 +8,7 @@ from kombu import Connection, Exchange
 from dpnode.settings import DPNMQ
 from dpnmq.requests import QueryForReplication
 
+logger = logging.getLogger('dpnmq.request')
 
 class Command(BaseCommand):
     help = 'Sends a heartbeat message to the configured Broadcast exchange an routing key.'
@@ -27,7 +28,9 @@ class Command(BaseCommand):
                         producer.publish(msg.body, exchange=msg.exchange,
                                          routing_key=msg.routingkey, headers=msg.headers)
                         time.sleep(int(options['repeat'])) # Adding a delay so I can follow messages manually.
-                        print("Sent MSG: %s->%s" % (msg.exchange, msg.routingkey))
+                        logger.info("Sent %s to %s->%s id: %s" % (msg.__class__.__name__,
+                                                                   msg.exchange,
+                                                                   msg.routingkey, msg.headers["correlation_id"]))
                     except KeyboardInterrupt:
                         break
             print("Stopping Heartbeat")

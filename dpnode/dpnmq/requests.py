@@ -24,7 +24,7 @@ class BroadcastMessage(object):
                    "routing_key": DPNMQ["LOCAL"]["ROUTINGKEY"],
                    "correlation_id": uuid(),
                    "sequence": 0,
-                   "date": dpn_strftime(datetime.now()),
+                   "date": dpn_strftime(datetime.utcnow()),
                    "ttl": DPNMQ["TTL"],
         }
         return headers

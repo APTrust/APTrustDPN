@@ -27,6 +27,7 @@ __pycache__
 pip-log.txt
 *.log
 *.db
+*.dump
 
 # Unit test / coverage reports
 .coverage

@@ -60,17 +60,18 @@ BROKER_URL = "amqp://guest:guest@localhost:5672//"
 # DPN AMQP Information
 
 DPNMQ = {
-    "NODE": "node_name"
-            "BROKERURL":
-"amqp://guest:guest@localhost:5672//", # Central broker service.
-"BROADCAST": {# Details for handling DPN Broadcast messages.
-              "QUEUE": "broadcast_queue", # Broadcast queue name if you need to explicitly declare.
-              "EXCHANGE": "exchange-name", # Exchange to route all messages through.
-              "ROUTINGKEY": "broadcastRoutingKey", # Broadcast routing key.
-             },
-             "LOCAL": {
-                          "QUEUE": "local_queue", # Queue to use for direct messaing from DPN nodes.
-                          "EXCHANGE": "exchange-name", # Exchange is probably the same as broadcast above.
-                          "ROUTINGKEY": "localroutingkey", # Routing key to use for direct messages from DPN members.
-                      },
+    "NODE": "node_name",
+    "BROKERURL":
+        "amqp://guest:guest@localhost:5672//", # Central broker service.
+    "TTL": 3600,
+    "BROADCAST": {# Details for handling DPN Broadcast messages.
+                  "QUEUE": "broadcast_queue", # Broadcast queue name if you need to explicitly declare.
+                  "EXCHANGE": "exchange-name", # Exchange to route all messages through.
+                  "ROUTINGKEY": "broadcastRoutingKey", # Broadcast routing key.
+    },
+    "LOCAL": {
+        "QUEUE": "local_queue", # Queue to use for direct messaing from DPN nodes.
+        "EXCHANGE": "exchange-name", # Exchange is probably the same as broadcast above.
+        "ROUTINGKEY": "localroutingkey", # Routing key to use for direct messages from DPN members.
+    },
 }
