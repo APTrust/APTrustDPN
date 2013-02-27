@@ -4,6 +4,9 @@ from kombu import Queue, Exchange
 from dpnmq.tasks import router
 
 
+import logging
+logger = logging.getLogger('dpn.consumer')
+
 class DPNConsumer(ConsumerMixin):
     def __init__(self, conn, exchng, bcast_queue, bcast_rtkey, local_queue, local_rtkey):
         """A basic consumer that listens on DPN broadcast and local queues.
@@ -30,9 +33,9 @@ class DPNConsumer(ConsumerMixin):
 
     def on_broadcast_message(self, body, msg):
         try:
-            router.dispatch(body.get('message', 'default'), msg)
-        except AttributeError:
-            print("No JSON msg body. %s" % body)
+            router.dispatch(body.get(u'message', 'default'), msg)
+        except AttributeError as err:
+            print(err)
 
     def on_local_message(self, body, msg):
         """

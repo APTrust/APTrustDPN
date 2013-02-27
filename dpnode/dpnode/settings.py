@@ -196,12 +196,12 @@ LOGGING = {
             'level': 'ERROR',
             'propagate': False,
             },
-        'dpnmq.request': {
+        'dpnmq.consumer': {
             'handlers': ['console_info'],
             'level': 'INFO',
             'filters': ['require_debug_true'],
         },
-        'dpnmq.response': {
+        'dpnmq.producer': {
             'handlers': ['console_info'],
             'level': 'INFO',
             'filters': ['require_debug_true'],

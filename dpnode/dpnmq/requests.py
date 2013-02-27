@@ -2,11 +2,8 @@
 
 from datetime import datetime
 
-from kombu.utils import uuid
-
 from dpnode.settings import DPNMQ
-from dpnmq.util import dpn_strftime
-
+from dpnmq.util import dpn_strftime, node_uuid
 
 class BroadcastMessage(object):
     def __init__(self):
@@ -22,7 +19,7 @@ class BroadcastMessage(object):
                    "src_node": self.node,
                    "exchange": DPNMQ["LOCAL"]["EXCHANGE"],
                    "routing_key": DPNMQ["LOCAL"]["ROUTINGKEY"],
-                   "correlation_id": uuid(),
+                   "correlation_id": node_uuid(),
                    "sequence": 0,
                    "date": dpn_strftime(datetime.utcnow()),
                    "ttl": DPNMQ["TTL"],
@@ -31,7 +28,6 @@ class BroadcastMessage(object):
 
     def _set_body(self):
         raise NotImplementedError("Must create a query construction method.")
-
 
 # Query for replication
 # https://wiki.duraspace.org/display/DPN/1+Message+-+Query+for+Replication
@@ -63,4 +59,3 @@ class QueryForReplication(BroadcastMessage):
         }
 
         # TODO enable optional logging
-

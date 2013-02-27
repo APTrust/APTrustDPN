@@ -7,10 +7,8 @@ from kombu import Connection
 from dpnode.settings import DPNMQ
 from dpnmq.util import dpn_strftime
 
-
 class DPNRequestError(Exception):
     pass
-
 
 class ResponseMessage(object):
     def __init__(self, msg):
@@ -21,8 +19,8 @@ class ResponseMessage(object):
         """
         self.brokerurl = DPNMQ.get('BROKERURL', "")
         self.request_msg = msg
-        self._set_headers()
         self._parse_reply()
+        self._set_headers()
         self.body = {}
 
     def _parse_reply(self):
@@ -45,8 +43,7 @@ class ResponseMessage(object):
             "correlation_id": self.correlation_id,
             "sequence": self.sequence + 1,
             "date": dpn_strftime(datetime.now()),
-            "ttl": 3600,
-
+            "ttl": DPNMQ["TTL"],
         }
 
     def reply(self):
@@ -74,13 +71,13 @@ class ResponseForReplication(ResponseMessage):
         :param result: Boolean preresenting result for reply, true for ack, false nak.
         """
         self.result = result
-        self._set_body()
         super(ResponseForReplication, self).__init__(msg)
+        self._set_body()
 
     def _set_body(self):
         self.body = {
             "src_node": DPNMQ.get("NODE", "default"),
-            "message_type": {"direct", "reply"},
+            "message_type": {"direct": "reply"},
             "message": "is_available_replication",
             "message_att": "nak",
             "date": dpn_strftime(datetime.now()),
