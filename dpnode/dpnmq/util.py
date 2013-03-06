@@ -3,9 +3,7 @@
 
 from pytz import timezone
 
-from kombu.utils import uuid
-
-from dpnode.settings import TIME_ZONE, DPNMQ
+from dpnode.settings import TIME_ZONE
 
 def dpn_strftime(dt):
     """
@@ -19,10 +17,3 @@ def dpn_strftime(dt):
     fmt = "%Y-%m-%d %H:%M:%S %z"
     loc_dt = timezone(TIME_ZONE).localize(dt)
     return loc_dt.strftime(fmt)
-
-def node_uuid():
-    """
-    Returns a simple UUID namespaced with the node identifier as configured in settings.
-    :return: String of unique ID.
-    """
-    return "%s-%s" % (DPNMQ["NODE"], uuid())

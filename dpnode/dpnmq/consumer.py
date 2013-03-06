@@ -1,11 +1,13 @@
+import json
+
 from kombu.mixins import ConsumerMixin
 from kombu import Queue, Exchange
 
-from dpnmq.tasks import router
-
+from dpnmq.tasks import broadcast_router, local_router
+from dpnmq.messages import DPNMessageError
 
 import logging
-logger = logging.getLogger('dpn.consumer')
+logger = logging.getLogger('dpnmq.consumer')
 
 class DPNConsumer(ConsumerMixin):
     def __init__(self, conn, exchng, bcast_queue, bcast_rtkey, local_queue, local_rtkey):
@@ -22,28 +24,32 @@ class DPNConsumer(ConsumerMixin):
         self.connection = conn
         self.xchng = Exchange(exchng, 'topic', durable=True)
         self.bcast_queue = Queue(bcast_queue, exchange=self.xchng, routing_key=bcast_rtkey)
-        self.local_queue = Queue(local_queue, exchange=self.xchng, routing_key=local_rtkey)
+        self.direct_queue = Queue(local_queue, exchange=self.xchng, routing_key=local_rtkey)
 
     def get_consumers(self, Consumer, chan):
         consumers = [
-            Consumer(queues=[self.bcast_queue, ], callbacks=[self.on_broadcast_message, ], auto_declare=False),
-            Consumer(queues=[self.local_queue, ], callbacks=[self.on_local_message, ], auto_declare=False)
+            Consumer(queues=[self.bcast_queue, ], callbacks=[self.route_broadcast, ], auto_declare=False),
+            Consumer(queues=[self.direct_queue, ], callbacks=[self.route_local, ], auto_declare=False)
         ]
         return consumers
 
-    def on_broadcast_message(self, body, msg):
+    def _route_message(self, router, body, msg):
+        """
+
+        :param body: DeSerialized body format.
+        :param msg: kombu.transport.base.Message
+        """
+        if isinstance(body, basestring): # Autocast to JSON
+            body = json.loads(body)
         try:
-            router.dispatch(body.get(u'message', 'default'), msg)
-        except AttributeError as err:
-            print(err)
+            key = msg.headers["sequence"]
+            broadcast_router.dispatch(key, msg, body)
+        except KeyError:
+            raise DPNMessageError("Cannot Route Message!  Missing message field in body.")
 
-    def on_local_message(self, body, msg):
-        """
-        Callback for any message received to the locally configured channel.
-        :param body: Message.body object
-        :param msg:  Message object returned by Kombu
-        """
-        # TODO change this to logging instead of print
-        print("Recieved Local Msg %r" % msg)
+    def route_local(self, body, msg):
+        self._route_message(local_router, body, msg)
 
+    def route_broadcast(self, body, msg):
+        self._route_message(broadcast_router, body, msg)
 
