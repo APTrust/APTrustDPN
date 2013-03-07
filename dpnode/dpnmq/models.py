@@ -1,1 +1,1 @@
-# Create your models here.
+# If we end up needing data models directly related to messgaes, they go here.

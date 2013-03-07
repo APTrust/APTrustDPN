@@ -1,3 +1,5 @@
+from optparse import make_option
+
 from django.core.management.base import BaseCommand
 
 from kombu import Connection
@@ -8,6 +10,13 @@ from dpnmq.consumer import DPNConsumer
 
 class Command(BaseCommand):
     help = 'Starts listening for DPN broadcast and local messages as configured in localsettings'
+    option_list = BaseCommand.option_list + (
+        make_option('--replyall',
+                    action='store_true',
+                    dest='replyall',
+                    default=False,
+                    help='Reply to your own messages.', ),
+    )
 
     def handle(self, *args, **options):
         bcast = DPNMQ.get('BROADCAST', {})
@@ -18,7 +27,8 @@ class Command(BaseCommand):
         local_rtkey = local.get('ROUTINGKEY', "")
         local_queue = local.get('QUEUE', "")
         with Connection(DPNMQ.get('BROKERURL', "")) as conn:
-            cnsmr = DPNConsumer(conn, bcast_xchng, bcast_queue, bcast_rtkey, local_queue, local_rtkey)
+            cnsmr = DPNConsumer(conn, bcast_xchng, bcast_queue, bcast_rtkey, local_queue,
+                                local_rtkey, options["replyall"])
             print("Consuming broadcast(%s) and local(%s) messages from %s.  Press CTRL+C to exit."
                   % (bcast_rtkey, local_rtkey, bcast_xchng))
             try:

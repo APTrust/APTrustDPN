@@ -19,7 +19,7 @@ class TaskRouter:
         :param msg: kombu.transport.base.Message instance.
         :param body: Unmarshalled JSON of message payload.
         """
-        handler = self._registry.get(key, default_handler)
+        handler = self._registry.get("%s" % (key,), default_handler)
         if handler:
             handler(msg, body) # TODO catch DPNMessageErrors here and log them.
         # TODO raise error if no handler is returned.
@@ -29,7 +29,9 @@ broadcast_router = TaskRouter()
 local_router = TaskRouter()
 
 def default_handler(msg, body):
-    print("No handler defined for %r %r." % (msg.headers, msg.payload))
+    msg.reject()
+    raise DPNMessageError("No handler defined for sequence %s for routing key %r" %
+                          (msg.headers.get('sequence', None), msg.delivery_info.get('routing_key', None)))
 
 broadcast_router.register('default', default_handler) # TODO turn this into a decorator
 local_router.register('default', default_handler)
@@ -60,7 +62,7 @@ def query_for_replication_reply_handler(msg, body):
     qfr.send()
     msg.ack()
 
-broadcast_router.register(0, query_for_replication_reply_handler)
+broadcast_router.register("0", query_for_replication_reply_handler)
 
 def query_for_replication_result_handler(msg, body):
     """
@@ -73,17 +75,16 @@ def query_for_replication_result_handler(msg, body):
     :param body: Decoded JSON object of the message payload.
     """
     try:
-        if body['message_attr'] == "nak":
+        if body['message_att'] == "nak":
             return None # End of sequence, replication space not available.
         cl = ContentLocation()
-        cl.response(msg, body)
+        cl.response(msg, body, 'http://www.codinghorror.com/blog/')
         cl.send()
         msg.ack()
     except KeyError:
         raise DPNMessageError('Invalid Reply! No message_attr in body of message.')
 
-
-local_router.register(1, query_for_replication_result_handler)
+local_router.register("1", query_for_replication_result_handler)
 
 # Message 2
 

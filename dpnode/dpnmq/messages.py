@@ -1,16 +1,16 @@
-import random, traceback
+import random, json
 
 from datetime import datetime
 
 from kombu import Connection
-from kombu.utils import uuid4
+from kombu.common import uuid
 
 from dpnode.settings import DPNMQ
 from dpnmq.util import dpn_strftime
 
 import logging
 
-logger = logging.getLogger('dpn.producer')
+logger = logging.getLogger('dpnmq.producer')
 
 class DPNMessageError(Exception):
     pass
@@ -46,9 +46,9 @@ class DPNMessage(object):
     def _make_headers(self):
         self.headers = {
             'src_node': self.src_node,
-            'exchange': self.brokerurl,
+            'exchange': self.exchange,
             'routing_key': self.routing_key,
-            'correlation_id': self.id,
+            'correlation_id': "%s" % self.id,
             'sequence': self.sequence,
             'date': self.date,
             'ttl': self.ttl,
@@ -67,17 +67,28 @@ class DPNMessage(object):
         """
         self._make_headers()
         self._validate()
-        with Connection(self.brokerurl) as conn:  # TODO change this to a conneciton pool
+        # TODO change this to a connection pool
+        with Connection(self.brokerurl) as conn:
             with conn.Producer(serializer='json') as producer:
                 producer.publish(self.body, headers=self.headers, exchange=self.to_exchange,
                                  routing_key=self.to_routing_key)
-                logger.info("SENT %s:%s %s to %s->%s with id: %s" % (self.type_route,
-                                                                      self.type_msg,
-                                                                      self.__class__.__name__,
-                                                                      self.exchange,
-                                                                      self.routing_key,
-                                                                      self.id))
+                self._log_send_msg()
+
         conn.close()
+
+    def _log_send_msg(self):
+        """
+        Logs information about the message prefixing the log entry with the 'prefix' input.
+
+        :param prefix: String to prefix to the log entry.
+        :return: None
+        """
+        logger.info("SENT %s %s:%s to %s->%s with id: %s" % (self.__class__.__name__,
+                                                                self.type_route,
+                                                                self.type_msg,
+                                                                self.to_exchange,
+                                                                self.to_routing_key,
+                                                                self.id))
 
     def request(self):
         raise NotImplementedError("Must implement a method to originate requests.")
@@ -94,12 +105,12 @@ class QueryForReplication(DPNMessage):
     def request(self, size):
         # Headers here form the reply to and transaction info.
 
-        self.id = uuid4()
+        self.id = uuid()
         self.sequence = 0
         self.date = dpn_strftime(datetime.utcnow())
 
-        self.to_exchange = self.exchange
-        self.to_routing_key = self.routing_key
+        self.to_exchange = DPNMQ['BROADCAST']['EXCHANGE']
+        self.to_routing_key = DPNMQ['BROADCAST']['ROUTINGKEY']
         self.type_route = 'broadcast'
         self.type_msg = 'query'
 
@@ -116,9 +127,9 @@ class QueryForReplication(DPNMessage):
 
         # Start by getting validating items out of the way.
         try:
-            size = int(body[0]['replication_size'])
-        except (IndexError, AttributeError, TypeError, ValueError):
-            raise DPNMessageError("Invalid request!  replication size not specified correctly")
+            size = int(body['message_args'][0]['replication_size'])
+        except (IndexError, AttributeError, TypeError, ValueError, KeyError) as err:
+            raise DPNMessageError("Invalid Replication Size Request!  %s %s %r" % (err.__class__.__name__, err.message, body))
 
         try:
             self.to_exchange = msg.headers["exchange"]
@@ -168,9 +179,9 @@ class ContentLocation(DPNMessage):
         try:
             self.to_exchange = msg.headers['exchange']
             self.to_routing_key = msg.headers['routing_key']
-            self.id = body['correlation_id']
+            self.id = msg.headers['correlation_id']
         except KeyError as err:
-            raise DPNMessageError("Invalid Request!  Message does not contain %s" % err.message)
+            raise DPNMessageError("Invalid Request!  Header does not contain %s" % err.message)
         self.sequence = 2
         self.date = dpn_strftime(datetime.utcnow())
 
@@ -199,7 +210,7 @@ class ContentLocation(DPNMessage):
         try:
             self.to_exchange = msg.headers['exchange']
             self.to_routing_key = msg.headers['routing_key']
-            self.id = body['correlation_id']
+            self.id = msg.headers['correlation_id']
         except KeyError as err:
             raise DPNMessageError("Invalid Request!  Message does not contain %s" % err.message)
         self.sequence = 2

@@ -9,5 +9,5 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         msg = QueryForReplication()
-        msg.request(1024 * randint(1, 100))
+        msg.request(1024)
         msg.send()
