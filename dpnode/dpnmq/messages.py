@@ -1,22 +1,22 @@
-import random, json
-
+import random
 from datetime import datetime
+import logging
 
 from kombu import Connection
 from kombu.common import uuid
 
 from dpnode.settings import DPNMQ
 from dpnmq.util import dpn_strftime
-
-import logging
+from dpnmq import CHECKSUM_TYPES
 
 logger = logging.getLogger('dpnmq.producer')
+
 
 class DPNMessageError(Exception):
     pass
 
-class DPNMessage(object):
 
+class DPNMessage(object):
     def __init__(self):
         """
         Base Message object for DPN.
@@ -84,11 +84,11 @@ class DPNMessage(object):
         :return: None
         """
         logger.info("SENT %s %s:%s to %s->%s with id: %s" % (self.__class__.__name__,
-                                                                self.type_route,
-                                                                self.type_msg,
-                                                                self.to_exchange,
-                                                                self.to_routing_key,
-                                                                self.id))
+                                                             self.type_route,
+                                                             self.type_msg,
+                                                             self.to_exchange,
+                                                             self.to_routing_key,
+                                                             self.id))
 
     def request(self):
         raise NotImplementedError("Must implement a method to originate requests.")
@@ -96,8 +96,8 @@ class DPNMessage(object):
     def response(self, msg, body):
         raise NotImplementedError("Must implement a method to respond to requests.")
 
-class QueryForReplication(DPNMessage):
 
+class QueryForReplication(DPNMessage):
     def __init__(self):
         super(QueryForReplication, self).__init__()
         self.directive = 'is_available_replication'
@@ -129,7 +129,8 @@ class QueryForReplication(DPNMessage):
         try:
             size = int(body['message_args'][0]['replication_size'])
         except (IndexError, AttributeError, TypeError, ValueError, KeyError) as err:
-            raise DPNMessageError("Invalid Replication Size Request!  %s %s %r" % (err.__class__.__name__, err.message, body))
+            raise DPNMessageError(
+                "Invalid Replication Size Request!  %s %s %r" % (err.__class__.__name__, err.message, body))
 
         try:
             self.to_exchange = msg.headers["exchange"]
@@ -142,7 +143,6 @@ class QueryForReplication(DPNMessage):
         self.date = dpn_strftime(datetime.utcnow())
         self.type_route = 'direct'
         self.type_msg = 'reply'
-
 
         self.body = {
             "src_node": self.src_node,
@@ -164,6 +164,7 @@ class QueryForReplication(DPNMessage):
         """
         return random.choice([True, False])
 
+
 class ContentLocation(DPNMessage):
     def __init__(self):
         super(ContentLocation, self).__init__()
@@ -176,6 +177,8 @@ class ContentLocation(DPNMessage):
         :param id:  String of correlation_id for transaction.
         :param location: String of location for requested file.
         """
+        # TODO most of this is standard for local replies.  Move to central method
+        # once msg format stablizes. Repeating for now.
         try:
             self.to_exchange = msg.headers['exchange']
             self.to_routing_key = msg.headers['routing_key']
@@ -193,7 +196,7 @@ class ContentLocation(DPNMessage):
             'src_node': self.src_node,
             'message_type': {self.type_route: self.type_msg},
             'message': self.directive,
-            'message_attr': 'nak',
+            'message_att': 'nak',
             'date': self.date
         }
 
@@ -224,7 +227,80 @@ class ContentLocation(DPNMessage):
             'src_node': self.src_node,
             'message_type': {self.type_route: self.type_msg},
             'message': self.directive,
-            'message_attr': 'ack',
+            'message_att': 'ack',
             'message_args': [{'https': location}],
             'date': self.date
         }
+
+
+class TransferStatus(DPNMessage):
+
+    def __init__(self):
+        super(TransferStatus, self).__init__()
+        self.directive = 'copy_transfer_status'
+
+    def request(self, msg, body, result):
+        """
+
+        :param msg:
+        :param body:
+        :param result: Dict of result of transfer, either formatted as
+            {'[encryptiontype]': '[checksum'} or
+            {'err_message': '[error message text'}
+
+        """
+        try:
+            self.to_exchange = msg.headers['exchange']
+            self.to_routing_key = msg.headers['routing_key']
+            self.id = msg.headers['correlation_id']
+        except KeyError as err:
+            raise DPNMessageError("Invalid Request!  Header does not contain %s" % err.message)
+
+        self.sequence = 3
+        self.date = dpn_strftime(datetime.utcnow())
+        self.type_route = 'direct'
+        self.type_msg = 'reply'
+
+        self.body = {
+            'src_node': self.src_node,
+            'message_type': {self.type_route: self.type_msg},
+            'message': self.directive,
+            'message_att': 'nak',
+            'message_args': result,
+            'date': self.date,
+        }
+        key, value = result.popitem()
+        if key in CHECKSUM_TYPES:
+            self.body['message_att'] = 'ack'
+
+
+    def response(self, msg, body, confirm):
+        """
+        Responds to a fixity check result initiated by a nodes Transfer
+        Status request.
+
+        :param msg:
+        :param body:
+        :param confirm: Boolean of
+        """
+        try:
+            self.to_exchange = msg.headers['exchange']
+            self.to_routing_key = msg.headers['routing_key']
+            self.id = msg.headers['correlation_id']
+        except KeyError as err:
+            raise DPNMessageError("Invalid Request!  Header does not contain %s" % err.message)
+
+        self.sequence = 4
+        self.date = dpn_strftime(datetime.utcnow())
+        self.type_route = 'direct'
+        self.type_msg = 'reply'
+
+        self.body = {
+            'src_node': self.src_node,
+            'message_type': {self.type_route: self.type_msg},
+            'message': self.directive,
+            'message_att': 'nak',
+            'date': self.date,
+            }
+        if confirm:
+            self.body['message_att'] = 'ack'

@@ -37,7 +37,7 @@ class DPNConsumer(ConsumerMixin):
         ]
         return consumers
 
-    # TODO when msg format is settled, validate message before processing to reduce all interrior err msg raises.
+    # TODO when msg format is settled, validate message before processing to reduce all interior err msg raises.
     def _route_message(self, router, msg):
         """
         Sends the original message to the appropriate dispatcher provided by router.
@@ -54,6 +54,7 @@ class DPNConsumer(ConsumerMixin):
 
     def route_local(self, body, msg):
         if self._ignore(msg):
+            msg.reject()
             return None
         try:
             self._route_message(local_router, msg)
@@ -63,6 +64,7 @@ class DPNConsumer(ConsumerMixin):
 
     def route_broadcast(self, body, msg):
         if self._ignore(msg):
+            msg.reject()
             return None
         try:
             self._route_message(broadcast_router, msg)
@@ -97,4 +99,3 @@ class DPNConsumer(ConsumerMixin):
         if self.ignore_own and msg.headers.get('src_node', None) == DPNMQ['NODE']:
             return True
         return False
-

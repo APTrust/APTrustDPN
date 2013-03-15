@@ -1,4 +1,4 @@
-from dpnmq.messages import QueryForReplication, ContentLocation, DPNMessageError
+from dpnmq.messages import QueryForReplication, ContentLocation, TransferStatus, DPNMessageError
 
 class TaskRouter:
     def __init__(self):
@@ -52,9 +52,12 @@ broadcast_router.register('info', info_handler)
 # =========
 def query_for_replication_reply_handler(msg, body):
     """
-    Replies to a sequence 0 msg - Query For Replication message.
+    Accepts a Query For Replication request broadcast message and produces a
+    Query For Replication Response message to the local queue.
 
-    :param qfr: kombu.transport.base.Message instance
+    .. _Documentation: https://wiki.duraspace.org/display/DPN/1+Message+-+Query+for+Replication
+
+    :param msg: kombu.transport.base.Message instance
     :param body: Decoded JSON object of message payload.
     """
     qfr = QueryForReplication()
@@ -66,26 +69,72 @@ broadcast_router.register("0", query_for_replication_reply_handler)
 
 def query_for_replication_result_handler(msg, body):
     """
-    Resolve a sequence 1 msg - reply to an original Query For Replication message.
+    Accepts a Query for Replication response message and ends the chain if 'nak' or
+    produces a Content Location request if 'ack'.
 
-    A 'nak' reply should end the chain while an 'ack' reply should initiate a
-    Content Location request.
+    see: https://wiki.duraspace.org/display/DPN/1+Message+-+Query+for+Replication
 
     :param msg: kombu.transport.base.Message instance
-    :param body: Decoded JSON object of the message payload.
+    :param body: Decoded JSON of the message payload.
     """
     try:
-        if body['message_att'] == "nak":
-            return None # End of sequence, replication space not available.
-        cl = ContentLocation()
-        cl.response(msg, body, 'http://www.codinghorror.com/blog/')
-        cl.send()
+        if body['message_att'] == 'ack':
+            cl = ContentLocation()
+            cl.response(msg, body, 'http://www.codinghorror.com/blog/')
+            cl.send()
         msg.ack()
     except KeyError:
-        raise DPNMessageError('Invalid Reply! No message_attr in body of message.')
+        raise DPNMessageError('Invalid Reply! No message_att in body of message.')
 
 local_router.register("1", query_for_replication_result_handler)
 
 # Message 2
+def content_location_reply_handler(msg, body):
+    """
+    Accepts a Content Location message and produces a Transfer Status message when complete.
+    It can also accept a Content Location 'nak' that cancels a Transfer.
+
+    .. _Documentation: https://wiki.duraspace.org/display/DPN/2+Message+-+Content+Location
+
+    :param msg:  kombu.transport.base.Message instance
+    :param body: Decoded JSON of message payload.
+    """
+    try:
+        if body['message_args'][0]:
+            # TODO this key value is bad, suggest 'protocol' 'value' instead to parse sensibly.
+            result = {"sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"}
+            ts = TransferStatus()
+            ts.request(msg, body, result)
+            ts.send()
+    except (KeyError, IndexError) as err:
+        raise DPNMessageError('Invalid Reply! Cannot parse message_args: %s' % err.message)
+local_router.register("2", content_location_reply_handler)
 
 # Message 3
+def transfer_status_reply_handler(msg, body):
+    """
+    Accepts a Transfer Status request message and produces a Transfer Status
+    response.
+
+    :param msg:  kombu.transport.base.Message instance
+    :param body: Decoded JSON of message payload.
+    """
+    try:
+        if body['message_att'] == 'ack':
+            algo, checksum = body['message_args'][0].popitem()
+            # process the checksum for the file provided earlier?
+            ts = TransferStatus()
+            ts.response(msg, body, True)
+            ts.send()
+    except (KeyError, IndexError) as err:
+        raise DPNMessageError('Invalid Reply! Cannot parse message_args: %s' % err.message)
+
+local_router.register("3", transfer_status_reply_handler)
+
+def transfer_status_result_handler(msg, body):
+    """
+    Accepts a Transfer Status response and produces a Request for Registry Update.
+    :param msg:
+    :param body:
+    """
+    pass
