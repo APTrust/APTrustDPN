@@ -84,7 +84,8 @@ def query_for_replication_result_handler(msg, body):
             cl.send()
         msg.ack()
     except KeyError:
-        raise DPNMessageError('Invalid Reply! No message_att in body of message.')
+        msg.reject()
+        raise DPNMessageError('Invalid QFR Result! No message_att in body of message.')
 
 local_router.register("1", query_for_replication_result_handler)
 
@@ -106,8 +107,10 @@ def content_location_reply_handler(msg, body):
             ts = TransferStatus()
             ts.request(msg, body, result)
             ts.send()
+        msg.ack()
     except (KeyError, IndexError) as err:
-        raise DPNMessageError('Invalid Reply! Cannot parse message_args: %s' % err.message)
+        msg.reject()
+        raise DPNMessageError('Invalid Conent Location Reply! Cannot parse message_args: %s' % err.message)
 local_router.register("2", content_location_reply_handler)
 
 # Message 3
@@ -126,8 +129,10 @@ def transfer_status_reply_handler(msg, body):
             ts = TransferStatus()
             ts.response(msg, body, True)
             ts.send()
+        msg.ack()
     except (KeyError, IndexError) as err:
-        raise DPNMessageError('Invalid Reply! Cannot parse message_args: %s' % err.message)
+        msg.reject()
+        raise DPNMessageError('Invalid Transfer Status Reply! %s' % err.message)
 
 local_router.register("3", transfer_status_reply_handler)
 
@@ -137,4 +142,4 @@ def transfer_status_result_handler(msg, body):
     :param msg:
     :param body:
     """
-    pass
+    msg.ack()
