@@ -268,7 +268,7 @@ class TransferStatus(DPNMessage):
             'message_type': {self.type_route: self.type_msg},
             'message': self.directive,
             'message_att': 'nak',
-            'message_args': [{key, value},],
+            'message_args': [{key: value},],
             'date': self.date,
         }
 
@@ -285,6 +285,7 @@ class TransferStatus(DPNMessage):
         :param body: Deserialized JSON object
         :param confirm: Boolean of weather to ack or nak
         """
+        self.directive = "copy_transfer_verify"
         try:
             self.to_exchange = msg.headers['exchange']
             self.to_routing_key = msg.headers['routing_key']
@@ -306,3 +307,62 @@ class TransferStatus(DPNMessage):
             }
         if confirm:
             self.body['message_att'] = 'ack'
+
+class RegistryItemCreation(DPNMessage):
+
+    def __init__(self):
+        super(TransferStatus, self).__init__()
+        self.directive = 'registry_item_create'
+
+    def request(self, msg, body): # NOTE this is always sent to broadcast.
+        try:
+            self.to_exchange = msg.headers['exchange']
+            self.to_routing_key = DPNMQ['BROADCAST']['ROUTINGKEY']
+            self.id = msg.headers['correlation_id']
+        except KeyError as err:
+            raise DPNMessageError("Invalid Request!  Header does not contain %s" % err.message)
+
+        self.sequence = 5
+        self.date = dpn_strftime(datetime.utcnow())
+        self.type_route = 'broadcast'
+        self.type_msg = 'registry_directive'
+
+        dummy_data = {
+            "dpn_uuid": "f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+            "alt_id": "sdr:1234567890",
+            "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+            "first_node": "sdr",
+            "replicating_nodes": ["ht", "chron"],
+            "previous_version": "a21d4fae-7dec-11d0-a765-00a0c91e6bcc",
+            "rights_md_ref": "c01d4fae-7dec-11d0-a765-00a0c91e6be3"
+        }
+
+        self.body = {
+            'src_node': self.src_node,
+            'message_type': {self.type_route: self.type_msg},
+            'message': self.directive,
+            'message_args': [dummy_data,],
+            'date': self.date,
+            }
+
+    def response(self, msg, body):
+        try:
+            self.to_exchange = msg.headers['exchange']
+            self.to_routing_key = msg.headers['routing_key']
+            self.id = msg.headers['correlation_id']
+        except KeyError as err:
+            raise DPNMessageError("Invalid Request!  Header does not contain %s" % err.message)
+
+        self.sequence = 6
+        self.date = dpn_strftime(datetime.utcnow())
+        self.type_route = 'direct'
+        self.type_msg = 'reply'
+
+        self.body = {
+            'src_node': self.src_node,
+            'message_type': {self.type_route: self.type_msg},
+            'message': self.directive,
+            'message_att': 'ack',
+            'date': self.date,
+            }
+        # TODO test nak?
