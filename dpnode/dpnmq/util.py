@@ -14,6 +14,6 @@ def dpn_strftime(dt):
     :return:  String of datetime with local timezone.
     """
 
-    fmt = "%Y-%m-%d %H:%M:%S %z"
+    fmt = "%Y-%m-%dT%H:%M:%S%z"
     loc_dt = timezone(TIME_ZONE).localize(dt)
     return loc_dt.strftime(fmt)

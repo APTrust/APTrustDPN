@@ -206,6 +206,11 @@ LOGGING = {
             'level': 'INFO',
             'filters': ['require_debug_true'],
         },
+        'dpnmq.console': {
+            'handlers': ['console_info'],
+            'level': 'INFO',
+            'filters': ['require_debug_true'],
+            },
     },
 }
 

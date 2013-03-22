@@ -80,7 +80,7 @@ def query_for_replication_result_handler(msg, body):
     try:
         if body['message_att'] == 'ack':
             cl = ContentLocation()
-            cl.response(msg, body, 'http://www.codinghorror.com/blog/')
+            cl.response(msg, body, 'https://www.codinghorror.com/blog/')
             cl.send()
         msg.ack()
     except KeyError:

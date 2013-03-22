@@ -9,7 +9,7 @@ from dpnode.settings import DPNMQ
 from dpnmq.util import dpn_strftime
 from dpnmq import CHECKSUM_TYPES
 
-logger = logging.getLogger('dpnmq.producer')
+logger = logging.getLogger('dpnmq.console')
 
 
 class DPNMessageError(Exception):
@@ -196,9 +196,10 @@ class ContentLocation(DPNMessage):
             'src_node': self.src_node,
             'message_type': {self.type_route: self.type_msg},
             'message': self.directive,
-            'message_att': 'nak',
+            'message_att': 'ack',
             'date': self.date
         }
+
 
     def response(self, msg, body, location):
         """
@@ -242,8 +243,8 @@ class TransferStatus(DPNMessage):
     def request(self, msg, body, result):
         """
 
-        :param msg:
-        :param body:
+        :param msg:  kombu.transport.base.Message instance
+        :param body: Deserialized JSON object
         :param result: Dict of result of transfer, either formatted as
             {'[encryptiontype]': '[checksum'} or
             {'err_message': '[error message text'}
@@ -261,16 +262,17 @@ class TransferStatus(DPNMessage):
         self.type_route = 'direct'
         self.type_msg = 'reply'
 
+        key, value = result.popitem()
         self.body = {
             'src_node': self.src_node,
             'message_type': {self.type_route: self.type_msg},
             'message': self.directive,
             'message_att': 'nak',
-            'message_args': result,
+            'message_args': [{key, value},],
             'date': self.date,
         }
-        key, value = result.popitem()
-        if key in CHECKSUM_TYPES:
+
+        if key.upper() in CHECKSUM_TYPES:
             self.body['message_att'] = 'ack'
 
 
@@ -280,8 +282,8 @@ class TransferStatus(DPNMessage):
         Status request.
 
         :param msg:
-        :param body:
-        :param confirm: Boolean of
+        :param body: Deserialized JSON object
+        :param confirm: Boolean of weather to ack or nak
         """
         try:
             self.to_exchange = msg.headers['exchange']

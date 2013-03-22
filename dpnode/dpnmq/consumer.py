@@ -9,7 +9,7 @@ from dpnmq.tasks import broadcast_router, local_router
 from dpnmq.messages import DPNMessageError
 
 import logging
-logger = logging.getLogger('dpnmq.consumer')
+logger = logging.getLogger('dpnmq.console')
 
 class DPNConsumer(ConsumerMixin):
     def __init__(self, conn, exchng, bcast_queue, bcast_rtkey, local_queue, local_rtkey, ignore_own=True):
