@@ -5,7 +5,7 @@ from kombu.mixins import ConsumerMixin
 from kombu import Queue, Exchange
 
 from dpnode.settings import DPNMQ
-from dpnmq.tasks import broadcast_router, local_router
+from dpnmq.handlers import broadcast_router, local_router
 from dpnmq.messages import DPNMessageError
 
 import logging

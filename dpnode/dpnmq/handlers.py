@@ -1,4 +1,4 @@
-from dpnmq.messages import QueryForReplication, ContentLocation, TransferStatus, DPNMessageError
+from dpnmq.messages import QueryForReplication, ContentLocation, TransferStatus, DPNMessageError, RegistryItemCreation
 
 class TaskRouter:
     def __init__(self):
@@ -82,6 +82,8 @@ def query_for_replication_result_handler(msg, body):
             cl = ContentLocation()
             cl.response(msg, body, 'https://www.codinghorror.com/blog/')
             cl.send()
+        if body['message_att'] == 'nak':
+            raise DPNMessageError("Received Query for Replication NAK, transaction canceled.")
         msg.ack()
     except KeyError:
         msg.reject()
@@ -101,16 +103,18 @@ def content_location_reply_handler(msg, body):
     :param body: Decoded JSON of message payload.
     """
     try:
-        if body['message_args'][0]:
+        if body['message_args'][0] and body['message_att'] == 'ack':
             # TODO this key value is bad, suggest 'protocol' 'value' instead to parse sensibly.
             result = {"sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"}
             ts = TransferStatus()
             ts.request(msg, body, result)
             ts.send()
+        if body['message_att'] == 'nak':
+            raise DPNMessageError("Received Content Location NAK, transaction canceled.")
         msg.ack()
     except (KeyError, IndexError) as err:
         msg.reject()
-        raise DPNMessageError('Invalid Conent Location Reply! Cannot parse message_args: %s' % err.message)
+        raise DPNMessageError('Invalid Content Location Reply! Cannot parse message_args: %s' % err.message)
 local_router.register("2", content_location_reply_handler)
 
 # Message 3
@@ -129,17 +133,55 @@ def transfer_status_reply_handler(msg, body):
             ts = TransferStatus()
             ts.response(msg, body, True)
             ts.send()
+        if body['message_att'] == 'nak':
+            raise DPNMessageError("Received Transfer Status NAK, transaction canceled.")
         msg.ack()
     except (KeyError, IndexError) as err:
         msg.reject()
-        raise DPNMessageError('Invalid Transfer Status Reply! %s' % err.message)
+        raise DPNMessageError('Invalid Transfer Status Request! %s' % err.message)
 
 local_router.register("3", transfer_status_reply_handler)
 
 def transfer_status_result_handler(msg, body):
     """
-    Accepts a Transfer Status response and produces a Request for Registry Update.
+    Accepts a Transfer Status response and produces a Registry Item Creation request.
+
     :param msg:
     :param body:
     """
+    try:
+        if body['message_att'] == 'ack':
+            ric = RegistryItemCreation()
+            ric.request(msg, body)
+            ric.send()
+        if body['message_att'] == 'nak':
+            raise DPNMessageError("Received Transfer Status NAK, transaction canceled.")
+        msg.ack()
+    except (KeyError, IndexError) as err:
+        msg.reject()
+        raise DPNMessageError('Invalid Transfer Status Reply! %s' % err.message)
+
+#local_router.register("4", transfer_status_result_handler)
+
+def registry_update_reply_handler(msg, body):
+    """
+    Accepts a Registry Item Creation request message and produces a Registry Item Creation response.
+
+    :param msg:
+    :param body:
+    """
+    ric = RegistryItemCreation()
+    ric.response(msg, body)
+    ric.send()
     msg.ack()
+#broadcast_router.register("5", registry_update_reply_handler)
+
+def registry_update_result_handler(msg, body):
+    """
+    Accepts a Registry Item Creation response and ends the sequence.
+
+    :param msg:
+    :param body:
+    """
+    msg.ack() #Thanks
+#local_router.register("6", registry_update_result_handler)
