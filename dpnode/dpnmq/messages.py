@@ -311,7 +311,7 @@ class TransferStatus(DPNMessage):
 class RegistryItemCreation(DPNMessage):
 
     def __init__(self):
-        super(TransferStatus, self).__init__()
+        super(RegistryItemCreation, self).__init__()
         self.directive = 'registry_item_create'
 
     def request(self, msg, body): # NOTE this is always sent to broadcast.

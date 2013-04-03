@@ -161,7 +161,7 @@ def transfer_status_result_handler(msg, body):
         msg.reject()
         raise DPNMessageError('Invalid Transfer Status Reply! %s' % err.message)
 
-local_router.register("4", transfer_status_result_handler)
+#local_router.register("4", transfer_status_result_handler)
 
 def registry_update_reply_handler(msg, body):
     """
@@ -174,7 +174,7 @@ def registry_update_reply_handler(msg, body):
     ric.response(msg, body)
     ric.send()
     msg.ack()
-broadcast_router.register("5", registry_update_reply_handler)
+#broadcast_router.register("5", registry_update_reply_handler)
 
 def registry_update_result_handler(msg, body):
     """
@@ -184,4 +184,4 @@ def registry_update_result_handler(msg, body):
     :param body:
     """
     msg.ack() #Thanks
-local_router.register("6", registry_update_result_handler)
+#local_router.register("6", registry_update_result_handler)
