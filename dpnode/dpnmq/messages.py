@@ -21,57 +21,45 @@ class DPNMessage(object):
         """
         Base Message object for DPN.
         """
-        # MSG properties currently used for headers.
-        self.brokerurl = DPNMQ['BROKERURL']
-        self.src_node = DPNMQ['NODE']
-        self.ttl = DPNMQ['TTL']
-        self.exchange = DPNMQ['LOCAL']['EXCHANGE']
-        self.routing_key = DPNMQ['LOCAL']['ROUTINGKEY']
-        self.id = None
-        self.sequence = None
-        self.date = None
-        self.to_routing_key = None
-        self.to_exchange = None
+        self.set_headers()
 
-        # Other metadata to help process message
-        # TODO ask group to review the msg format to reduce duplication and unneeded metadata
-        self.directive = None # Directive to use in body.message
-        self.type_route = None
-        self.type_msg = None
-
-        # The meat of the message itself
-        self.body = None
-        self.headers = None
-
-    def _make_headers(self):
-        self.headers = {
-            'src_node': self.src_node,
-            'exchange': self.exchange,
-            'routing_key': self.routing_key,
+    def set_headers(self, from=DPNMQ["NODE"], reply_key=DPNMQ["LOCAL"]["ROUTINGKEY"],
+             ttl=DPNMQ["TTL"], id=None, sequence=None, date=None):
+        self.headers = { # TODO:  Refactor this into a class all it's own.
+            'from': self.src_node,
+            'reply_key': self.routing_key,
             'correlation_id': "%s" % self.id,
             'sequence': self.sequence,
             'date': self.date,
             'ttl': self.ttl,
         }
 
-    def _validate(self):
-        for attrName, attrValue in vars(self).iteritems():
-            if attrValue is None:
-                raise DPNMessageError("Message Validation Error: %s not set." % (attrName,))
+    def set_body(self, arguments):
+        self.body = arguments
+
+    def _set_date():
+        self.headers["date"] = dpn_strftime(datetime.now())
+
+    def validate_headers(self):
+        for key, value in self.headers.iteritems():
+            if value is None:
+                raise DPNMessageError("No header value set for %s." % (key,))
 
 
-    def send(self):
+    def send(self, rt_key):
         """
         Sends this message to the DPN Broker URL in settings.
 
+        :param rt_key:  String of the routingkey to send this message to.
+
         """
-        self._make_headers()
-        self._validate()
+        self._set_date() # Set date just before it's sent.
+        self.validate_headers()
         # TODO change this to a connection pool
         with Connection(self.brokerurl) as conn:
             with conn.Producer(serializer='json') as producer:
-                producer.publish(self.body, headers=self.headers, exchange=self.to_exchange,
-                                 routing_key=self.to_routing_key)
+                producer.publish(self.body, headers=self.headers, exchange=DPNMQ["EXCHANGE"],
+                                 routing_key=rt_key)
                 self._log_send_msg()
 
         conn.close()
@@ -89,6 +77,9 @@ class DPNMessage(object):
                                                              self.to_exchange,
                                                              self.to_routing_key,
                                                              self.id))
+
+    def validate_body(self):
+        raise NotImplementedError("Must implement a body validation method.")
 
     def request(self):
         raise NotImplementedError("Must implement a method to originate requests.")
