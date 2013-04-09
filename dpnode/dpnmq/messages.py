@@ -15,6 +15,8 @@ class DPNMessageError(Exception):
 
 class DPNMessage(object):
 
+    directive = None
+
     def __init__(self):
         """
         Base Message object for DPN.
@@ -22,16 +24,16 @@ class DPNMessage(object):
         self.set_headers()
         self.body = {}
 
-    def set_headers(self, frm=DPNMQ["NODE"], 
-        reply_key=DPNMQ["LOCAL"]["ROUTINGKEY"], ttl=DPNMQ["TTL"], 
-        correlation_id=None, sequence=None, date=None, **kwargs):
+    def set_headers(self,  reply_key=DPNMQ["LOCAL"]["ROUTINGKEY"], 
+        ttl=DPNMQ["TTL"], correlation_id=None, sequence=None, date=None, 
+        **kwargs):
         self.headers = { 
-            'from': frm,
+            'from': kwargs.get('from', DPNMQ["NODE"]),
             'reply_key': reply_key,
             'correlation_id': "%s" % correlation_id,
-            'sequence': self.sequence,
-            'date': self.date,
-            'ttl': self.ttl,
+            'sequence': sequence,
+            'date': date,
+            'ttl': ttl,
         }
 
     def set_body(self, arguments):
@@ -90,46 +92,73 @@ class DPNMessage(object):
                                                     self.to_routing_key,
                                                     self.id))
 
+    def _validate_directive(self):
+        classname = self.__class__.__name__
+        if not self.body["message_name"] == self.directive:
+            raise DPNMessage("%s.body['message_name] is not %s!" % 
+                                                    (classname, self.directive))
+
     def validate_body(self):
         raise NotImplementedError("Must implement a body validation method.")
 
 
 class ReplicationInitQuery(DPNMessage):
+
     directive = 'replication-init-query'
-    def __init__(self, replication_size):
-        super(ReplicationInitQuery, self):__init__()
-        self.set_headers(**{
-            'id': ,
-            'sequence': 0,
-            'date':  dpn_strftime(datetime.now()),
-            })
-        self.body = {
-            'message_name': self.directive,
-            'replication_size': replication_size,
-            'protocol': DPNMQ["XFER_OPTIONS"]
-        }
 
     def validate_body(self):
         classname = self.__class__.__name__
-        if not self.body["message_name"] == self.directive:
-            raise DPNMessage("%s.body['message_name] is not %s!" % 
-                                                    (classname, self.directive))
-        if not isinstance(self.body['replication_size'], int):
-            raise DPNMessage("%s.body['replication_size'] of %s is not an int!"
-                                 % (classname, self.body["replication_size"]))
-        for prtcl in self.body["protocol"]:
-            protocols = ['https', 'rsync']
-            if prtcl not in protocols:
+        try:
+            self._validate_directive()
+            if not isinstance(self.body['replication_size'], int):
                 raise DPNMessage(
-                            "%s.body['protocol'] value %s is not one of %s!" % 
-                                            (classname, self.body["protocol"]))
+                    "%s.body['replication_size'] of %s is not an int!"
+                    % (classname, self.body["replication_size"]))
+            for prtcl in self.body["protocol"]:
+                protocols = ['https', 'rsync']
+                if prtcl not in protocols:
+                    raise DPNMessage(
+                        "%s.body['protocol'] value %s is not one of %s!" % 
+                         (classname, self.body["protocol"]))
+        except KeyError as err:
+            raise DPNMessage("%s.body missing value %s!" %
+                (classname, err.message))
 
 
 class ReplicationAvailableReply(DPNMessage):
-    pass
+    
+    directive = "replication-available-reply"
+
+    def validate_body(self):
+        classname = self.__class__.__name__
+        try:
+            self._validate_directive()
+            if self.body["message_att"] not in ["ack", "nak"]:
+                raise DPNMessage("%s.body['message_att'] is not ack or nak" % 
+                    (classname))
+        except KeyError as err:
+            raise DPNMessage("%s.body missing value %s!" %
+                (classname, err.message))
 
 class ReplicationLocationReply(DPNMessage):
-    pass
+    
+    directive = 'replication-location-reply'
+
+    def validate_body(self):
+        classname = self.__class__.__name__
+        try:
+            self._validate_directive()
+            if self.body["protocol"] not in ['https', 'rsync']:
+                raise DPNMessage(
+                    "%s.body['protocol'] is not one of https or rsync" % 
+                    classname)
+            if not is_string(self.body["location"]):
+                raise DPNMessage("%s.body['location'] is not a string!" %
+                    classname)
+        except KeyError as err:
+            raise DPNMessage("%s.body missing value %s!" %
+                (classname, err.message))
+
 
 class ReplicationLocationCancel(DPNMessage):
     pass
