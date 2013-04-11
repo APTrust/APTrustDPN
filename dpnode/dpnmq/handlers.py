@@ -1,4 +1,4 @@
-import sys, json
+import json
 from datetime import datetime
 
 from dpnmq.messages import DPNMessageError, ReplicationInitQuery

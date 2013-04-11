@@ -1,4 +1,4 @@
-import json, sys
+import json
 from io import BufferedReader
 
 from kombu.mixins import ConsumerMixin
