@@ -25,5 +25,5 @@ class Command(BaseCommand):
             'replication_size': 4502,
             'protocol': ['https', 'rsync']
         }
-        msg.set_body(body)
-        msg.send(DPNMQ['LOCAL']['ROUTINGKEY'])
+        msg.set_body(**body)
+        msg.send(DPNMQ['BROADCAST']['ROUTINGKEY'])

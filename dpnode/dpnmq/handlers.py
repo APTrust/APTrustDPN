@@ -1,6 +1,9 @@
 from datetime import datetime
 
-from dpnmq.messages import DPNMessageError, ReplicationInitQuery, ReplicationAvailableReply
+from dpnmq.messages import DPNMessageError, ReplicationInitQuery
+from dpnmq.messages import ReplicationAvailableReply, ReplicationLocationReply
+from dpnmq.messages import ReplicationLocationCancel, ReplicationTransferReply
+from dpnmq.messages import ReplicationVerificationReply
 
 from dpnmq.util import dpn_strftime
 
@@ -52,8 +55,6 @@ def info_handler(msg, body):
 
 broadcast_router.register('info', info_handler)
 
-# Message 1
-# =========
 def replication_init_query_handler(msg, body):
     """
     Accepts a Replication Init Query Message and produces a Replication 
@@ -62,36 +63,147 @@ def replication_init_query_handler(msg, body):
     :param msg: kombu.transport.base.Message instance
     :param body: Decoded JSON of the message payload.
     """
-    rcvd_msg = ReplicationInitQuery(msg.headers, body)
-    rcvd_msg.validate()
+    try:
+        req = ReplicationInitQuery(msg.headers, body)
+        req.validate()
+    except TypeError as err:
+        raise DPNMessageError("Recieved bad message body: %s" 
+            % err.message)
     
+    # Prep Reply
     headers = {
-        'correlation_id': rcvd_msg.headers['correlation_id'],
+        'correlation_id': req.headers['correlation_id'],
         'sequence': 1,
         'date': dpn_strftime(datetime.now())
     }
-    body = {
-        'message_name':  'replication-available-reply',
+    ack = {
         'message_att': 'ack',
-        'message_att': 'https',
+        'protocol': 'https',
     }
-    msg = ReplicationAvailableReply(headers, body)
-    msg.send(rcvd_msg.headers['reply_key'])
+    nak = {
+        'message_att': 'nak'
+    }
+    rsp = ReplicationAvailableReply(headers, ack)
+    rsp.send(req.headers['reply_key'])
 
 
 broadcast_router.register("replication-init-query", 
     replication_init_query_handler)
 
 def replication_available_reply_handler(msg, body):
-    rcvd_msg = ReplicationAvailableReply(msg.headers, body)
-    rcvd_msg.validate()
+    """
+    Accepts a Replication Available Reply and produces a Replication
+    Location Reply
+    """
+    try:
+        req = ReplicationAvailableReply(msg.headers, body)
+        req.validate()
+    except TypeError as err:
+        raise DPNMessageError("Recieved bad message body: %s" 
+            % err.message)
 
     headers = {
-    
+        'correlation_id': req.headers['correlation_id'],
+        'sequence': 2,
+        'date': dpn_strftime(datetime.now())
     }
+    ack = {
+        'protocol': 'https',
+        'location': 'https://www.interweb.com/cornfritter.jpg'
+    }
+    rsp = ReplicationLocationReply(headers, ack)
+    rsp.send(req.headers['reply_key'])
+local_router.register('replication-available-reply',
+    replication_available_reply_handler)
 
+def replication_location_cancel_handler(msg, body):
+    """
+    Accepts a Replication Location Cancel and cancels a file transfer.
+    """
+    try:
+        req = ReplicationLocationCancel(msg.headers, body)
+        req.validate()
+    except TypeError as err:
+        raise DPNMessageError("Recieved bad message body: %s" 
+            % err.message)
+local_router.register('replication-location-cancel', 
+    replication_location_cancel_handler)
 
+def replication_location_reply_handler(msg, body):
+    """
+    Accepts a Replication Location Reply and produces a Replication
+    Transfer Reply
+    """
+    try:
+        req = ReplicationLocationReply(msg.headers, body)
+        req.validate()
+    except TypeError as err:
+        raise DPNMessageError("Recieved bad message body: %s" 
+            % err.message)
 
+    headers = {
+        'correlation_id': req.headers['correlation_id'],
+        'sequence': 4,
+        'date': dpn_strftime(datetime.now())
+    }
+    ack = {
+        'message_att': 'ack',
+        'fixity_algorithm': 'sha256',
+        'fixity_value': '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824',
+    }
+    nak = {
+        'message_att': 'nak',
+        'message_error':  "Automatic fail to test nak function."
+    }
+    rsp = ReplicationTransferReply(headers, ack)
+    rsp.send(req.headers['reply_key'])
+local_router.register('replication-location-reply', 
+    replication_location_reply_handler)
 
+def replication_transfer_reply_handler(msg, body):
+    """
+    Accepts a Replication Transfer Reply and produces a Replication
+    Verification Reply
+    """
+    try:
+        req = ReplicationTransferReply(msg.headers, body)
+        req.validate()
+    except TypeError as err:
+        raise DPNMessageError("Recieved bad message body: %s" 
+            % err.message)
+
+    headers = {
+        'correlation_id': req.headers['correlation_id'],
+        'sequence': 5,
+        'date': dpn_strftime(datetime.now())
+    }
+    ack = {
+        'message_att': 'ack',
+    }
+    nak = {
+        'message_att': 'nak',
+    }
+    retry = {
+        'message_att': 'retry',
+    }
+    rsp = ReplicationVerificationReply(headers, ack)
+    rsp.send(req.headers['reply_key'])
+local_router.register('replication-transfer-reply', 
+    replication_transfer_reply_handler)
+
+def replication_verify_reply_handler(msg, body):
+    """
+    Accepts a Replication Verification Reply does nothing until
+    we implement business logic.
+    """
+    try:
+        req = ReplicationVerificationReply(msg.headers, body)
+        req.validate()
+    except TypeError as err:
+        raise DPNMessageError("Recieved bad message body: %s" 
+            % err.message)
+    # End?  Do what?
+local_router.register('replication-verify-reply', 
+    replication_verify_reply_handler)
 
 #local_router.register("6", registry_update_result_handler)
