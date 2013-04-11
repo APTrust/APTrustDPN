@@ -85,11 +85,12 @@ class DPNMessage(object):
         :param prefix: String to prefix to the log entry.
         :return: None
         """
-        logger.info("SENT %s to %s->%s with id: %s" % 
+        logger.info("SENT %s to %s->%s with id: %s, sequence: %s" % 
                                 (self.__class__.__name__,
                                 DPNMQ["EXCHANGE"],
                                 rt_key,
-                                self.headers['correlation_id']))          
+                                self.headers['correlation_id'],
+                                self.headers['sequence']))          
 
 
     def _set_message_name(self, message_name):

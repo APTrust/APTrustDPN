@@ -1,3 +1,4 @@
+import sys, json
 from datetime import datetime
 
 from dpnmq.messages import DPNMessageError, ReplicationInitQuery
@@ -66,7 +67,9 @@ def replication_init_query_handler(msg, body):
     try:
         req = ReplicationInitQuery(msg.headers, body)
         req.validate()
+        msg.ack()
     except TypeError as err:
+        msg.reject()
         raise DPNMessageError("Recieved bad message body: %s" 
             % err.message)
     
@@ -98,7 +101,9 @@ def replication_available_reply_handler(msg, body):
     try:
         req = ReplicationAvailableReply(msg.headers, body)
         req.validate()
+        msg.ack()
     except TypeError as err:
+        msg.reject()
         raise DPNMessageError("Recieved bad message body: %s" 
             % err.message)
 
@@ -123,7 +128,9 @@ def replication_location_cancel_handler(msg, body):
     try:
         req = ReplicationLocationCancel(msg.headers, body)
         req.validate()
+        msg.ack()
     except TypeError as err:
+        msg.reject()
         raise DPNMessageError("Recieved bad message body: %s" 
             % err.message)
 local_router.register('replication-location-cancel', 
@@ -137,7 +144,9 @@ def replication_location_reply_handler(msg, body):
     try:
         req = ReplicationLocationReply(msg.headers, body)
         req.validate()
+        msg.ack()
     except TypeError as err:
+        msg.reject()
         raise DPNMessageError("Recieved bad message body: %s" 
             % err.message)
 
@@ -168,7 +177,9 @@ def replication_transfer_reply_handler(msg, body):
     try:
         req = ReplicationTransferReply(msg.headers, body)
         req.validate()
+        msg.ack()
     except TypeError as err:
+        msg.reject()
         raise DPNMessageError("Recieved bad message body: %s" 
             % err.message)
 
@@ -199,7 +210,9 @@ def replication_verify_reply_handler(msg, body):
     try:
         req = ReplicationVerificationReply(msg.headers, body)
         req.validate()
+        msg.ack()
     except TypeError as err:
+        msg.reject()
         raise DPNMessageError("Recieved bad message body: %s" 
             % err.message)
     # End?  Do what?
