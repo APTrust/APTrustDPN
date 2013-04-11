@@ -32,4 +32,7 @@ def is_string(obj):
     :param obj:  object to be tested.
     :return:  Boolean of test result
     """
-    return isinstance(obj, basestring)
+    try: 
+        return isinstance(obj, basestring) and obj != ""
+    except TypeError:
+        return False

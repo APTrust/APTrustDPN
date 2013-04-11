@@ -50,7 +50,12 @@ class DPNConsumer(ConsumerMixin):
         except UnicodeDecodeError as err:
             raise DPNMessageError("Cannot Decode Message Body! %s" % err.message)
 
-        router.dispatch(msg.headers.get('sequence', 'default'), msg, decoded_body)
+        try:
+            message_name = decoded_body['message_name']
+        except KeyError:
+            raise DPNMessageError("Invalid message recieved with no 'message_body' set!")
+
+        router.dispatch(message_name, msg, decoded_body)
 
     def route_local(self, body, msg):
         if self._ignore(msg):
@@ -79,7 +84,7 @@ class DPNConsumer(ConsumerMixin):
         :return: None
         """
         # No validation at this point so form log whatever fields you can find.
-        header_fields = ['src_node', 'exchange', 'routing_key', 'correlation_id', 'sequence']
+        header_fields = ['from', 'reply_key', 'correlation_id', 'sequence']
         parts = ["%s: %s" % (field, msg.headers[field]) for field in header_fields if field in msg.headers]
         if not parts:
             return "Could Not Find Header Fields in %s" % msg.headers
@@ -96,6 +101,6 @@ class DPNConsumer(ConsumerMixin):
         # If not ignoring don't bother testing message, just return false.
         if not self.ignore_own:
             return False
-        if self.ignore_own and msg.headers.get('src_node', None) == DPNMQ['NODE']:
+        if self.ignore_own and msg.headers.get('from', None) == DPNMQ['NODE']:
             return True
         return False

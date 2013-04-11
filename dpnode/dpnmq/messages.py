@@ -8,6 +8,7 @@ from dpnmq.util import dpn_strftime, is_string
 
 logger = logging.getLogger('dpnmq.console')
 
+PROTOCOL_LIST = ['https', 'rsync']
 
 class DPNMessageError(Exception):
     pass
@@ -17,14 +18,18 @@ class DPNMessage(object):
 
     directive = None
 
-    def __init__(self):
+    def __init__(self, headers_dict=None, body_dict=None):
         """
         Base Message object for DPN.
         """
         self.set_headers()
+        if headers_dict:
+            self.set_headers(**headers_dict)
         self.body = {}
+        if body_dict:
+            self.set_body(**body_dict)
 
-    def set_headers(self,  reply_key=DPNMQ["LOCAL"]["ROUTINGKEY"], 
+    def set_headers(self, reply_key=DPNMQ["LOCAL"]["ROUTINGKEY"], 
         ttl=DPNMQ["TTL"], correlation_id=None, sequence=None, date=None, 
         **kwargs):
         self.headers = { 
@@ -35,9 +40,6 @@ class DPNMessage(object):
             'date': date,
             'ttl': ttl,
         }
-
-    def set_body(self, arguments):
-        self.body = arguments
 
     def _set_date(self):
         self.headers["date"] = dpn_strftime(datetime.now())
@@ -57,7 +59,6 @@ class DPNMessage(object):
                             "Header value of %s for '%s' is not an int!" % 
                             (self.headers[key], key))
 
-
     def send(self, rt_key):
         """
         Sends this message to the DPN Broker URL in settings.
@@ -68,15 +69,15 @@ class DPNMessage(object):
         self._set_date() # Set date just before it's sent.
         self.validate_headers()
         # TODO change this to a connection pool
-        with Connection(self.brokerurl) as conn:
+        with Connection(DPNMQ["BROKERURL"]) as conn:
             with conn.Producer(serializer='json') as producer:
                 producer.publish(self.body, headers=self.headers, 
                             exchange=DPNMQ["EXCHANGE"], routing_key=rt_key)
-                self._log_send_msg()
+                self._log_send_msg(rt_key)
 
         conn.close()
 
-    def _log_send_msg(self):
+    def _log_send_msg(self, rt_key):
         """
         Logs information about the message prefixing the log entry with the 
         'prefix' input.
@@ -84,89 +85,145 @@ class DPNMessage(object):
         :param prefix: String to prefix to the log entry.
         :return: None
         """
-        logger.info("SENT %s %s:%s to %s->%s with id: %s" % 
-                                                    (self.__class__.__name__,
-                                                    self.type_route,
-                                                    self.type_msg,
-                                                    self.to_exchange,
-                                                    self.to_routing_key,
-                                                    self.id))
+        logger.info("SENT %s to %s->%s with id: %s" % 
+                                (self.__class__.__name__,
+                                DPNMQ["EXCHANGE"],
+                                rt_key,
+                                self.headers['correlation_id']))          
 
-    def _validate_directive(self):
-        classname = self.__class__.__name__
-        if not self.body["message_name"] == self.directive:
-            raise DPNMessage("%s.body['message_name] is not %s!" % 
-                                                    (classname, self.directive))
+
+    def _set_message_name(self, message_name):
+        if not message_name:
+            message_name = self.directive
+        if message_name != self.directive:
+            raise DPNMessageError('Passed %s message_name for %s' 
+                % (message_name, self.directive))
+        self.body['message_name'] = message_name
 
     def validate_body(self):
-        raise NotImplementedError("Must implement a body validation method.")
+        self.set_body(**self.body)
+
+    def set_body(self, **kwargs):
+        try:
+            for key, value in kwargs.iteritems():
+                self.body[key] = value
+        except AttributeError:
+            raise DPNMessageError(
+                "%s.set_body arguments must be a dictionary, recieved %s!"
+                % (self.__class__.__name__, arguments))
+
+    def validate(self):
+        self.validate_headers()
+        self.validate_body()
 
 
 class ReplicationInitQuery(DPNMessage):
 
     directive = 'replication-init-query'
 
-    def validate_body(self):
-        classname = self.__class__.__name__
+    def set_body(self, replication_size=0, protocol=[], message_name=None):
+
+        self._set_message_name(message_name)
+
+        if not isinstance(replication_size, int):
+            raise DPNMessageError("Replication size of %s is invalid!" % 
+                replication_size)
+        self.body['replication_size'] = replication_size
+
         try:
-            self._validate_directive()
-            if not isinstance(self.body['replication_size'], int):
-                raise DPNMessage(
-                    "%s.body['replication_size'] of %s is not an int!"
-                    % (classname, self.body["replication_size"]))
-            for prtcl in self.body["protocol"]:
-                protocols = ['https', 'rsync']
-                if prtcl not in protocols:
-                    raise DPNMessage(
-                        "%s.body['protocol'] value %s is not one of %s!" % 
-                         (classname, self.body["protocol"]))
-        except KeyError as err:
-            raise DPNMessage("%s.body missing value %s!" %
-                (classname, err.message))
+            if not set(protocol) <= set(PROTOCOL_LIST):
+                raise DPNMessageError("Invalid protocol value: %s"
+                    % protocol)
+            self.body['protocol'] = protocol
+        except TypeError:
+            raise DPNMessageError("Protocol is not iterable.") 
 
 
 class ReplicationAvailableReply(DPNMessage):
     
     directive = "replication-available-reply"
 
-    def validate_body(self):
-        classname = self.__class__.__name__
-        try:
-            self._validate_directive()
-            if self.body["message_att"] not in ["ack", "nak"]:
-                raise DPNMessage("%s.body['message_att'] is not ack or nak" % 
-                    (classname))
-        except KeyError as err:
-            raise DPNMessage("%s.body missing value %s!" %
-                (classname, err.message))
+    def set_body(self, message_name=None, message_att='nak', protocol=None):
+
+        self._set_message_name(message_name)
+
+        if message_att not in ['nak', 'ack']:
+            raise DPNMessageError("Invalid message_att value: %s!" 
+                % message_att)
+        self.body['message_att'] = message_att
+
+        if message_att == 'ack':
+            if protocol not in PROTOCOL_LIST:
+                raise DPNMessageError("Invalid protocol value: %s" % protocol)
+            self.body['protocol'] = protocol
 
 class ReplicationLocationReply(DPNMessage):
     
     directive = 'replication-location-reply'
 
-    def validate_body(self):
-        classname = self.__class__.__name__
-        try:
-            self._validate_directive()
-            if self.body["protocol"] not in ['https', 'rsync']:
-                raise DPNMessage(
-                    "%s.body['protocol'] is not one of https or rsync" % 
-                    classname)
-            if not is_string(self.body["location"]):
-                raise DPNMessage("%s.body['location'] is not a string!" %
-                    classname)
-        except KeyError as err:
-            raise DPNMessage("%s.body missing value %s!" %
-                (classname, err.message))
+    def set_body(self, message_name=None, protocol=None, location=None):
+
+        self._set_message_name(message_name)
+
+        if protocol not in PROTOCOL_LIST:
+            raise DPNMessageError("Invalid protocol value: %s" % protocol)
+        self.body['protocol'] = protocol
+
+        if not is_string(location):
+            raise DPNMessageError("Invalid location value: %s" % location)
+        self.body['location'] = location
 
 
 class ReplicationLocationCancel(DPNMessage):
-    pass
+    
+    directive = 'replication-location-cancel'
+
+    def set_body(self, message_name=None, message_att='nak'):
+
+        self._set_message_name(message_name)
+
+        if message_att != 'nak':
+            raise DPNMessageError("Invalid message_att value: %s" % message_att)
+        self.body['message_att'] = message_att
 
 class ReplicationTransferReply(DPNMessage):
-    pass
+    
+    directive = 'replication-transfer-reply'
+
+    def set_body(self, message_name=None, message_att=None, 
+        fixity_algorithm=None, fixity_value=None, message_error=None):
+
+        self._set_message_name(message_name)
+
+        if message_att not in ['ack', 'nak']:
+            raise DPNMessageError("Invalid message_att value: %s" % message_att)
+        self.body['message_att'] = message_att
+
+        if message_att == 'nak':
+            if not is_string(message_error):
+                raise DPNMessageError("Invalid message_err value: %s" 
+                    % message_error)
+            self.body["message_error"] = message_error
+
+        if message_att == 'ack':
+            if fixity_algorithm != 'sha256':
+                raise DPNMessageError("Invalid fixity_algorithm value: %s" 
+                    % fixity_algorithm)
+            self.body['fixity_algorithm'] = fixity_algorithm
+
+            if not is_string(fixity_value):
+                raise DPNMessageError("Invalid fixity_value value: %s" 
+                    % fixity_value)
+            self.body["fixity_value"] = fixity_value
 
 class ReplicationVerificationReply(DPNMessage):
-    pass
+    
+    directive = 'replication-verify-reply'
 
+    def set_body(self, message_name=None, message_att='nak'):
 
+        self._set_message_name(message_name)
+
+        if message_att not in ['nak', 'ack', 'retry']:
+            raise DPNMessageError("Invalid message_att value: %s" % message_att)
+        self.body["message_att"] = message_att
