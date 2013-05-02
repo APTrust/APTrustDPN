@@ -1,5 +1,13 @@
 from django.db import models
 
+STATE_CHOICES = [
+    ('P', 'Pending'),
+    ('T', 'Started')
+    ('S', 'Success'),
+    ('F', 'Failed'),
+    ('C', 'Cancelled'),
+]
+
 # Create your models here.
 class CopyAction(models.Model):
     correlation_id = models.CharField(max_length=100)
