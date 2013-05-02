@@ -113,10 +113,16 @@ def replication_available_reply_handler(msg, body):
         'date': dpn_strftime(datetime.now())
     }
     ack = {
-        'protocol': 'https',
-        'location': 'https://www.interweb.com/cornfritter.jpg'
+        'https': {
+            'protocol': 'https',
+            'location': 'https://www.interweb.com/cornfritter.jpg'
+        },
+        'rsync': {
+            'protocol': 'rsync',
+            'location': 'rabbit@dpn-demo:/staging_directory/dpn_package_location'
+        }
     }
-    rsp = ReplicationLocationReply(headers, ack)
+    rsp = ReplicationLocationReply(headers, ack[req.body['protocol']])
     rsp.send(req.headers['reply_key'])
 local_router.register('replication-available-reply',
     replication_available_reply_handler)
