@@ -1,368 +1,230 @@
-import random
 from datetime import datetime
 import logging
 
 from kombu import Connection
-from kombu.common import uuid
 
 from dpnode.settings import DPNMQ
-from dpnmq.util import dpn_strftime
-from dpnmq import CHECKSUM_TYPES
+from dpnmq.util import dpn_strftime, is_string
 
 logger = logging.getLogger('dpnmq.console')
 
+PROTOCOL_LIST = ['https', 'rsync']
 
 class DPNMessageError(Exception):
     pass
 
 
 class DPNMessage(object):
-    def __init__(self):
+
+    directive = None
+
+    def __init__(self, headers_dict=None, body_dict=None):
         """
         Base Message object for DPN.
         """
-        # MSG properties currently used for headers.
-        self.brokerurl = DPNMQ['BROKERURL']
-        self.src_node = DPNMQ['NODE']
-        self.ttl = DPNMQ['TTL']
-        self.exchange = DPNMQ['LOCAL']['EXCHANGE']
-        self.routing_key = DPNMQ['LOCAL']['ROUTINGKEY']
-        self.id = None
-        self.sequence = None
-        self.date = None
-        self.to_routing_key = None
-        self.to_exchange = None
+        self.set_headers()
+        if headers_dict:
+            self.set_headers(**headers_dict)
+        self.body = {}
+        if body_dict:
+            self.set_body(**body_dict)
 
-        # Other metadata to help process message
-        # TODO ask group to review the msg format to reduce duplication and unneeded metadata
-        self.directive = None # Directive to use in body.message
-        self.type_route = None
-        self.type_msg = None
-
-        # The meat of the message itself
-        self.body = None
-        self.headers = None
-
-    def _make_headers(self):
-        self.headers = {
-            'src_node': self.src_node,
-            'exchange': self.exchange,
-            'routing_key': self.routing_key,
-            'correlation_id': "%s" % self.id,
-            'sequence': self.sequence,
-            'date': self.date,
-            'ttl': self.ttl,
+    def set_headers(self, reply_key=DPNMQ["LOCAL"]["ROUTINGKEY"], 
+        ttl=DPNMQ["TTL"], correlation_id=None, sequence=None, date=None, 
+        **kwargs):
+        self.headers = { 
+            'from': kwargs.get('from', DPNMQ["NODE"]),
+            'reply_key': reply_key,
+            'correlation_id': "%s" % correlation_id,
+            'sequence': sequence,
+            'date': date,
+            'ttl': ttl,
         }
 
-    def _validate(self):
-        for attrName, attrValue in vars(self).iteritems():
-            if attrValue is None:
-                raise DPNMessageError("Message Validation Error: %s not set." % (attrName,))
+    def _set_date(self):
+        self.headers["date"] = dpn_strftime(datetime.now())
 
+    def validate_headers(self):
+        for key, value in self.headers.iteritems():
+            if value is None:
+                raise DPNMessageError("No header value set for %s." % (key,))
+        for key in ['from', 'reply_key', 'correlation_id', 'date']:
+            if not is_string(self.headers[key]):
+                raise DPNMessageError(
+                            "Header value of %s for '%s' is not a string!" % 
+                            (self.headers[key], key))
+        for key in ['sequence', 'ttl']:
+            if not isinstance(self.headers[key], int):
+                raise DPNMessageError(
+                            "Header value of %s for '%s' is not an int!" % 
+                            (self.headers[key], key))
 
-    def send(self):
+    def send(self, rt_key):
         """
         Sends this message to the DPN Broker URL in settings.
 
+        :param rt_key:  String of the routingkey to send this message to.
+
         """
-        self._make_headers()
-        self._validate()
+        self._set_date() # Set date just before it's sent.
+        self.validate_headers()
         # TODO change this to a connection pool
-        with Connection(self.brokerurl) as conn:
+        with Connection(DPNMQ["BROKERURL"]) as conn:
             with conn.Producer(serializer='json') as producer:
-                producer.publish(self.body, headers=self.headers, exchange=self.to_exchange,
-                                 routing_key=self.to_routing_key)
-                self._log_send_msg()
+                producer.publish(self.body, headers=self.headers, 
+                            exchange=DPNMQ["EXCHANGE"], routing_key=rt_key)
+                self._log_send_msg(rt_key)
 
         conn.close()
 
-    def _log_send_msg(self):
+    def _log_send_msg(self, rt_key):
         """
-        Logs information about the message prefixing the log entry with the 'prefix' input.
+        Logs information about the message prefixing the log entry with the 
+        'prefix' input.
 
         :param prefix: String to prefix to the log entry.
         :return: None
         """
-        logger.info("SENT %s %s:%s to %s->%s with id: %s" % (self.__class__.__name__,
-                                                             self.type_route,
-                                                             self.type_msg,
-                                                             self.to_exchange,
-                                                             self.to_routing_key,
-                                                             self.id))
-
-    def request(self):
-        raise NotImplementedError("Must implement a method to originate requests.")
-
-    def response(self, msg, body):
-        raise NotImplementedError("Must implement a method to respond to requests.")
+        logger.info("SENT %s to %s->%s with id: %s, sequence: %s" % 
+                                (self.__class__.__name__,
+                                DPNMQ["EXCHANGE"],
+                                rt_key,
+                                self.headers['correlation_id'],
+                                self.headers['sequence']))          
 
 
-class QueryForReplication(DPNMessage):
-    def __init__(self):
-        super(QueryForReplication, self).__init__()
-        self.directive = 'is_available_replication'
+    def _set_message_name(self, message_name):
+        if not message_name:
+            message_name = self.directive
+        if message_name != self.directive:
+            raise DPNMessageError('Passed %s message_name for %s' 
+                % (message_name, self.directive))
+        self.body['message_name'] = message_name
 
-    def request(self, size):
-        # Headers here form the reply to and transaction info.
+    def validate_body(self):
+        self.set_body(**self.body)
 
-        self.id = uuid()
-        self.sequence = 0
-        self.date = dpn_strftime(datetime.utcnow())
-
-        self.to_exchange = DPNMQ['BROADCAST']['EXCHANGE']
-        self.to_routing_key = DPNMQ['BROADCAST']['ROUTINGKEY']
-        self.type_route = 'broadcast'
-        self.type_msg = 'query'
-
-        # Create the body of the request.
-        self.body = {
-            'src_node': self.src_node,
-            'message_type': {self.type_route: self.type_msg},
-            'message': self.directive,
-            'message_args': [{'replication_size': size}],
-            'date': self.date
-        }
-
-    def response(self, msg, body):
-
-        # Start by getting validating items out of the way.
+    def set_body(self, **kwargs):
         try:
-            size = int(body['message_args'][0]['replication_size'])
-        except (IndexError, AttributeError, TypeError, ValueError, KeyError) as err:
+            for key, value in kwargs.iteritems():
+                self.body[key] = value
+        except AttributeError:
             raise DPNMessageError(
-                "Invalid Replication Size Request!  %s %s %r" % (err.__class__.__name__, err.message, body))
+                "%s.set_body arguments must be a dictionary, recieved %s!"
+                % (self.__class__.__name__, arguments))
+
+    def validate(self):
+        self.validate_headers()
+        self.validate_body()
+
+
+class ReplicationInitQuery(DPNMessage):
+
+    directive = 'replication-init-query'
+
+    def set_body(self, replication_size=0, protocol=[], message_name=None):
+
+        self._set_message_name(message_name)
+
+        if not isinstance(replication_size, int):
+            raise DPNMessageError("Replication size of %s is invalid!" % 
+                replication_size)
+        self.body['replication_size'] = replication_size
 
         try:
-            self.to_exchange = msg.headers["exchange"]
-            self.to_routing_key = msg.headers['routing_key']
-            self.id = msg.headers["correlation_id"]
-        except KeyError as err:
-            raise DPNMessageError("Error Parsing Request!  Header does not contain %s" % err.message)
-
-        self.sequence = 1
-        self.date = dpn_strftime(datetime.utcnow())
-        self.type_route = 'direct'
-        self.type_msg = 'reply'
-
-        self.body = {
-            "src_node": self.src_node,
-            "message_type": {self.type_route: self.type_msg},
-            "message": self.directive,
-            "message_att": "nak",
-            "date": self.date
-        }
-
-        if self._check_freespace(size):
-            self.body['message_att'] = 'ack'
+            if not set(protocol) <= set(PROTOCOL_LIST):
+                raise DPNMessageError("Invalid protocol value: %s"
+                    % protocol)
+            self.body['protocol'] = protocol
+        except TypeError:
+            raise DPNMessageError("Protocol is not iterable.") 
 
 
-    def _check_freespace(self, size):
-        """
-        Temporary private function to check freespace.
-        :param size: Bytes to check for.
-        :return:  Random reply for neg pos for testing.
-        """
-        return random.choice([True, False])
+class ReplicationAvailableReply(DPNMessage):
+    
+    directive = "replication-available-reply"
+
+    def set_body(self, message_name=None, message_att='nak', protocol=None):
+
+        self._set_message_name(message_name)
+
+        if message_att not in ['nak', 'ack']:
+            raise DPNMessageError("Invalid message_att value: %s!" 
+                % message_att)
+        self.body['message_att'] = message_att
+
+        if message_att == 'ack':
+            if protocol not in PROTOCOL_LIST:
+                raise DPNMessageError("Invalid protocol value: %s" % protocol)
+            self.body['protocol'] = protocol
+
+class ReplicationLocationReply(DPNMessage):
+    
+    directive = 'replication-location-reply'
+
+    def set_body(self, message_name=None, protocol=None, location=None):
+
+        self._set_message_name(message_name)
+
+        if protocol not in PROTOCOL_LIST:
+            raise DPNMessageError("Invalid protocol value: %s" % protocol)
+        self.body['protocol'] = protocol
+
+        if not is_string(location):
+            raise DPNMessageError("Invalid location value: %s" % location)
+        self.body['location'] = location
 
 
-class ContentLocation(DPNMessage):
-    def __init__(self):
-        super(ContentLocation, self).__init__()
-        self.directive = 'content_location'
+class ReplicationLocationCancel(DPNMessage):
+    
+    directive = 'replication-location-cancel'
 
-    def request(self, msg, body, id, location):
-        """
-        Sends a stop transaction request to a node for the this file and correlation_id
+    def set_body(self, message_name=None, message_att='nak'):
 
-        :param id:  String of correlation_id for transaction.
-        :param location: String of location for requested file.
-        """
-        # TODO most of this is standard for local replies.  Move to central method
-        # once msg format stablizes. Repeating for now.
-        try:
-            self.to_exchange = msg.headers['exchange']
-            self.to_routing_key = msg.headers['routing_key']
-            self.id = msg.headers['correlation_id']
-        except KeyError as err:
-            raise DPNMessageError("Invalid Request!  Header does not contain %s" % err.message)
-        self.sequence = 2
-        self.date = dpn_strftime(datetime.utcnow())
+        self._set_message_name(message_name)
 
-        self.type_route = 'direct'
-        self.type_msg = 'reply'
+        if message_att != 'nak':
+            raise DPNMessageError("Invalid message_att value: %s" % message_att)
+        self.body['message_att'] = message_att
 
-        # Create the body of the request.
-        self.body = {
-            'src_node': self.src_node,
-            'message_type': {self.type_route: self.type_msg},
-            'message': self.directive,
-            'message_att': 'ack',
-            'date': self.date
-        }
+class ReplicationTransferReply(DPNMessage):
+    
+    directive = 'replication-transfer-reply'
 
+    def set_body(self, message_name=None, message_att=None, 
+        fixity_algorithm=None, fixity_value=None, message_error=None):
 
-    def response(self, msg, body, location):
-        """
-        Sends the location of a requested file to the node requesting replication.
+        self._set_message_name(message_name)
 
-        :param msg: kombu.transport.base.Message instance
-        :param body: Deserialized JSON object
-        :param location:  String of the location of the file to be acted on.
-        """
+        if message_att not in ['ack', 'nak']:
+            raise DPNMessageError("Invalid message_att value: %s" % message_att)
+        self.body['message_att'] = message_att
 
-        # Headers here form the reply to and transaction info.
-        try:
-            self.to_exchange = msg.headers['exchange']
-            self.to_routing_key = msg.headers['routing_key']
-            self.id = msg.headers['correlation_id']
-        except KeyError as err:
-            raise DPNMessageError("Invalid Request!  Message does not contain %s" % err.message)
-        self.sequence = 2
-        self.date = dpn_strftime(datetime.utcnow())
+        if message_att == 'nak':
+            if not is_string(message_error):
+                raise DPNMessageError("Invalid message_err value: %s" 
+                    % message_error)
+            self.body["message_error"] = message_error
 
-        self.type_route = 'direct'
-        self.type_msg = 'reply'
+        if message_att == 'ack':
+            if fixity_algorithm != 'sha256':
+                raise DPNMessageError("Invalid fixity_algorithm value: %s" 
+                    % fixity_algorithm)
+            self.body['fixity_algorithm'] = fixity_algorithm
 
-        # Create the body of the request.
-        self.body = {
-            'src_node': self.src_node,
-            'message_type': {self.type_route: self.type_msg},
-            'message': self.directive,
-            'message_att': 'ack',
-            'message_args': [{'https': location}],
-            'date': self.date
-        }
+            if not is_string(fixity_value):
+                raise DPNMessageError("Invalid fixity_value value: %s" 
+                    % fixity_value)
+            self.body["fixity_value"] = fixity_value
 
+class ReplicationVerificationReply(DPNMessage):
+    
+    directive = 'replication-verify-reply'
 
-class TransferStatus(DPNMessage):
+    def set_body(self, message_name=None, message_att='nak'):
 
-    def __init__(self):
-        super(TransferStatus, self).__init__()
-        self.directive = 'copy_transfer_status'
+        self._set_message_name(message_name)
 
-    def request(self, msg, body, result):
-        """
-
-        :param msg:  kombu.transport.base.Message instance
-        :param body: Deserialized JSON object
-        :param result: Dict of result of transfer, either formatted as
-            {'[encryptiontype]': '[checksum'} or
-            {'err_message': '[error message text'}
-
-        """
-        try:
-            self.to_exchange = msg.headers['exchange']
-            self.to_routing_key = msg.headers['routing_key']
-            self.id = msg.headers['correlation_id']
-        except KeyError as err:
-            raise DPNMessageError("Invalid Request!  Header does not contain %s" % err.message)
-
-        self.sequence = 3
-        self.date = dpn_strftime(datetime.utcnow())
-        self.type_route = 'direct'
-        self.type_msg = 'reply'
-
-        key, value = result.popitem()
-        self.body = {
-            'src_node': self.src_node,
-            'message_type': {self.type_route: self.type_msg},
-            'message': self.directive,
-            'message_att': 'nak',
-            'message_args': [{key: value},],
-            'date': self.date,
-        }
-
-        if key.upper() in CHECKSUM_TYPES:
-            self.body['message_att'] = 'ack'
-
-
-    def response(self, msg, body, confirm):
-        """
-        Responds to a fixity check result initiated by a nodes Transfer
-        Status request.
-
-        :param msg:
-        :param body: Deserialized JSON object
-        :param confirm: Boolean of weather to ack or nak
-        """
-        self.directive = "copy_transfer_verify"
-        try:
-            self.to_exchange = msg.headers['exchange']
-            self.to_routing_key = msg.headers['routing_key']
-            self.id = msg.headers['correlation_id']
-        except KeyError as err:
-            raise DPNMessageError("Invalid Request!  Header does not contain %s" % err.message)
-
-        self.sequence = 4
-        self.date = dpn_strftime(datetime.utcnow())
-        self.type_route = 'direct'
-        self.type_msg = 'reply'
-
-        self.body = {
-            'src_node': self.src_node,
-            'message_type': {self.type_route: self.type_msg},
-            'message': self.directive,
-            'message_att': 'nak',
-            'date': self.date,
-            }
-        if confirm:
-            self.body['message_att'] = 'ack'
-
-class RegistryItemCreation(DPNMessage):
-
-    def __init__(self):
-        super(RegistryItemCreation, self).__init__()
-        self.directive = 'registry_item_create'
-
-    def request(self, msg, body): # NOTE this is always sent to broadcast.
-        try:
-            self.to_exchange = msg.headers['exchange']
-            self.to_routing_key = DPNMQ['BROADCAST']['ROUTINGKEY']
-            self.id = msg.headers['correlation_id']
-        except KeyError as err:
-            raise DPNMessageError("Invalid Request!  Header does not contain %s" % err.message)
-
-        self.sequence = 5
-        self.date = dpn_strftime(datetime.utcnow())
-        self.type_route = 'broadcast'
-        self.type_msg = 'registry_directive'
-
-        dummy_data = {
-            "dpn_uuid": "f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
-            "alt_id": "sdr:1234567890",
-            "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
-            "first_node": "sdr",
-            "replicating_nodes": ["ht", "chron"],
-            "previous_version": "a21d4fae-7dec-11d0-a765-00a0c91e6bcc",
-            "rights_md_ref": "c01d4fae-7dec-11d0-a765-00a0c91e6be3"
-        }
-
-        self.body = {
-            'src_node': self.src_node,
-            'message_type': {self.type_route: self.type_msg},
-            'message': self.directive,
-            'message_args': [dummy_data,],
-            'date': self.date,
-            }
-
-    def response(self, msg, body):
-        try:
-            self.to_exchange = msg.headers['exchange']
-            self.to_routing_key = msg.headers['routing_key']
-            self.id = msg.headers['correlation_id']
-        except KeyError as err:
-            raise DPNMessageError("Invalid Request!  Header does not contain %s" % err.message)
-
-        self.sequence = 6
-        self.date = dpn_strftime(datetime.utcnow())
-        self.type_route = 'direct'
-        self.type_msg = 'reply'
-
-        self.body = {
-            'src_node': self.src_node,
-            'message_type': {self.type_route: self.type_msg},
-            'message': self.directive,
-            'message_att': 'ack',
-            'date': self.date,
-            }
-        # TODO test nak?
+        if message_att not in ['nak', 'ack', 'retry']:
+            raise DPNMessageError("Invalid message_att value: %s" % message_att)
+        self.body["message_att"] = message_att
