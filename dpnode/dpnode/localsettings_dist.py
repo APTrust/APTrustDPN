@@ -1,3 +1,7 @@
+# Set a reasonable Project Path setting so I dont' have to use hard coded paths.
+import os
+PROJECT_PATH = os.path.dirname(os.path.abspath(__file__))
+
 DEBUG = False # Always make False by default.
 TEMPLATE_DEBUG = DEBUG
 
@@ -17,6 +21,10 @@ DATABASES = {
         'PORT': '', # Set to empty string for default. Not used with sqlite3.
     }
 }
+
+# Make this unique, and don't share it with anybody.
+# Useful tool for this at http://www.miniwebtool.com/django-secret-key-generator/
+SECRET_KEY = ''
 
 # Hosts/domain names that are valid for this site; required if DEBUG is False
 # See https://docs.djangoproject.com/en/1.4/ref/settings/#allowed-hosts
@@ -45,7 +53,7 @@ STATIC_ROOT = ''
 
 # URL prefix for static files.
 # Example: "http://media.lawrence.com/static/"
-STATIC_URL = '/static/'
+STATIC_URL = '/assets/'
 
 # Additional locations of static files
 STATICFILES_DIRS = (
@@ -57,20 +65,21 @@ STATICFILES_DIRS = (
 # Celery Information.
 BROKER_URL = "amqp://guest:guest@localhost:5672//"
 
-# DPN AMQP Information
+# DPN AMQP Information - Some defaults in but change as needed
 
 DPNMQ = {
-    "NODE": "node_name",
-    "EXCHANGE": "exchange_name" # Name of exchange to send DPN messages to.
-    "BROKERURL":
-        "amqp://guest:guest@localhost:5672//", # Central broker service.
-    "TTL": 3600,
-    "BROADCAST": {# Details for handling DPN Broadcast messages.
-                  "QUEUE": "broadcast_queue", # Broadcast queue name if you need to explicitly declare.
-                  "ROUTINGKEY": "broadcastRoutingKey", # Broadcast routing key.
-    },
+    "NODE": "" # "aptrust",
+    "BROKERURL": "" # "amqp://guest:guest@localhost:5672//",
+    "TTL": 3600, # Default time to live.
+    "EXCHANGE": "dpn-control-exchange",
+    "BROADCAST": {
+        "QUEUE": "test",
+        "ROUTINGKEY": "broadcast",
+        },
     "LOCAL": {
-        "QUEUE": "local_queue", # Queue to use for direct messaing from DPN nodes.
-        "ROUTINGKEY": "localroutingkey", # Routing key to use for direct messages from DPN members.
-    },
+        "QUEUE": "local",
+        "ROUTINGKEY": "" # "aptrust.dpn",
+        },
+    "DT_FMT": "%Y-%m-%dT%H:%M:%S%z", # Datetime format for strftime functions.
+    "XFER_OPTIONS": ["https", "rsync"],  # Protocols supported for bag transfers.
 }

@@ -119,9 +119,18 @@ class NodeInfo(models.Model):
     """
     Information on specific nodes in the Federation.
     """
-    name = models.CharField(max_length=50)
-    slug = models.SlugField(max_length=5)
+    name = models.CharField(max_length=50, help_text=nnm_help)
+    slug = models.SlugField(max_length=10, help_text=slg_help)
 
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True, help_text=created_help)
     updated_at = models.DateTimeField(auto_now=True, help_text=updated_help)
+
+    def __unicode__(self):
+        return u'%s' % self.name
+
+    def __str__(self):
+        return '%s' % self.__unicode__()
+
+    class Meta:
+        verbose_name_plural = "Node Info"

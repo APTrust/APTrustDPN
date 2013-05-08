@@ -1,3 +1,7 @@
+# Set a reasonable Project Path setting so I dont' have to use hard coded paths.
+import os
+PROJECT_PATH = os.path.dirname(os.path.abspath(__file__))
+
 # Django settings for dpnode project.
 
 DEBUG = True
@@ -82,7 +86,7 @@ STATICFILES_FINDERS = (
 )
 
 # Make this unique, and don't share it with anybody.
-SECRET_KEY = 'n)-dt#3k4gr@cqkjp*(qpsy7!6eb6ng=!rk-00qai+t-y*9khx'
+SECRET_KEY = ''
 
 # List of callables that know how to import templates from various sources.
 TEMPLATE_LOADERS = (
@@ -109,7 +113,8 @@ WSGI_APPLICATION = 'dpnode.wsgi.application'
 TEMPLATE_DIRS = (
 # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
 # Always use forward slashes, even on Windows.
-# Don't forget to use absolute paths, not relative paths.
+# I resolve the path setting at the top of this file.
+    os.path.join(PROJECT_PATH, '../templates'),
 )
 
 INSTALLED_APPS = (
@@ -119,14 +124,15 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'grappelli',
     # Uncomment the next line to enable the admin:
-    # 'django.contrib.admin',
+    'django.contrib.admin',
     # Uncomment the next line to enable admin documentation:
-    # 'django.contrib.admindocs',
+    'django.contrib.admindocs',
     # 'djcelery',
     #'celerytest',
     'dpnmq',
-    'dpn_workflows'
+    'dpn_workflows',
 )
 
 # Support configurable localsettings.

@@ -43,7 +43,8 @@ nosetests.xml
 .idea
 
 # Project Specific Files
-aptrustmq/mqconfig.py
+files/*
+sitemedia/*
 
 # Other Files
 .DS_Store
