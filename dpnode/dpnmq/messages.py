@@ -108,10 +108,10 @@ class DPNMessage(object):
         try:
             for key, value in kwargs.iteritems():
                 self.body[key] = value
-        except AttributeError:
+        except AttributeError as err:
             raise DPNMessageError(
                 "%s.set_body arguments must be a dictionary, recieved %s!"
-                % (self.__class__.__name__, arguments))
+                % (self.__class__.__name__, err.message))
 
     def validate(self):
         self.validate_headers()
@@ -228,3 +228,21 @@ class ReplicationVerificationReply(DPNMessage):
         if message_att not in ['nak', 'ack', 'retry']:
             raise DPNMessageError("Invalid message_att value: %s" % message_att)
         self.body["message_att"] = message_att
+
+class RegistryItemCreate(DPNMessage):
+
+    directive = 'registry-item-create'
+
+    def set_body(self, message_name=None, dpn_object_id=None, local_id=None, first_node_name=None,
+                 replicating_node_names=[], version_number=1, previous_version_object_id='null',
+                 forward_version_object_id='null', first_version_object_id=None, fixity_algorithm=None,
+                 fixity_value=None, lastfixity_date=None, creation_date=None, last_modified_date=None,
+                 bag_size=None, brightening_object_id=[], rights_object_id=[], object_type=None):
+
+        self._set_message_name(message_name)
+
+        for k, v in vars().iteritems():
+            if not v:
+                raise DPNMessageError("Missing Registry Item value for %s" % k)
+            if k != 'self' or k != 'message_name':
+                self.body[k] = v

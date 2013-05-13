@@ -1,4 +1,5 @@
 import json
+from random import choice
 from datetime import datetime
 
 from dpnmq.messages import DPNMessageError, ReplicationInitQuery
@@ -7,6 +8,11 @@ from dpnmq.messages import ReplicationLocationCancel, ReplicationTransferReply
 from dpnmq.messages import ReplicationVerificationReply
 
 from dpnmq.util import dpn_strftime
+
+from dpn_workflows.models import PENDING, STARTED, SUCCESS, FAILED, CANCELLED
+from dpn_workflows.models import HTTPS, RSYNC
+from dpn_workflows.models import AVAILABLE, TRANSFER, VERIFY
+from dpn_workflows.models import ReceiveFileAction
 
 class TaskRouter:
     def __init__(self):
@@ -72,23 +78,37 @@ def replication_init_query_handler(msg, body):
         msg.reject()
         raise DPNMessageError("Recieved bad message body: %s" 
             % err.message)
+
+    rcv, created = ReceiveFileAction.objects.get_or_create(
+        correlation_id=req.headers['correlation_id'],
+        node=req.headers['from'],
+        defaults={
+        'step': AVAILABLE,
+        'state': PENDING,
+        'note': "Received availability query.",
+        #fake picking a protocol right now.
+        'protocol': choice(req.body['protocol']),
+        }
+    )
     
     # Prep Reply
     headers = {
-        'correlation_id': req.headers['correlation_id'],
+        'correlation_id': rcv.correlation_id,
         'sequence': 1,
         'date': dpn_strftime(datetime.now())
     }
     ack = {
         'message_att': 'ack',
-        'protocol': 'https',
+        # fake picking a choice
+        'protocol': rcv.protocol,
     }
     nak = {
         'message_att': 'nak'
     }
     rsp = ReplicationAvailableReply(headers, ack)
     rsp.send(req.headers['reply_key'])
-
+    rcv.state = STARTED
+    rcv.save()
 
 broadcast_router.register("replication-init-query", 
     replication_init_query_handler)

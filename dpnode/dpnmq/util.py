@@ -22,6 +22,9 @@ def dpn_strptime(dt_string):
     """
     Parses a datetime object from a DPN formatted Datetime string as configured
     in localsettings.
+
+    :param dt_string:  String in DPN datetime format to parse as a datetime object.
+    :return:  Datetime object
     """
     return datetime.strptime(dt_string, DPNMQ['DT_FMT'] )
 

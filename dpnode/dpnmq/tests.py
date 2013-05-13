@@ -4,6 +4,7 @@ when you run "manage.py test".
 
 Replace this with more appropriate tests for your application.
 """
+from uuid import uuid4
 from datetime import datetime
 
 from django.test import TestCase
@@ -11,9 +12,12 @@ from django.test import TestCase
 from dpnmq.messages import DPNMessage, DPNMessageError, ReplicationInitQuery
 from dpnmq.messages import ReplicationAvailableReply, ReplicationLocationReply
 from dpnmq.messages import ReplicationLocationCancel, ReplicationTransferReply
-from dpnmq.messages import ReplicationVerificationReply
+from dpnmq.messages import ReplicationVerificationReply, RegistryItemCreate
 from dpnmq.util import is_string, dpn_strftime
-from dpnode.settings import DPNMQ
+from dpnmq.handlers import replication_init_query_handler
+
+from dpn_workflows.models import ReceiveFileAction
+from dpn_workflows.models import PENDING, STARTED, SUCCESS, FAILED, CANCELLED
 
 class TestIsString(TestCase):
 
@@ -261,7 +265,7 @@ class TestReplicationTransferReply(TestCase):
         bad_body2['message_att'] = 'ack'
         self.assertRaises(DPNMessageError, self.msg.set_body, **bad_body2)
 
-class TestReplicationVerificationReplyi(TestCase):
+class TestReplicationVerificationReply(TestCase):
 
     def setUp(self):
         self.msg = ReplicationVerificationReply()
@@ -286,5 +290,74 @@ class TestReplicationVerificationReplyi(TestCase):
             fail_body = good_body.copy()
             fail_body[key] = value
             self.assertRaises(DPNMessageError, self.msg.set_body, **fail_body)
+
+class TestRegistryItemCreate(TestCase):
+
+    def setUp(self):
+        self.msg = RegistryItemCreate()
+        self.msg.set_headers(**good_headers)
+
+    def test_set_body(self):
+        good_body = {
+          "message_name": "registry-item-create",
+          "dpn_object_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+          "local_id": "TDR-282dcbdd-c16b-42f1-8c21-0dd7875fb94e",
+          "first_node_name": "tdr",
+          "replicating_node_names": ["hathi", "chron", "sdr"],
+          "version_number": 1,
+          "previous_version_object_id": "null",
+          "forward_version_object_id": "null",
+          "first_version_object_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+          "fixity_algorithm": "sha256",
+          "fixity_value": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+          "lastfixity_date": "2013-01-18T09:49:28-0800",
+          "creation_date": "2013-01-05T09:49:28-0800",
+          "last_modified_date": "2013-01-05T09:49:28-0800",
+          "bag_size": 65536,
+          "brightening_object_id": ["a02de3cd-a74b-4cc6-adec-16f1dc65f726", "C92de3cd-a789-4cc6-adec-16a40c65f726",],
+          "rights_object_id": ["0df688d4-8dfb-4768-bee9-639558f40488", ],
+          "object_type": "data",
+        }
+        try:
+            self.msg.set_body(**good_body)
+        except DPNMessageError:
+            self.fail("Setting raises error when it should not!")
+
+# HANDLER TESTS
+class MockMessage(object):
+    """
+    Mock class for kombu messages for test.
+    """
+    headers = {}
+    def ack(self):
+        pass
+    def reject(self):
+        pass
+
+class ReplicationInitQueryHandlerTest(TestCase):
+
+    def setUp(self):
+        self.query = MockMessage()
+        self.query.headers = {
+            "from": "sdr",
+            "reply_key": "sdr.replication.inbox",
+            "correlation_id": uuid4(),
+            "sequence": 0,
+            "date": dpn_strftime(datetime.now()),
+            "ttl": 3600,
+        }
+        self.query_body = {
+            "message_name": "replication-init-query",
+            "replication_size": 4096,
+            "protocol": ["https", "rsync"],
+        }
+
+    def test_good_msg(self):
+        """
+        Test a properly formatted message flow with no problems.
+        """
+        replication_init_query_handler(self.query, self.query_body)
+        record = ReceiveFileAction.objects.get(correlation_id=self.query.headers['correlation_id'])
+        self.failUnlessEqual(record.state, STARTED)
 
 

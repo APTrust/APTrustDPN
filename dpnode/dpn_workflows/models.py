@@ -1,30 +1,30 @@
 from django.db import models
-
+PENDING = 'P'
+STARTED = 'T'
+SUCCESS = 'S'
+FAILED = 'F'
+CANCELLED = 'X'
 STATE_CHOICES = (
-    ('P', 'Pending'),
-    ('T', 'Started'),
-    ('S', 'Success'),
-    ('F', 'Failed'),
-    ('C', 'Cancelled'),
+    (PENDING, 'Pending'),
+    (STARTED, 'Started'),
+    (SUCCESS, 'Success'),
+    (FAILED, 'Failed'),
+    (CANCELLED, 'Cancelled'),
 )
+HTTPS = 'H'
+RSYNC = 'R'
 PROTOCOL_CHOICES = (
-    ('H', 'https'),
-    ('R', 'rsync'),
+    (HTTPS, 'https'),
+    (RSYNC, 'rsync'),
 )
-
-SEND_STEP_CHOICES = ( # Noted it actually begins with a broadcast workflow.
-    ('A', 'CONFIRM NODE AVAILABLE'),
-    ('L', 'SEND FILE LOCATION'),
-    ('T', 'RECEIVE TRANSFER VERIFICATION'),
-    ('C', 'CONFIRM VALID TRANSFER'),
-    ('X', 'OPERATION CANCELED')
-)
-RECEIVE_STEP_CHOICES = (
-    ('A', 'CONFIRM AVAILABLE'),
-    ('L', 'RECEIVE FILE LOCATION'),
-    ('T', 'SEND TRANSFER VERIFICATION'),
-    ('C', 'CONFIRM VALID TRANSFER'),
-    ('X', 'OPERATION CANCELED')
+AVAILABLE = 'A'
+TRANSFER = 'T'
+VERIFY = 'V'
+STEP_CHOICES = ( # Noted it actually begins with a broadcast workflow.
+    (AVAILABLE, 'REPLICATION AVAILABLE'), # replication-init-query     -> replication-available-reply
+    (TRANSFER, 'TRANSFER FILE'), # replication-location-reply -> replication-transfer-reply
+    (VERIFY, 'TRANSFER VERIFICATION'),
+    (CANCELLED, 'OPERATION CANCELED')
 )
 
 """
@@ -69,10 +69,10 @@ class BaseCopyAction(models.Model):
     Base class for all the common features of a file transfer action between DPN nodes.
     """
 
-    node = models.ForeignKey('NodeInfo', help_text=node_help)
+    node = models.CharField(max_length=25, help_text=node_help)
     protocol = models.CharField(max_length=1, choices=PROTOCOL_CHOICES, help_text=ptcl_help)
-    location = models.TextField(help_text=lctn_help)
-    fixity_value = models.CharField(max_length=64, help_text=fxty_help)
+    location = models.TextField(help_text=lctn_help, null=True, blank=True)
+    fixity_value = models.CharField(max_length=64, help_text=fxty_help, null=True, blank=True)
 
 
     # Timestamps
@@ -90,7 +90,7 @@ class SendFileAction(BaseCopyAction):
     ingest = models.ForeignKey('IngestAction')
 
     # Workflow Tracking
-    step = models.CharField(max_length=1, choices=SEND_STEP_CHOICES, help_text=step_help)
+    step = models.CharField(max_length=1, choices=STEP_CHOICES, help_text=step_help)
     state = models.CharField(max_length=10, choices=STATE_CHOICES, help_text=step_help)
     note = models.TextField(blank=True, null=True, help_text=stat_help)
 
@@ -104,7 +104,7 @@ class ReceiveFileAction(BaseCopyAction):
     correlation_id = models.CharField(max_length=100)
 
     # Workflow Tracking
-    step = models.CharField(max_length=1, choices=RECEIVE_STEP_CHOICES, help_text=step_help)
+    step = models.CharField(max_length=1, choices=STEP_CHOICES, help_text=step_help)
     state = models.CharField(max_length=10, choices=STATE_CHOICES, help_text=stat_help)
     note = models.TextField(blank=True, null=True, help_text=node_help)
 
