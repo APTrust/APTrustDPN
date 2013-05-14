@@ -133,6 +133,7 @@ INSTALLED_APPS = (
     #'celerytest',
     'dpnmq',
     'dpn_workflows',
+    'dpn_registry',
 )
 
 # Support configurable localsettings.

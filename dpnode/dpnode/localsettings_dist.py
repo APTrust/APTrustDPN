@@ -68,8 +68,8 @@ BROKER_URL = "amqp://guest:guest@localhost:5672//"
 # DPN AMQP Information - Some defaults in but change as needed
 
 DPNMQ = {
-    "NODE": "" # "aptrust",
-    "BROKERURL": "" # "amqp://guest:guest@localhost:5672//",
+    "NODE": "", # "aptrust",
+    "BROKERURL": "", # "amqp://guest:guest@localhost:5672//",
     "TTL": 3600, # Default time to live.
     "EXCHANGE": "dpn-control-exchange",
     "BROADCAST": {
