@@ -58,8 +58,8 @@ class DPNConsumer(ConsumerMixin):
         router.dispatch(message_name, msg, decoded_body)
 
     def route_local(self, body, msg):
-        if self._ignore(msg):
-            msg.reject()
+        if self._skip(msg):
+            msg.ack()
             return None
         try:
             self._route_message(local_router, msg)
@@ -68,8 +68,8 @@ class DPNConsumer(ConsumerMixin):
             logger.info(err.message)
 
     def route_broadcast(self, body, msg):
-        if self._ignore(msg):
-            msg.reject()
+        if self._skip(msg):
+            msg.ack()
             return None
         try:
             self._route_message(broadcast_router, msg)
@@ -90,7 +90,7 @@ class DPNConsumer(ConsumerMixin):
             return "Could Not Find Header Fields in %s" % msg.headers
         return "RECIEVED %s" % (", ".join(parts),)
 
-    def _ignore(self, msg):
+    def _skip(self, msg):
         """
         Tests if the message should be ignored based on self.reply_own setting and weather it's from your own
         node.
@@ -98,9 +98,6 @@ class DPNConsumer(ConsumerMixin):
         :param msg: kombu.transport.base.Message instance.
         :return: Boolean
         """
-        # If not ignoring don't bother testing message, just return false.
-        if not self.ignore_own:
-            return False
         if self.ignore_own and msg.headers.get('from', None) == DPNMQ['NODE']:
             return True
         return False

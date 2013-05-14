@@ -246,3 +246,16 @@ class RegistryItemCreate(DPNMessage):
                 raise DPNMessageError("Missing Registry Item value for %s" % k)
             if k != 'self' or k != 'message_name':
                 self.body[k] = v
+
+class RegistryEntryCreated(DPNMessage):
+
+    directive = 'registry-entry-created'
+
+    def set_body(self, message_att='nak', message_error="No reason given."):
+        if message_att == 'ack':
+            self.body['message_att'] = message_att
+        elif message_att == 'nak':
+            self.body['message_att'] = message_att
+            self.body['message_error'] = message_error
+        else:
+            raise DPNMessageError("Attribute must be ack or nak!")

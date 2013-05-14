@@ -5,7 +5,8 @@ from datetime import datetime
 from dpnmq.messages import DPNMessageError, ReplicationInitQuery
 from dpnmq.messages import ReplicationAvailableReply, ReplicationLocationReply
 from dpnmq.messages import ReplicationLocationCancel, ReplicationTransferReply
-from dpnmq.messages import ReplicationVerificationReply
+from dpnmq.messages import ReplicationVerificationReply, RegistryItemCreate
+from dpnmq.messages import RegistryEntryCreated
 
 from dpnmq.util import dpn_strftime
 
@@ -70,45 +71,32 @@ def replication_init_query_handler(msg, body):
     :param msg: kombu.transport.base.Message instance
     :param body: Decoded JSON of the message payload.
     """
+
     try:
         req = ReplicationInitQuery(msg.headers, body)
         req.validate()
         msg.ack()
     except TypeError as err:
         msg.reject()
-        raise DPNMessageError("Recieved bad message body: %s" 
+        raise DPNMessageError("Recieved bad message body: %s"
             % err.message)
-
-    rcv, created = ReceiveFileAction.objects.get_or_create(
-        correlation_id=req.headers['correlation_id'],
-        node=req.headers['from'],
-        defaults={
-        'step': AVAILABLE,
-        'state': PENDING,
-        'note': "Received availability query.",
-        #fake picking a protocol right now.
-        'protocol': choice(req.body['protocol']),
-        }
-    )
     
     # Prep Reply
     headers = {
-        'correlation_id': rcv.correlation_id,
+        'correlation_id': req.headers['correlation_id'],
         'sequence': 1,
         'date': dpn_strftime(datetime.now())
     }
     ack = {
         'message_att': 'ack',
         # fake picking a choice
-        'protocol': rcv.protocol,
+        'protocol': 'https',
     }
     nak = {
         'message_att': 'nak'
     }
     rsp = ReplicationAvailableReply(headers, ack)
     rsp.send(req.headers['reply_key'])
-    rcv.state = STARTED
-    rcv.save()
 
 broadcast_router.register("replication-init-query", 
     replication_init_query_handler)
@@ -117,6 +105,9 @@ def replication_available_reply_handler(msg, body):
     """
     Accepts a Replication Available Reply and produces a Replication
     Location Reply
+
+    :param msg: kombu.transport.base.Message instance
+    :param body: Decoded JSON of the message payload.
     """
     try:
         req = ReplicationAvailableReply(msg.headers, body)
@@ -150,6 +141,9 @@ local_router.register('replication-available-reply',
 def replication_location_cancel_handler(msg, body):
     """
     Accepts a Replication Location Cancel and cancels a file transfer.
+
+    :param msg: kombu.transport.base.Message instance
+    :param body: Decoded JSON of the message payload.
     """
     try:
         req = ReplicationLocationCancel(msg.headers, body)
@@ -166,6 +160,9 @@ def replication_location_reply_handler(msg, body):
     """
     Accepts a Replication Location Reply and produces a Replication
     Transfer Reply
+
+    :param msg: kombu.transport.base.Message instance
+    :param body: Decoded JSON of the message payload.
     """
     try:
         req = ReplicationLocationReply(msg.headers, body)
@@ -199,6 +196,9 @@ def replication_transfer_reply_handler(msg, body):
     """
     Accepts a Replication Transfer Reply and produces a Replication
     Verification Reply
+
+    :param msg: kombu.transport.base.Message instance
+    :param body: Decoded JSON of the message payload.
     """
     try:
         req = ReplicationTransferReply(msg.headers, body)
@@ -232,6 +232,9 @@ def replication_verify_reply_handler(msg, body):
     """
     Accepts a Replication Verification Reply does nothing until
     we implement business logic.
+
+    :param msg: kombu.transport.base.Message instance
+    :param body: Decoded JSON of the message payload.
     """
     try:
         req = ReplicationVerificationReply(msg.headers, body)
@@ -245,4 +248,59 @@ def replication_verify_reply_handler(msg, body):
 local_router.register('replication-verify-reply', 
     replication_verify_reply_handler)
 
-#local_router.register("6", registry_update_result_handler)
+
+# Registry Message Handlers
+def registry_item_create_handler(msg, body):
+    """
+    Accepts a Registry Entry Creation directive and produces a Registry Entry
+    Creation reply.
+
+    :param msg: kombu.transport.base.Message instance
+    :param body: Decoded JSON of the message payload.
+    """
+    try:
+        req = RegistryItemCreate(msg.headers, body)
+        req.validate()
+        msg.ack()
+    except TypeError as err:
+        msg.reject()
+        raise DPNMessageError("Recieved bad message body: %s"
+            % err.message)
+
+    # Fake the reply
+    headers = {
+        'correlation_id': req.headers['correlation_id'],
+        'sequence': 1,
+        'date': dpn_strftime(datetime.now())
+    }
+    ack = {
+        'message_att': 'ack',
+    }
+    nak = {
+        'message_att': 'nak',
+        'message_error': "Ahm in yer DPN, nak'in yer messages.",
+    }
+    rsp = RegistryEntryCreated(headers, ack)
+    rsp.send(req.headers['reply_key'])
+broadcast_router.register("registry-item-create",
+    registry_item_create_handler)
+
+def registry_entry_created_handler(msg, body):
+    """
+    Accepts a Registry Entry Creation reply and does nothing until more
+    workflows are identified.
+
+    :param msg: kombu.transport.base.Message instance
+    :param body: Decoded JSON of the message payload.
+    """
+    try:
+        req = RegistryEntryCreated(msg.headers, body)
+        req.validate()
+        msg.ack()
+    except TypeError as err:
+        msg.reject()
+        raise DPNMessageError("Recieved bad message body: %s"
+            % err.message)
+    # TODO Figure out where this goes from here?
+local_router.register('registry-entry-created',
+    registry_entry_created_handler)

@@ -12,9 +12,9 @@ class Command(BaseCommand):
     help = 'Starts listening for DPN broadcast and local messages as configured in localsettings'
     option_list = BaseCommand.option_list + (
         make_option('--replyall',
-                    action='store_true',
+                    action='store_false',
                     dest='reply_all',
-                    default=False,
+                    default=True,
                     help='Reply to your own messages.', ),
     )
 
@@ -28,7 +28,7 @@ class Command(BaseCommand):
         local_queue = local.get('QUEUE', "")
         with Connection(DPNMQ.get('BROKERURL', "")) as conn:
             cnsmr = DPNConsumer(conn, bcast_xchng, bcast_queue, bcast_rtkey, local_queue,
-                                local_rtkey, options["reply_all"])
+                                local_rtkey, ignore_own=options["reply_all"])
             print("Consuming broadcast(%s) and local(%s) messages from %s.  Press CTRL+C to exit."
                   % (bcast_rtkey, local_rtkey, bcast_xchng))
             try:
