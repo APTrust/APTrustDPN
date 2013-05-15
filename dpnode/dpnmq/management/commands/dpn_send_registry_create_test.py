@@ -16,7 +16,7 @@ class Command(BaseCommand):
         headers = {
         	'correlation_id': uuid(),
         	'sequence': 0,
-        	'date': dpn_strftime(datetime.now())
+        	'date': dpn_strftime(datetime.now()),
         }
         body = {
             "message_name": "registry-item-create",

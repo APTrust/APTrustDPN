@@ -298,7 +298,7 @@ def registry_entry_created_handler(msg, body):
         req.validate()
         msg.ack()
     except TypeError as err:
-        msg.reject()
+        msg.ack()
         raise DPNMessageError("Recieved bad message body: %s"
             % err.message)
     # TODO Figure out where this goes from here?

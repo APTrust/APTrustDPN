@@ -1,6 +1,8 @@
 from datetime import datetime
 import logging
 
+from django.forms import Form
+
 from kombu import Connection
 
 from dpnode.settings import DPNMQ
@@ -241,17 +243,19 @@ class RegistryItemCreate(DPNMessage):
 
         self._set_message_name(message_name)
 
-        for k, v in vars().iteritems():
-            if not v:
-                raise DPNMessageError("Missing Registry Item value for %s" % k)
-            if k != 'self' or k != 'message_name':
-                self.body[k] = v
+        attrs = vars()
+        del attrs['self']
+        del attrs['message_name']
+        for k, v in attrs.iteritems():
+            self.body[k] = v
 
 class RegistryEntryCreated(DPNMessage):
 
     directive = 'registry-entry-created'
 
-    def set_body(self, message_att='nak', message_error="No reason given."):
+    def set_body(self, message_name=None, message_att='nak',
+                 message_error="No reason given."):
+        self._set_message_name(message_name)
         if message_att == 'ack':
             self.body['message_att'] = message_att
         elif message_att == 'nak':
