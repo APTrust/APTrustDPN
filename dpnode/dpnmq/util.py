@@ -4,7 +4,7 @@ from datetime import datetime
 
 from pytz import timezone
 
-from dpnode.settings import TIME_ZONE, DPNMQ
+from dpnode.settings import TIME_ZONE, DPN_DATE_FORMAT
 
 def dpn_strftime(dt):
     """
@@ -16,7 +16,7 @@ def dpn_strftime(dt):
     """
 
     loc_dt = timezone(TIME_ZONE).localize(dt)
-    return loc_dt.strftime(DPNMQ['DT_FMT'])
+    return loc_dt.strftime(DPN_DATE_FORMAT)
 
 def dpn_strptime(dt_string):
     """
@@ -26,7 +26,7 @@ def dpn_strptime(dt_string):
     :param dt_string:  String in DPN datetime format to parse as a datetime object.
     :return:  Datetime object
     """
-    return datetime.strptime(dt_string, DPNMQ['DT_FMT'] )
+    return datetime.strptime(dt_string, DPN_DATE_FORMAT )
 
 def is_string(obj):
     """

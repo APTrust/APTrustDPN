@@ -2,6 +2,10 @@ import json
 from random import choice
 from datetime import datetime
 
+from django.core.exceptions import ValidationError
+
+from dpnode.settings import DPN_XFER_OPTIONS
+
 from dpnmq.messages import DPNMessageError, ReplicationInitQuery
 from dpnmq.messages import ReplicationAvailableReply, ReplicationLocationReply
 from dpnmq.messages import ReplicationLocationCancel, ReplicationTransferReply
@@ -10,10 +14,7 @@ from dpnmq.messages import RegistryEntryCreated
 
 from dpnmq.util import dpn_strftime
 
-from dpn_workflows.models import PENDING, STARTED, SUCCESS, FAILED, CANCELLED
-from dpn_workflows.models import HTTPS, RSYNC
-from dpn_workflows.models import AVAILABLE, TRANSFER, VERIFY
-from dpn_workflows.models import ReceiveFileAction
+from dpn_workflows.handlers import replication_init_query_workflow
 
 class TaskRouter:
     def __init__(self):
@@ -72,6 +73,7 @@ def replication_init_query_handler(msg, body):
     :param body: Decoded JSON of the message payload.
     """
 
+
     try:
         req = ReplicationInitQuery(msg.headers, body)
         req.validate()
@@ -80,22 +82,32 @@ def replication_init_query_handler(msg, body):
         msg.reject()
         raise DPNMessageError("Recieved bad message body: %s"
             % err.message)
-    
+
     # Prep Reply
     headers = {
         'correlation_id': req.headers['correlation_id'],
         'sequence': 1,
         'date': dpn_strftime(datetime.now())
     }
-    ack = {
-        'message_att': 'ack',
-        # fake picking a choice
-        'protocol': 'https',
-    }
-    nak = {
+    body = {
         'message_att': 'nak'
     }
-    rsp = ReplicationAvailableReply(headers, ack)
+
+    common_protocols = [val for val in req.body['protocol'] if val in DPN_XFER_OPTIONS]
+    if common_protocols:
+        try:
+            replication_init_query_workflow(
+                node=req.headers["from"],
+                protocol=common_protocols[0],
+                id=req.headers["correlation_id"])
+            body = {
+                'message_att': 'ack',
+                'protocol': common_protocols[0] # Take the first one for now.
+            }
+        except ValidationError:
+            pass # Record not created nak sent
+
+    rsp = ReplicationAvailableReply(headers, body)
     rsp.send(req.headers['reply_key'])
 
 broadcast_router.register("replication-init-query", 

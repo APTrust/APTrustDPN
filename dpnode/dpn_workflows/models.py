@@ -21,7 +21,7 @@ AVAILABLE = 'A'
 TRANSFER = 'T'
 VERIFY = 'V'
 STEP_CHOICES = ( # Noted it actually begins with a broadcast workflow.
-    (AVAILABLE, 'REPLICATION AVAILABLE'), # replication-init-query     -> replication-available-reply
+    (AVAILABLE, 'REPLICATION INIT'), # replication-init-query     -> replication-available-reply
     (TRANSFER, 'TRANSFER FILE'), # replication-location-reply -> replication-transfer-reply
     (VERIFY, 'TRANSFER VERIFICATION'),
     (CANCELLED, 'OPERATION CANCELED')
