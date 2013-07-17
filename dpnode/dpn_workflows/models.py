@@ -34,10 +34,11 @@ Some General Notes on workflows for messaging
 
 Happy Flow
 
-SEND                       -> RECIEVE
-replication-init-query     -> replication-available-reply
-replication-location-reply -> replication-transfer-reply
-replication-verify-reply   ->
+SEND                       -> RECIEVE                       -> STEP
+replication-init-query     -> replication-available-reply   -> AVAILABLE
+replication-location-reply -> replication-transfer-reply    -> TRANSFER
+replication-verify-reply   ->                               -> VERIFICATION
+                                                            -> COMPLETE
 """
 
 
@@ -58,13 +59,15 @@ obid_help = "UUID of the DPN object."
 
 class IngestAction(models.Model):
     """
-    Represents the ingest of an object into the DPN Federation by replicating it to
-    the minimum required set of nodes and updating the registries across the
+    Represents the ingest of an object into the DPN Federation by replicating it
+    to the minimum required set of nodes and updating the registries across the
     Federation.
     """
-    correlation_id = models.CharField(max_length=100)
+    correlation_id = models.CharField(max_length=100, primary_key=True,
+                                      help_text=cid_help)
     object_id = models.CharField(max_length=100, help_text=obid_help)
-    state = models.CharField(max_length=1, choices=STATE_CHOICES, help_text=stat_help)
+    state = models.CharField(max_length=1, choices=STATE_CHOICES,
+                             help_text=stat_help)
 
 class BaseCopyAction(models.Model):
     """
@@ -101,7 +104,8 @@ class SendFileAction(BaseCopyAction):
 
 class ReceiveFileAction(BaseCopyAction):
     """
-    Tracks the sequential workflow related to recieving a file from another DPN node.
+    Tracks the sequential workflow related to recieving a file from another DPN
+    node.
     """
     correlation_id = models.CharField(max_length=100)
 

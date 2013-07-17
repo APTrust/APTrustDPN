@@ -12,7 +12,8 @@ from dpnmq.messages import RegistryEntryCreated
 
 from dpnmq.util import dpn_strftime
 
-from dpn_workflows.handlers import replication_init_query_workflow
+from dpn_workflows.handlers import recieve_available_workflow
+from dpn_workflows.handlers import DPNWorkflowError
 
 class TaskRouter:
     def __init__(self):
@@ -94,7 +95,7 @@ def replication_init_query_handler(msg, body):
     common_protocols = [val for val in req.body['protocol'] if val in DPN_XFER_OPTIONS]
     if common_protocols:
         try:
-            action = replication_init_query_workflow(
+            action = recieve_available_workflow(
                 node=req.headers["from"],
                 protocol=common_protocols[0],
                 id=req.headers["correlation_id"])
@@ -105,6 +106,9 @@ def replication_init_query_handler(msg, body):
         except ValidationError:
             # TODO log this error.
             pass # Record not created nak sent
+        except DPNWorkflowError:
+            # TODO log this error
+            pass # Record not created, nak sent
 
     rsp = ReplicationAvailableReply(headers, body)
     rsp.send(req.headers['reply_key'])
