@@ -1,5 +1,3 @@
-import json
-from random import choice
 from datetime import datetime
 
 from django.core.exceptions import ValidationError
@@ -96,7 +94,7 @@ def replication_init_query_handler(msg, body):
     common_protocols = [val for val in req.body['protocol'] if val in DPN_XFER_OPTIONS]
     if common_protocols:
         try:
-            replication_init_query_workflow(
+            action = replication_init_query_workflow(
                 node=req.headers["from"],
                 protocol=common_protocols[0],
                 id=req.headers["correlation_id"])
@@ -105,6 +103,7 @@ def replication_init_query_handler(msg, body):
                 'protocol': common_protocols[0] # Take the first one for now.
             }
         except ValidationError:
+            # TODO log this error.
             pass # Record not created nak sent
 
     rsp = ReplicationAvailableReply(headers, body)

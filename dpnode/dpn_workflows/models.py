@@ -4,6 +4,7 @@ STARTED = 'T'
 SUCCESS = 'S'
 FAILED = 'F'
 CANCELLED = 'X'
+COMPLETE = 'C'
 STATE_CHOICES = (
     (PENDING, 'Pending'),
     (STARTED, 'Started'),
@@ -24,7 +25,8 @@ STEP_CHOICES = ( # Noted it actually begins with a broadcast workflow.
     (AVAILABLE, 'REPLICATION INIT'), # replication-init-query     -> replication-available-reply
     (TRANSFER, 'TRANSFER FILE'), # replication-location-reply -> replication-transfer-reply
     (VERIFY, 'TRANSFER VERIFICATION'),
-    (CANCELLED, 'OPERATION CANCELED')
+    (CANCELLED, 'OPERATION CANCELED'),
+    (COMPLETE, 'TRANSACTION COMPLETE'),
 )
 
 """
