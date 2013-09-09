@@ -11,7 +11,7 @@ from dpn_workflows.models import ReceiveFileAction, SendFileAction, IngestAction
 class DPNWorkflowError(Exception):
     pass
 
-def recieve_available_workflow(node=None, protocol=None, id=None):
+def receive_available_workflow(node=None, protocol=None, id=None):
     """
     Initiates or restarts a RecieveFileAction.
 
@@ -28,7 +28,7 @@ def recieve_available_workflow(node=None, protocol=None, id=None):
         correlation_id=id
     )
 
-    # if the xaction was cancelled, you had your chance buddy!
+    # if the action was cancelled, you had your chance buddy!
     if action.state == CANCELLED:
         raise DPNWorkflowError("Trying to restart cancelled transaction.")
 
@@ -40,7 +40,6 @@ def recieve_available_workflow(node=None, protocol=None, id=None):
     action.step = AVAILABLE
     action.state = SUCCESS
 
-    action.full_clean()
     action.save()
 
     return action

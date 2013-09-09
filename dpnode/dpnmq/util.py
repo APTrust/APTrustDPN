@@ -1,10 +1,10 @@
 # Various utilities and helpers specific for DPN MQ
 # functions.
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from pytz import timezone
 
-from dpnode.settings import TIME_ZONE, DPN_DATE_FORMAT
+from dpnode.settings import TIME_ZONE, DPN_DATE_FORMAT, DPN_TTL
 
 def dpn_strftime(dt):
     """
@@ -39,3 +39,12 @@ def is_string(obj):
         return isinstance(obj, basestring) and obj != ""
     except TypeError:
         return False
+
+def ttl_datetime(date, ttl=DPN_TTL):
+    """
+    Returns a datetime from a specific date advanced by TTL.
+    :param date: datetime to calculate ttl from.
+    :param ttl: time in seconds to add to the date param.
+    :return: Datetime object.
+    """
+    return date + timedetla(0, ttl)

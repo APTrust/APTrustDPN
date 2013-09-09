@@ -1,0 +1,7 @@
+# Requirements file for python3
+kombu==2.5.9
+librabbitmq==1.0.1
+django==1.5
+django-celery==3.0.11
+sphinx
+django-grappelli==2.4.4

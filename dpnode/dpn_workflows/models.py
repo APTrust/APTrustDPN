@@ -22,8 +22,10 @@ AVAILABLE = 'A'
 TRANSFER = 'T'
 VERIFY = 'V'
 STEP_CHOICES = ( # Noted it actually begins with a broadcast workflow.
-    (AVAILABLE, 'REPLICATION INIT'), # replication-init-query     -> replication-available-reply
-    (TRANSFER, 'TRANSFER FILE'), # replication-location-reply -> replication-transfer-reply
+    # replication-init-query -> replication-available-reply
+    (AVAILABLE, 'REPLICATION INIT'),
+    # replication-location-reply -> replication-transfer-reply
+    (TRANSFER, 'TRANSFER FILE'),
     (VERIFY, 'TRANSFER VERIFICATION'),
     (CANCELLED, 'OPERATION CANCELED'),
     (COMPLETE, 'TRANSACTION COMPLETE'),
@@ -68,6 +70,7 @@ class IngestAction(models.Model):
     object_id = models.CharField(max_length=100, help_text=obid_help)
     state = models.CharField(max_length=1, choices=STATE_CHOICES,
                              help_text=stat_help)
+    note = models.TextField(blank=True, null=True, help_text=note_help)
 
 class BaseCopyAction(models.Model):
     """
@@ -96,8 +99,8 @@ class SendFileAction(BaseCopyAction):
 
     # Workflow Tracking
     step = models.CharField(max_length=1, choices=STEP_CHOICES, help_text=step_help)
-    state = models.CharField(max_length=10, choices=STATE_CHOICES, help_text=step_help)
-    note = models.TextField(blank=True, null=True, help_text=stat_help)
+    state = models.CharField(max_length=10, choices=STATE_CHOICES, help_text=stat_help)
+    note = models.TextField(blank=True, null=True, help_text=note_help)
 
     class Meta:
         unique_together = (('ingest', 'node'),)
@@ -112,7 +115,7 @@ class ReceiveFileAction(BaseCopyAction):
     # Workflow Tracking
     step = models.CharField(max_length=1, choices=STEP_CHOICES, help_text=step_help)
     state = models.CharField(max_length=10, choices=STATE_CHOICES, help_text=stat_help)
-    note = models.TextField(blank=True, null=True, help_text=node_help)
+    note = models.TextField(blank=True, null=True, help_text=note_help)
 
     class Meta:
         unique_together = (('correlation_id', 'node'),)

@@ -62,6 +62,7 @@ class DPNMessage(object):
                 raise DPNMessageError(
                             "Header value of %s for '%s' is not an int!" % 
                             (self.headers[key], key))
+        for key in ['date', 'ttl']
 
     def send(self, rt_key):
         """

@@ -62,24 +62,32 @@ STATICFILES_DIRS = (
 # Don't forget to use absolute paths, not relative paths.
 )
 
-# Celery Information.
-BROKER_URL = "amqp://guest:guest@localhost:5672//"
 
-# DPN AMQP Information - Some defaults in but change as needed
+# DPN MQ SETTINGS
+DPN_NODE_NAME = "aptrust" # brief name of node as configured in Federation.
+DPN_BROKER_URL = 'amqp://guest:guest@localhost:5672/' #amqp://guest:guest@aptrust.duracloud.org:5672//" # amqp://guest:guest@www.mymq.org:5672//
+DPN_TTL = 3600 # time in seconds for default TTL in messages
+DPN_EXCHANGE = "dpn-control-exchange" # Name of DPN exchange
+DPN_BROADCAST_QUEUE = "test" # Name of queue configured for DPN Federation Plugin
+DPN_BROADCAST_KEY = "broadcast" # Routing key for broadcast messages
+DPN_LOCAL_QUEUE = "local" # Name of local queue to bind local routing key.
+DPN_LOCAL_KEY = "aptrust.dpn" # Name to use for routing direct reply messages.
+DPN_XFER_OPTIONS = ['https', 'rsync'] # List of lowercase protocols available for transfer.
 
-DPNMQ = {
-    "NODE": "", # "aptrust",
-    "BROKERURL": "", # "amqp://guest:guest@localhost:5672//",
-    "TTL": 3600, # Default time to live.
-    "EXCHANGE": "dpn-control-exchange",
-    "BROADCAST": {
-        "QUEUE": "test",
-        "ROUTINGKEY": "broadcast",
-        },
-    "LOCAL": {
-        "QUEUE": "local",
-        "ROUTINGKEY": "" # "aptrust.dpn",
-        },
-    "DT_FMT": "%Y-%m-%dT%H:%M:%S%z", # Datetime format for strftime functions.
-    "XFER_OPTIONS": ["https", "rsync"],  # Protocols supported for bag transfers.
-}
+# DPN COMMON SETTINGS
+DPN_DATE_FORMAT = "%Y-%m-%dT%H:%M:%S%z" # Date format for strftime functions.
+DPN_NODE_LIST = [
+    'aptrust',
+    'utexas',
+    'hathi',
+    'sdr',
+    'chron',
+]
+# List of allowable fixity algorithms used in DPN.
+DPN_FIXITY_CHOICES = ['sha256',]
+
+# Max Size of allowable bags
+DPN_MAX_SIZE = 1099511627776 # 1 TB
+
+# GRAPELLI SETTINGS
+GRAPPELLI_ADMIN_TITLE = 'APTrust Admin'
