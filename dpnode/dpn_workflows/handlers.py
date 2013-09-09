@@ -40,6 +40,7 @@ def receive_available_workflow(node=None, protocol=None, id=None):
     action.step = AVAILABLE
     action.state = SUCCESS
 
+    action.clean_fields()
     action.save()
 
     return action
@@ -58,8 +59,8 @@ def send_available_workflow(node=None, id=None, protocol=None,
     """
     try:
         iAction = IngestAction.objects.get(correlation_id=id)
-    except IngestAction.DoesNotExist as e:
-        raise DPNWorkflowError(e.message)
+    except IngestAction.DoesNotExist as err:
+        raise DPNWorkflowError(err)
 
     action, created = SendFileAction.objects.get_or_create(
         node=node,
@@ -88,6 +89,6 @@ def receive_transfer_workflow(node=None, id=None, protocol=None, loc=None):
 
     try:
         action = ReceiveFileAction.object.get(node=node, correlation_id=id)
-    except ReceiveFileAction.DoesNotExist as e:
-        raise DPNWorkflowError(e.message)
+    except ReceiveFileAction.DoesNotExist as err:
+        raise DPNWorkflowError(err)
     #Confirm last step was success.

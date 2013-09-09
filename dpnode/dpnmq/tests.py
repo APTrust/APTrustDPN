@@ -238,7 +238,7 @@ class TestReplicationTransferReply(TestCase):
         try:
             self.msg.set_body(**good_body1)
         except DPNMessageError as err:
-            self.fail(err.message)
+            self.fail(err)
 
         good_body2 = {
             'message_name': 'replication-transfer-reply',
@@ -248,7 +248,7 @@ class TestReplicationTransferReply(TestCase):
         try:
             self.msg.set_body(**good_body2)
         except DPNMessageError as err:
-            self.fail(err.message)
+            self.fail(err)
 
         bad_body1 = {
             'message_name': "fail",
@@ -280,7 +280,7 @@ class TestReplicationVerificationReply(TestCase):
                 good_body["message_att"] = value
                 self.msg.set_body(**good_body)
             except DPNMessageError as err:
-                self.fail(err.message)
+                self.fail(err)
 
         bad_body = {
             'message_name': 'fail', 

@@ -82,7 +82,7 @@ def replication_init_query_handler(msg, body):
     except TypeError as err:
         msg.reject()
         raise DPNMessageError("Recieved bad message body: %s"
-            % err.message)
+            % err)
 
     # Prep Reply
     headers = {
@@ -108,11 +108,11 @@ def replication_init_query_handler(msg, body):
             }
         except ValidationError as err:
             # TODO log this error.
-            print(err.message)
+            print(err)
             pass # Record not created nak sent
         except DPNWorkflowError as err:
             # TODO log this error
-            print(err.message)
+            print(err)
             pass # Record not created, nak sent
 
     rsp = ReplicationAvailableReply(headers, body)
@@ -136,7 +136,7 @@ def replication_available_reply_handler(msg, body):
     except TypeError as err:
         msg.reject()
         raise DPNMessageError("Received bad message body: %s"
-            % err.message)
+            % err)
 
     send_available_workflow(
         node=req.headers['from'],
@@ -178,7 +178,7 @@ def replication_location_cancel_handler(msg, body):
     except TypeError as err:
         msg.reject()
         raise DPNMessageError("Recieved bad message body: %s" 
-            % err.message)
+            % err)
 local_router.register('replication-location-cancel', 
     replication_location_cancel_handler)
 
@@ -197,7 +197,7 @@ def replication_location_reply_handler(msg, body):
     except TypeError as err:
         msg.reject()
         raise DPNMessageError("Recieved bad message body: %s" 
-            % err.message)
+            % err)
 
     headers = {
         'correlation_id': req.headers['correlation_id'],
@@ -233,7 +233,7 @@ def replication_transfer_reply_handler(msg, body):
     except TypeError as err:
         msg.reject()
         raise DPNMessageError("Recieved bad message body: %s" 
-            % err.message)
+            % err)
 
     headers = {
         'correlation_id': req.headers['correlation_id'],
@@ -269,7 +269,7 @@ def replication_verify_reply_handler(msg, body):
     except TypeError as err:
         msg.reject()
         raise DPNMessageError("Recieved bad message body: %s" 
-            % err.message)
+            % err)
     # End?  Do what?
 local_router.register('replication-verify-reply', 
     replication_verify_reply_handler)
@@ -291,7 +291,7 @@ def registry_item_create_handler(msg, body):
     except TypeError as err:
         msg.reject()
         raise DPNMessageError("Recieved bad message body: %s"
-            % err.message)
+            % err)
 
     # Fake the reply
     headers = {
@@ -326,7 +326,7 @@ def registry_entry_created_handler(msg, body):
     except TypeError as err:
         msg.ack()
         raise DPNMessageError("Recieved bad message body: %s"
-            % err.message)
+            % err)
     # TODO Figure out where this goes from here?
 local_router.register('registry-entry-created',
     registry_entry_created_handler)

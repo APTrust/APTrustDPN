@@ -125,7 +125,7 @@ class DPNMessage(object):
         except AttributeError as err:
             raise DPNMessageError(
                 "%s.set_body arguments must be a dictionary, recieved %s!"
-                % (self.__class__.__name__, err.message))
+                % (self.__class__.__name__, err))
 
     def validate(self):
         self.validate_headers()
