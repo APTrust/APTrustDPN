@@ -136,7 +136,7 @@ class NodeInfo(models.Model):
     updated_at = models.DateTimeField(auto_now=True, help_text=updated_help)
 
     def __unicode__(self):
-        return u'%s' % self.name
+        return '%s' % self.name
 
     def __str__(self):
         return '%s' % self.__unicode__()

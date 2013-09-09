@@ -144,8 +144,8 @@ try:
 except ImportError:
     import sys
 
-    print >> sys.stderr, '''Missing localsettings!  Please configure a version of
-    localsettings.py for this app.  See localsettings_dist.py for details'''
+    print('''Missing localsettings!  Please configure a version of
+    localsettings.py for this app.  See localsettings_dist.py for details''')
     del sys
 
 # A sample logging configuration. The only tangible logging

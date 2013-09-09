@@ -15,8 +15,7 @@ def dpn_strftime(dt):
     :return:  String of datetime with local timezone.
     """
 
-    loc_dt = timezone(TIME_ZONE).localize(dt)
-    return loc_dt.strftime(DPN_DATE_FORMAT)
+    return dt.strftime(DPN_DATE_FORMAT)
 
 def dpn_strptime(dt_string):
     """
@@ -26,7 +25,7 @@ def dpn_strptime(dt_string):
     :param dt_string:  String in DPN datetime format to parse as a datetime object.
     :return:  Datetime object
     """
-    return datetime.strptime(dt_string, DPN_DATE_FORMAT )
+    return datetime.strptime(dt_string, DPN_DATE_FORMAT)
 
 def is_string(obj):
     """
@@ -36,15 +35,27 @@ def is_string(obj):
     :return:  Boolean of test result
     """
     try: 
-        return isinstance(obj, basestring) and obj != ""
+        return isinstance(obj, str) and obj != ""
     except TypeError:
         return False
 
-def ttl_datetime(date, ttl=DPN_TTL):
+def expire_on(date, ttl=DPN_TTL):
     """
     Returns a datetime from a specific date advanced by TTL.
+
     :param date: datetime to calculate ttl from.
     :param ttl: time in seconds to add to the date param.
     :return: Datetime object.
     """
-    return date + timedetla(0, ttl)
+    return date + timedelta(0, ttl)
+
+def str_expire_on(date, ttl=DPN_TTL):
+    """
+    Returns a string of the DPN format Datetime for the date provided advanded
+    by the TTL
+
+    :param date: datetime to calculate expire from.
+    :param ttl:  Time in seconds to add to the date param.
+    :return:  String of the formatted datetime.
+    """
+    return dpn_strftime(expire_on(date, ttl))

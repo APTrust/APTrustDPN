@@ -4,7 +4,7 @@ from io import BufferedReader
 from kombu.mixins import ConsumerMixin
 from kombu import Queue, Exchange
 
-from dpnode.settings import DPNMQ
+from dpnode.settings import DPN_NODE_NAME
 from dpnmq.handlers import broadcast_router, local_router
 from dpnmq.messages import DPNMessageError
 
@@ -45,15 +45,12 @@ class DPNConsumer(ConsumerMixin):
         :param router:  TaskRouter instance to dispatch this message.
         :param msg: kombu.transport.base.Message to decode and dispatch.
         """
-        try:
-            decoded_body = json.loads(unicode(msg.body))
-        except UnicodeDecodeError as err:
-            raise DPNMessageError("Cannot Decode Message Body! %s" % err.message)
+        decoded_body = json.loads(msg.body)
 
         try:
             message_name = decoded_body['message_name']
         except KeyError:
-            raise DPNMessageError("Invalid message recieved with no 'message_body' set!")
+            raise DPNMessageError("Invalid message received with no 'message_body' set!")
 
         router.dispatch(message_name, msg, decoded_body)
 
@@ -65,7 +62,7 @@ class DPNConsumer(ConsumerMixin):
             self._route_message(local_router, msg)
             logger.info("LOCAL MSG %s" % self._get_logentry(msg))
         except DPNMessageError as err:
-            logger.info(err.message)
+            logger.info(err)
 
     def route_broadcast(self, body, msg):
         if self._skip(msg):
@@ -75,7 +72,7 @@ class DPNConsumer(ConsumerMixin):
             self._route_message(broadcast_router, msg)
             logger.info("BROADCAST MSG %s" % self._get_logentry(msg))
         except DPNMessageError as err:
-            logger.info("DPN Message Error: %s" % err.message)
+            logger.info("DPN Message Error: %s" % err)
 
     def _get_logentry(self, msg):
         """
@@ -98,6 +95,6 @@ class DPNConsumer(ConsumerMixin):
         :param msg: kombu.transport.base.Message instance.
         :return: Boolean
         """
-        if self.ignore_own and msg.headers.get('from', None) == DPNMQ['NODE']:
+        if self.ignore_own and msg.headers.get('from', None) == DPN_NODE_NAME:
             return True
         return False
