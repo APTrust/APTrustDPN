@@ -5,7 +5,9 @@ from django.forms import Form
 
 from kombu import Connection
 
-from dpnode.settings import DPNMQ
+from dpnode.settings import DPN_TTL, DPN_BROKER_URL, DPN_NODE_NAME, DPN_EXCHANGE
+from dpnode.settings import DPN_BROADCAST_QUEUE, DPN_BROADCAST_KEY
+from dpnode.settings import DPN_LOCAL_KEY, DPN_LOCAL_QUEUE, DPN_XFER_OPTIONS
 from dpnmq.util import dpn_strftime, is_string
 
 logger = logging.getLogger('dpnmq.console')
@@ -31,11 +33,11 @@ class DPNMessage(object):
         if body_dict:
             self.set_body(**body_dict)
 
-    def set_headers(self, reply_key=DPNMQ["LOCAL"]["ROUTINGKEY"], 
-        ttl=DPNMQ["TTL"], correlation_id=None, sequence=None, date=None, 
+    def set_headers(self, reply_key=DPN_LOCAL_KEY,
+        ttl=DPN_TTL, correlation_id=None, sequence=None, date=None,
         **kwargs):
         self.headers = { 
-            'from': kwargs.get('from', DPNMQ["NODE"]),
+            'from': kwargs.get('from', DPN_NODE_NAME),
             'reply_key': reply_key,
             'correlation_id': "%s" % correlation_id,
             'sequence': sequence,
@@ -60,6 +62,7 @@ class DPNMessage(object):
                 raise DPNMessageError(
                             "Header value of %s for '%s' is not an int!" % 
                             (self.headers[key], key))
+        for key in ['date', 'ttl']
 
     def send(self, rt_key):
         """
@@ -71,10 +74,10 @@ class DPNMessage(object):
         self._set_date() # Set date just before it's sent.
         self.validate_headers()
         # TODO change this to a connection pool
-        with Connection(DPNMQ["BROKERURL"]) as conn:
+        with Connection(DPN_BROKER_URL) as conn:
             with conn.Producer(serializer='json') as producer:
                 producer.publish(self.body, headers=self.headers, 
-                            exchange=DPNMQ["EXCHANGE"], routing_key=rt_key)
+                            exchange=DPN_EXCHANGE, routing_key=rt_key)
                 self._log_send_msg(rt_key)
 
         conn.close()
@@ -89,7 +92,7 @@ class DPNMessage(object):
         """
         logger.info("SENT %s to %s->%s with id: %s, sequence: %s" % 
                                 (self.__class__.__name__,
-                                DPNMQ["EXCHANGE"],
+                                DPN_EXCHANGE,
                                 rt_key,
                                 self.headers['correlation_id'],
                                 self.headers['sequence']))          

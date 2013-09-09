@@ -358,6 +358,7 @@ class ReplicationInitQueryHandlerTest(TestCase):
         """
         replication_init_query_handler(self.query, self.query_body)
         record = ReceiveFileAction.objects.get(correlation_id=self.query.headers['correlation_id'])
-        self.failUnlessEqual(record.state, STARTED)
+        print(record.correlation_id, record.get_state_display())
+        self.failUnlessEqual(record.state, SUCCESS)
 
 

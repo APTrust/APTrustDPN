@@ -1,6 +1,8 @@
-import json
-from random import choice
 from datetime import datetime
+
+from django.core.exceptions import ValidationError
+
+from dpnode.settings import DPN_XFER_OPTIONS, DPN_MAX_SIZE
 
 from dpnmq.messages import DPNMessageError, ReplicationInitQuery
 from dpnmq.messages import ReplicationAvailableReply, ReplicationLocationReply
@@ -10,10 +12,9 @@ from dpnmq.messages import RegistryEntryCreated
 
 from dpnmq.util import dpn_strftime
 
-from dpn_workflows.models import PENDING, STARTED, SUCCESS, FAILED, CANCELLED
-from dpn_workflows.models import HTTPS, RSYNC
-from dpn_workflows.models import AVAILABLE, TRANSFER, VERIFY
-from dpn_workflows.models import ReceiveFileAction
+from dpn_workflows.handlers import receive_available_workflow
+from dpn_workflows.handlers import send_available_workflow
+from dpn_workflows.handlers import DPNWorkflowError
 
 class TaskRouter:
     def __init__(self):
@@ -46,7 +47,8 @@ local_router = TaskRouter()
 def default_handler(msg, body):
     msg.reject()
     raise DPNMessageError("No handler defined for sequence %s for routing key %r" %
-                          (msg.headers.get('sequence', None), msg.delivery_info.get('routing_key', None)))
+                          (msg.headers.get('sequence', None),
+                           msg.delivery_info.get('routing_key', None)))
 
 broadcast_router.register('default', default_handler) # TODO turn this into a decorator
 local_router.register('default', default_handler)
@@ -72,6 +74,7 @@ def replication_init_query_handler(msg, body):
     :param body: Decoded JSON of the message payload.
     """
 
+
     try:
         req = ReplicationInitQuery(msg.headers, body)
         req.validate()
@@ -80,22 +83,40 @@ def replication_init_query_handler(msg, body):
         msg.reject()
         raise DPNMessageError("Recieved bad message body: %s"
             % err.message)
-    
+
     # Prep Reply
     headers = {
         'correlation_id': req.headers['correlation_id'],
         'sequence': 1,
         'date': dpn_strftime(datetime.now())
     }
-    ack = {
-        'message_att': 'ack',
-        # fake picking a choice
-        'protocol': 'https',
-    }
-    nak = {
+    body = {
         'message_att': 'nak'
     }
-    rsp = ReplicationAvailableReply(headers, ack)
+
+    supported_protocols = [val for val in req.body['protocol']
+                           if val in DPN_XFER_OPTIONS]
+    if supported_protocols and req.body['replication_size'] < DPN_MAX_SIZE:
+        try:
+            action = receive_available_workflow(
+                node=req.headers["from"],
+                protocol=supported_protocols[0],
+                id=req.headers["correlation_id"])
+            print(action.state)
+            body = {
+                'message_att': 'ack',
+                'protocol': supported_protocols[0] # Take the first one for now.
+            }
+        except ValidationError as err:
+            # TODO log this error.
+            print(err.message)
+            pass # Record not created nak sent
+        except DPNWorkflowError as err:
+            # TODO log this error
+            print(err.message)
+            pass # Record not created, nak sent
+
+    rsp = ReplicationAvailableReply(headers, body)
     rsp.send(req.headers['reply_key'])
 
 broadcast_router.register("replication-init-query", 
@@ -115,9 +136,15 @@ def replication_available_reply_handler(msg, body):
         msg.ack()
     except TypeError as err:
         msg.reject()
-        raise DPNMessageError("Recieved bad message body: %s" 
+        raise DPNMessageError("Received bad message body: %s"
             % err.message)
 
+    send_available_workflow(
+        node=req.headers['from'],
+        id=req.headers['correlation_id'],
+        protocol=req.body['protocol'],
+        confirm=req.body['message_att']
+    )
     headers = {
         'correlation_id': req.headers['correlation_id'],
         'sequence': 2,
