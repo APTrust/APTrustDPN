@@ -13,7 +13,7 @@ from dpnmq.messages import DPNMessage, DPNMessageError, ReplicationInitQuery
 from dpnmq.messages import ReplicationAvailableReply, ReplicationLocationReply
 from dpnmq.messages import ReplicationLocationCancel, ReplicationTransferReply
 from dpnmq.messages import ReplicationVerificationReply, RegistryItemCreate
-from dpnmq.util import is_string, dpn_strftime
+from dpnmq.util import is_string, dpn_strftime, str_expire_on
 from dpnmq.handlers import replication_init_query_handler
 
 from dpn_workflows.models import ReceiveFileAction
@@ -22,7 +22,7 @@ from dpn_workflows.models import PENDING, STARTED, SUCCESS, FAILED, CANCELLED
 class TestIsString(TestCase):
 
     def test_is_string(self):
-        succeed = ['test', '%s' % 10, u'another test']
+        succeed = ['test', '%s' % 10, 'another test']
         for item in succeed:
             self.assertTrue(is_string(item))
 
@@ -41,8 +41,8 @@ good_headers = {
     'reply_key': 'testkey',
     'correlation_id': 'testid',
     'sequence': 10,
-    'date':  'mydate',
-    'ttl':  566,
+    'date':  dpn_strftime(datetime.now()),
+    'ttl':  str_expire_on(datetime.now(), 566),
     }
 
 class TestDPNMessage(TestCase):
@@ -56,11 +56,11 @@ class TestDPNMessage(TestCase):
             'reply_key': 'testkey',
             'correlation_id': 'testid',
             'sequence': 10,
-            'date':  'mydate',
-            'ttl':  566,
+            'date':  dpn_strftime(datetime.now()),
+            'ttl':  str_expire_on(datetime.now(), 566),
         }
         self.msg.set_headers(**exp)
-        for key, value in exp.iteritems():
+        for key, value in exp.items():
             self.failUnlessEqual(self.msg.headers[key], value)
 
     def test_set_body(self):
@@ -72,7 +72,7 @@ class TestDPNMessage(TestCase):
             "message_att": "nak"
         }
         self.msg.set_body(**exp)
-        for key, value in exp.iteritems():
+        for key, value in exp.items():
             self.failUnlessEqual(self.msg.body[key], value)
 
     def test_validate_headers(self):
@@ -83,9 +83,10 @@ class TestDPNMessage(TestCase):
             'from': "",
             'reply_key': 15,
             'correlation_id': "",
-            'date': datetime.now()
+            'date': "thisisabaddate",
+            'ttl':  "thisisanotherdate",
         }
-        for key, value in string_tests.iteritems():
+        for key, value in string_tests.items():
             fail_headers = good_headers.copy()
             fail_headers[key] = value
             self.msg.set_headers(**fail_headers)
@@ -93,9 +94,8 @@ class TestDPNMessage(TestCase):
 
         int_tests = {
             'sequence': '10',
-            'ttl': '3600',
         }
-        for key, value in int_tests.iteritems():
+        for key, value in int_tests.items():
             fail_headers = good_headers.copy()
             fail_headers[key] = value
             self.msg.set_headers(**fail_headers)
@@ -130,7 +130,7 @@ class TestReplicationInitQuery(TestCase):
             'replication_size': "3432",
             'protocol': 'https',
         }
-        for key, value in bad_body.iteritems():
+        for key, value in bad_body.items():
             fail_body = good_body.copy()
             fail_body[key] = value
             self.assertRaises(DPNMessageError, self.msg.set_body, **fail_body)
@@ -163,7 +163,7 @@ class TestReplicationAvailableReply(TestCase):
             'message_att': 'nack',
             'protocol': 'http'
         }
-        for key, value in bad_body_ack.iteritems():
+        for key, value in bad_body_ack.items():
             fail_body = good_body_ack.copy()
             fail_body[key] = value
             self.assertRaises(DPNMessageError, self.msg.set_body, **fail_body)
@@ -194,7 +194,7 @@ class TestReplicationLocationReply(TestCase):
             'protocol': 'http',
             'location': 23423,
         }
-        for key, value in bad_body.iteritems():
+        for key, value in bad_body.items():
             fail_body = good_body.copy()
             fail_body[key] = value
             self.assertRaises(DPNMessageError, self.msg.set_body, **fail_body)
@@ -217,7 +217,7 @@ class TestReplicationLocationCancel(TestCase):
             'message_name': 'notright',
             'message_att': 'ack'
         }
-        for key, value in bad_body.iteritems():
+        for key, value in bad_body.items():
             fail_body = good_body.copy()
             fail_body[key] = value
             self.assertRaises(DPNMessageError, self.msg.set_body, **fail_body)
@@ -256,7 +256,7 @@ class TestReplicationTransferReply(TestCase):
             'fixity_algorithm': "",
             'fixity_value': ""
         }
-        for key, value in bad_body1.iteritems():
+        for key, value in bad_body1.items():
             fail_body = good_body1.copy()
             fail_body[key] = value
             self.assertRaises(DPNMessageError, self.msg.set_body, **fail_body)
@@ -286,7 +286,7 @@ class TestReplicationVerificationReply(TestCase):
             'message_name': 'fail', 
             'message_att': 'false',
         }
-        for key, value in bad_body.iteritems():
+        for key, value in bad_body.items():
             fail_body = good_body.copy()
             fail_body[key] = value
             self.assertRaises(DPNMessageError, self.msg.set_body, **fail_body)
@@ -344,7 +344,7 @@ class ReplicationInitQueryHandlerTest(TestCase):
             "correlation_id": uuid4(),
             "sequence": 0,
             "date": dpn_strftime(datetime.now()),
-            "ttl": 3600,
+            "ttl": str_expire_on(datetime.now(), 3600),
         }
         self.query_body = {
             "message_name": "replication-init-query",
@@ -358,7 +358,6 @@ class ReplicationInitQueryHandlerTest(TestCase):
         """
         replication_init_query_handler(self.query, self.query_body)
         record = ReceiveFileAction.objects.get(correlation_id=self.query.headers['correlation_id'])
-        print(record.correlation_id, record.get_state_display())
         self.failUnlessEqual(record.state, SUCCESS)
 
 

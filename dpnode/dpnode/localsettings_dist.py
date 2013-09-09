@@ -75,7 +75,7 @@ DPN_LOCAL_KEY = "aptrust.dpn" # Name to use for routing direct reply messages.
 DPN_XFER_OPTIONS = ['https', 'rsync'] # List of lowercase protocols available for transfer.
 
 # DPN COMMON SETTINGS
-DPN_DATE_FORMAT = "%Y-%m-%dT%H:%M:%S%z" # Date format for strftime functions.
+DPN_DATE_FORMAT = "%Y-%m-%dT%H:%M:%SZ" # ISO 8601 format for strftime functions.
 DPN_NODE_LIST = [
     'aptrust',
     'utexas',

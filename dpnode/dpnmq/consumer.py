@@ -45,15 +45,12 @@ class DPNConsumer(ConsumerMixin):
         :param router:  TaskRouter instance to dispatch this message.
         :param msg: kombu.transport.base.Message to decode and dispatch.
         """
-        try:
-            decoded_body = json.loads(unicode(msg.body))
-        except UnicodeDecodeError as err:
-            raise DPNMessageError("Cannot Decode Message Body! %s" % err.message)
+        decoded_body = json.loads(msg.body)
 
         try:
             message_name = decoded_body['message_name']
         except KeyError:
-            raise DPNMessageError("Invalid message recieved with no 'message_body' set!")
+            raise DPNMessageError("Invalid message received with no 'message_body' set!")
 
         router.dispatch(message_name, msg, decoded_body)
 

@@ -102,7 +102,6 @@ def replication_init_query_handler(msg, body):
                 node=req.headers["from"],
                 protocol=supported_protocols[0],
                 id=req.headers["correlation_id"])
-            print(action.state)
             body = {
                 'message_att': 'ack',
                 'protocol': supported_protocols[0] # Take the first one for now.

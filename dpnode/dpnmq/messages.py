@@ -8,7 +8,7 @@ from kombu import Connection
 from dpnode.settings import DPN_TTL, DPN_BROKER_URL, DPN_NODE_NAME, DPN_EXCHANGE
 from dpnode.settings import DPN_BROADCAST_QUEUE, DPN_BROADCAST_KEY
 from dpnode.settings import DPN_LOCAL_KEY, DPN_LOCAL_QUEUE, DPN_XFER_OPTIONS
-from dpnmq.util import dpn_strftime, is_string
+from dpnmq.util import dpn_strftime, is_string, dpn_strptime, str_expire_on
 
 logger = logging.getLogger('dpnmq.console')
 
@@ -21,6 +21,7 @@ class DPNMessageError(Exception):
 class DPNMessage(object):
 
     directive = None
+    ttl = DPN_TTL
 
     def __init__(self, headers_dict=None, body_dict=None):
         """
@@ -34,7 +35,7 @@ class DPNMessage(object):
             self.set_body(**body_dict)
 
     def set_headers(self, reply_key=DPN_LOCAL_KEY,
-        ttl=DPN_TTL, correlation_id=None, sequence=None, date=None,
+        ttl=None, correlation_id=None, sequence=None, date=None,
         **kwargs):
         self.headers = { 
             'from': kwargs.get('from', DPN_NODE_NAME),
@@ -46,10 +47,12 @@ class DPNMessage(object):
         }
 
     def _set_date(self):
-        self.headers["date"] = dpn_strftime(datetime.now())
+        now = datetime.now()
+        self.headers["date"] = dpn_strftime(now)
+        self.headers["ttl"] = str_expire_on(now, self.ttl)
 
     def validate_headers(self):
-        for key, value in self.headers.iteritems():
+        for key, value in self.headers.items():
             if value is None:
                 raise DPNMessageError("No header value set for %s." % (key,))
         for key in ['from', 'reply_key', 'correlation_id', 'date']:
@@ -57,12 +60,18 @@ class DPNMessage(object):
                 raise DPNMessageError(
                             "Header value of %s for '%s' is not a string!" % 
                             (self.headers[key], key))
-        for key in ['sequence', 'ttl']:
+        for key in ['sequence',]:
             if not isinstance(self.headers[key], int):
                 raise DPNMessageError(
                             "Header value of %s for '%s' is not an int!" % 
                             (self.headers[key], key))
-        for key in ['date', 'ttl']
+        for key in ['date', 'ttl']:
+            try:
+                dpn_strptime(self.headers[key])
+            except ValueError:
+                raise DPNMessageError(
+                    "Header field %s value %s is an invalid datetime."
+                    % (key, self.headers[key]))
 
     def send(self, rt_key):
         """
@@ -111,7 +120,7 @@ class DPNMessage(object):
 
     def set_body(self, **kwargs):
         try:
-            for key, value in kwargs.iteritems():
+            for key, value in kwargs.items():
                 self.body[key] = value
         except AttributeError as err:
             raise DPNMessageError(
@@ -249,7 +258,7 @@ class RegistryItemCreate(DPNMessage):
         attrs = vars()
         del attrs['self']
         del attrs['message_name']
-        for k, v in attrs.iteritems():
+        for k, v in attrs.items():
             self.body[k] = v
 
 class RegistryEntryCreated(DPNMessage):
