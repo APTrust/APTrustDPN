@@ -2,6 +2,11 @@
 import os
 PROJECT_PATH = os.path.dirname(os.path.abspath(__file__))
 
+# Django Celery Install as per
+# http://docs.celeryproject.org/en/latest/django/first-steps-with-django.html
+import djcelery
+djcelery.setup_loader()
+
 # Django settings for dpnode project.
 
 DEBUG = True
@@ -129,7 +134,7 @@ INSTALLED_APPS = (
     'django.contrib.admin',
     # Uncomment the next line to enable admin documentation:
     'django.contrib.admindocs',
-    # 'djcelery',
+    'djcelery',
     #'celerytest',
     'dpnmq',
     'dpn_workflows',

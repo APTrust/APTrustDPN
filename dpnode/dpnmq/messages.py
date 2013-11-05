@@ -1,3 +1,10 @@
+"""
+    I asked God for a bike, but I know God doesn't work that way. So I stole a
+    bike and asked for forgiveness.
+
+            - Emo Philips
+"""
+
 from datetime import datetime
 import logging
 

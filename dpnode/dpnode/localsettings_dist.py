@@ -5,6 +5,9 @@ PROJECT_PATH = os.path.dirname(os.path.abspath(__file__))
 DEBUG = False # Always make False by default.
 TEMPLATE_DEBUG = DEBUG
 
+# CELERY WORKER CONFIG
+BROKER_URL = 'amqp://guest:guest@localhost:5672/'
+
 ADMINS = (
 # ('Your Name', 'your_email@example.com'),
 )

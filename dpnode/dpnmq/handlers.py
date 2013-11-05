@@ -1,3 +1,10 @@
+"""
+    Do not argue with an idiot. He will drag you down to his level and beat you
+    with experience.
+
+            - Unknown
+"""
+
 from datetime import datetime
 
 from django.core.exceptions import ValidationError

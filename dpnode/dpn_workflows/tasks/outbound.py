@@ -1,8 +1,16 @@
+"""
+    I love deadlines. I like the whooshing sound they make as they fly by.
+
+            - Douglas Adams
+"""
+
 # Handles tasks related to sending bags for replication across the
 # DPN Federation.
 
 from datetime import datetime
 from uuid import uuid4
+
+from celery import task
 
 from dpn_workflows.models import PENDING, STARTED, SUCCESS, FAILED, CANCELLED
 from dpn_workflows.models import HTTPS, RSYNC, COMPLETE
@@ -14,6 +22,7 @@ from dpnode.settings import DPN_XFER_OPTIONS, DPN_BROADCAST_KEY
 from dpnmq.messages import ReplicationInitQuery
 from dpnmq.util import str_expire_on, dpn_strftime
 
+@task()
 def initiate_ingest(id, size):
     """
     Initiates an ingest operation by minting the correlation ID

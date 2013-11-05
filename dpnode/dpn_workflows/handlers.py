@@ -1,3 +1,11 @@
+"""
+    I can picture in my mind a world without war, a world without hate. And I
+    can picture us attacking that world, because they'd never expect it.
+
+        - JACK HANDY
+
+"""
+
 # Handles various workflow steps as defined by the DPN MQ control flow messages
 
 from django.core.exceptions import ValidationError

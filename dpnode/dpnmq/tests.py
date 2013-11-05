@@ -1,8 +1,8 @@
 """
-This file demonstrates writing tests using the unittest module. These will pass
-when you run "manage.py test".
+    First the doctor told me the good news: I was going to have a disease
+    named after me.
 
-Replace this with more appropriate tests for your application.
+            - Steve Martin
 """
 from uuid import uuid4
 from datetime import datetime

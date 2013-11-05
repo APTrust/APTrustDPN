@@ -1,10 +1,18 @@
+"""
+    For mad scientists who keep brains in jars, here's a tip: why not add a
+    slice of lemon to each jar, for freshness?
+        - JACK HANDY
+"""
+
 from django.db import models
+
+# STATE INFORMATION
 PENDING = 'P'
 STARTED = 'T'
 SUCCESS = 'S'
-FAILED = 'F'
+FAILED  = 'F'
 CANCELLED = 'X'
-COMPLETE = 'C'
+COMPLETE  = 'C'
 STATE_CHOICES = (
     (PENDING, 'Pending'),
     (STARTED, 'Started'),
@@ -12,12 +20,16 @@ STATE_CHOICES = (
     (FAILED, 'Failed'),
     (CANCELLED, 'Cancelled'),
 )
+
+# PROTOCOL INFORMATION
 HTTPS = 'H'
 RSYNC = 'R'
 PROTOCOL_CHOICES = (
     (HTTPS, 'https'),
     (RSYNC, 'rsync'),
 )
+
+# STEP INFORMATION
 AVAILABLE = 'A'
 TRANSFER = 'T'
 VERIFY = 'V'
@@ -36,7 +48,7 @@ Some General Notes on workflows for messaging
 
 Happy Flow
 
-SEND                       -> RECIEVE                       -> STEP
+SEND                       -> RECEIVE                       -> STEP
 replication-init-query     -> replication-available-reply   -> AVAILABLE
 replication-location-reply -> replication-transfer-reply    -> TRANSFER
 replication-verify-reply   ->                               -> VERIFICATION
