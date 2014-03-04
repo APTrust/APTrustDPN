@@ -4,7 +4,9 @@ from django.core.management.base import BaseCommand
 
 from kombu import Connection
 
-from dpnode.settings import DPNMQ
+from dpnode.settings import DPN_EXCHANGE, DPN_BROKER_URL
+from dpnode.settings import DPN_BROADCAST_QUEUE, DPN_BROADCAST_KEY
+from dpnode.settings import DPN_LOCAL_QUEUE, DPN_LOCAL_KEY
 from dpnmq.consumer import DPNConsumer
 
 
@@ -19,18 +21,16 @@ class Command(BaseCommand):
     )
 
     def handle(self, *args, **options):
-        bcast = DPNMQ.get('BROADCAST', {})
-        bcast_xchng = bcast.get('EXCHANGE', "")
-        bcast_rtkey = bcast.get('ROUTINGKEY', "")
-        bcast_queue = bcast.get('QUEUE', "")
-        local = DPNMQ.get('LOCAL', {})
-        local_rtkey = local.get('ROUTINGKEY', "")
-        local_queue = local.get('QUEUE', "")
-        with Connection(DPNMQ.get('BROKERURL', "")) as conn:
-            cnsmr = DPNConsumer(conn, bcast_xchng, bcast_queue, bcast_rtkey, local_queue,
-                                local_rtkey, ignore_own=options["reply_all"])
+        with Connection(DPN_BROKER_URL) as conn:
+            cnsmr = DPNConsumer(conn,
+                                DPN_EXCHANGE,
+                                DPN_BROADCAST_QUEUE,
+                                DPN_BROADCAST_KEY,
+                                DPN_LOCAL_QUEUE,
+                                DPN_LOCAL_KEY,
+                                ignore_own=options["reply_all"])
             print("Consuming broadcast(%s) and local(%s) messages from %s.  Press CTRL+C to exit."
-                  % (bcast_rtkey, local_rtkey, bcast_xchng))
+                  % (DPN_BROADCAST_KEY, DPN_LOCAL_KEY, DPN_EXCHANGE))
             try:
                 cnsmr.run()
             except KeyboardInterrupt:
