@@ -5,7 +5,7 @@ from django.core.management.base import BaseCommand
 
 from kombu.utils import uuid
 
-from dpnode.settings import DPNMQ
+from dpnode.settings import DPN_BROADCAST_KEY
 from dpnmq.messages import RegistryItemCreate
 from dpnmq.util import dpn_strftime
 
@@ -39,4 +39,4 @@ class Command(BaseCommand):
             "object_type": "data",
         }
         msg = RegistryItemCreate(headers, body)
-        msg.send(DPNMQ['BROADCAST']['ROUTINGKEY'])
+        msg.send(DPN_BROADCAST_KEY)
