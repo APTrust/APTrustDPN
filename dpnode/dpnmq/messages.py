@@ -60,26 +60,7 @@ class DPNMessage(object):
         self.headers["ttl"] = str_expire_on(now, self.ttl)
 
     def validate_headers(self):
-        for key, value in self.headers.items():
-            if value is None:
-                raise DPNMessageError("No header value set for %s." % (key,))
-        for key in ['from', 'reply_key', 'correlation_id', 'date']:
-            if not is_string(self.headers[key]):
-                raise DPNMessageError(
-                            "Header value of %s for '%s' is not a string!" % 
-                            (self.headers[key], key))
-        for key in ['sequence',]:
-            if not isinstance(self.headers[key], int):
-                raise DPNMessageError(
-                            "Header value of %s for '%s' is not an int!" % 
-                            (self.headers[key], key))
-        for key in ['date', 'ttl']:
-            try:
-                dpn_strptime(self.headers[key])
-            except ValueError:
-                raise DPNMessageError(
-                    "Header field %s value %s is an invalid datetime."
-                    % (key, self.headers[key]))
+        VALID_HEADERS.validate(self.headers)
 
     def send(self, rt_key):
         """
