@@ -11,9 +11,10 @@ from io import BufferedReader
 from kombu.mixins import ConsumerMixin
 from kombu import Queue, Exchange
 
-from dpnode.settings import DPN_NODE_NAME
+from dpnode.settings import DPN_NODE_NAME, DPN_TTL
 from dpnmq.handlers import broadcast_router, local_router
 from dpnmq.messages import DPNMessageError
+from dpnmq.util import dpn_strptime
 
 import logging
 logger = logging.getLogger('dpnmq.console')
@@ -44,7 +45,6 @@ class DPNConsumer(ConsumerMixin):
         ]
         return consumers
 
-    # TODO when msg format is settled, validate message before processing to reduce all interior err msg raises.
     def _route_message(self, router, msg):
         """
         Sends the original message to the appropriate dispatcher provided by router.
@@ -52,6 +52,13 @@ class DPNConsumer(ConsumerMixin):
         :param router:  TaskRouter instance to dispatch this message.
         :param msg: kombu.transport.base.Message to decode and dispatch.
         """
+        if not self._is_alive(msg):
+            msg.ack()
+            logger.info("MSG TTL Expired") # TODO: improve this message
+            return None
+
+        # TODO: add more message structure validations here
+
         decoded_body = json.loads(msg.body)
 
         try:
@@ -105,3 +112,21 @@ class DPNConsumer(ConsumerMixin):
         if self.ignore_own and msg.headers.get('from', None) == DPN_NODE_NAME:
             return True
         return False
+
+    def _is_alive(self, msg):
+        """
+        Check if the message has date and ttl set and returns if still alive
+
+        :param msg: kombu.transport.base.Message instance.
+        :return: Boolean
+        """
+        try:            
+            date = dpn_strptime(msg.headers['date'])
+            ttl = dpn_strptime(msg.headers['ttl'])
+
+            if (ttl-date).seconds < DPN_TTL:
+                return True
+            return False
+
+        except KeyError:
+            raise DPNMessageError("Invalid message received with no 'date' or 'ttl' set!")

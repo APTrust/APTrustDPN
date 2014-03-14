@@ -28,6 +28,10 @@ PROTOCOL_CHOICES = (
     (HTTPS, 'https'),
     (RSYNC, 'rsync'),
 )
+PROTOCOL_DB_VALUES = {
+    'https': HTTPS,
+    'rsync': RSYNC
+}
 
 # STEP INFORMATION
 AVAILABLE = 'A'

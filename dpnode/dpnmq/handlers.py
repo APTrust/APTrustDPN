@@ -23,6 +23,8 @@ from dpn_workflows.handlers import receive_available_workflow
 from dpn_workflows.handlers import send_available_workflow
 from dpn_workflows.handlers import DPNWorkflowError
 
+from dpn_workflows.models import PROTOCOL_DB_VALUES
+
 class TaskRouter:
     def __init__(self):
         self._registry = {}
@@ -105,9 +107,13 @@ def replication_init_query_handler(msg, body):
                            if val in DPN_XFER_OPTIONS]
     if supported_protocols and req.body['replication_size'] < DPN_MAX_SIZE:
         try:
+            # we need to switch 'https' to 'H' or 'rsync' to 'R'
+            # to prevent from getting a ValidationError
+            protocol = PROTOCOL_DB_VALUES[supported_protocols[0]] 
+
             action = receive_available_workflow(
                 node=req.headers["from"],
-                protocol=supported_protocols[0],
+                protocol=protocol,
                 id=req.headers["correlation_id"])
             body = {
                 'message_att': 'ack',
@@ -168,6 +174,7 @@ def replication_available_reply_handler(msg, body):
     }
     rsp = ReplicationLocationReply(headers, ack[req.body['protocol']])
     rsp.send(req.headers['reply_key'])
+
 local_router.register('replication-available-reply',
     replication_available_reply_handler)
 
