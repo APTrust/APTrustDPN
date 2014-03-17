@@ -18,7 +18,7 @@ STATE_CHOICES = (
     (STARTED, 'Started'),
     (SUCCESS, 'Success'),
     (FAILED, 'Failed'),
-    (CANCELLED, 'Cancelled'),
+    (CANCELLED, 'Cancelled')
 )
 
 # PROTOCOL INFORMATION
@@ -26,7 +26,7 @@ HTTPS = 'H'
 RSYNC = 'R'
 PROTOCOL_CHOICES = (
     (HTTPS, 'https'),
-    (RSYNC, 'rsync'),
+    (RSYNC, 'rsync')
 )
 PROTOCOL_DB_VALUES = {
     'https': HTTPS,
@@ -44,7 +44,7 @@ STEP_CHOICES = ( # Noted it actually begins with a broadcast workflow.
     (TRANSFER, 'TRANSFER FILE'),
     (VERIFY, 'TRANSFER VERIFICATION'),
     (CANCELLED, 'OPERATION CANCELED'),
-    (COMPLETE, 'TRANSACTION COMPLETE'),
+    (COMPLETE, 'TRANSACTION COMPLETE')
 )
 
 """
