@@ -6,7 +6,7 @@
 
 """
 
-class Schema(object):
+class MessageSchema(object):
 
     def __init__(self, schema, error=None):
         self._schema = schema
@@ -19,10 +19,10 @@ class Schema(object):
         s = self._schema
         e = self._error
         if type(s) in (list, tuple, set, frozenset):
-            data = Schema(type(s), error=e).validate(data)
+            data = MessageSchema(type(s), error=e).validate(data)
             return type(s)(Or(*s, error=e).validate(d) for d in data)
         if type(s) is dict:
-            data = Schema(dict, error=e).validate(data)
+            data = MessageSchema(dict, error=e).validate(data)
             new = type(data)()  # new - is a dict of the validated values
             x = None
             coverage = set()  # non-optional schema keys that were matched
@@ -34,13 +34,13 @@ class Schema(object):
                 for skey in sorted_skeys:
                     svalue = s[skey]
                     try:
-                        nkey = Schema(skey, error=e).validate(key)
-                    except SchemaError:
+                        nkey = MessageSchema(skey, error=e).validate(key)
+                    except MessageSchemaError:
                         pass
                     else:
                         try:
-                            nvalue = Schema(svalue, error=e).validate(value)
-                        except SchemaError as _x:
+                            nvalue = MessageSchema(svalue, error=e).validate(value)
+                        except MessageSchemaError as _x:
                             x = _x
                             raise
                         else:
@@ -51,51 +51,51 @@ class Schema(object):
                     new[nkey] = nvalue
                 elif skey is not None:
                     if x is not None:
-                        raise SchemaError(['invalid value for key %r' % key] +
+                        raise MessageSchemaError(['invalid value for key %r' % key] +
                                           x.autos, [e] + x.errors)
             coverage = set(k for k in coverage if type(k) is not Optional)
             required = set(k for k in s if type(k) is not Optional)
             if coverage != required:
-                raise SchemaError('missed keys %r' % (required - coverage), e)
+                raise MessageSchemaError('missed keys %r' % (required - coverage), e)
             if len(new) != len(data):
                 wrong_keys = set(data.keys()) - set(new.keys())
                 s_wrong_keys = ', '.join('%r' % k for k in sorted(wrong_keys))
-                raise SchemaError('wrong keys %s in %r' % (s_wrong_keys, data),
+                raise MessageSchemaError('wrong keys %s in %r' % (s_wrong_keys, data),
                                   e)
             return new
         if hasattr(s, 'validate'):
             try:
                 return s.validate(data)
-            except SchemaError as x:
-                raise SchemaError([None] + x.autos, [e] + x.errors)
+            except MessageSchemaError as x:
+                raise MessageSchemaError([None] + x.autos, [e] + x.errors)
             except BaseException as x:
-                raise SchemaError('%r.validate(%r) raised %r' % (s, data, x),
+                raise MessageSchemaError('%r.validate(%r) raised %r' % (s, data, x),
                                   self._error)
         if type(s) is type:
             if isinstance(data, s):
                 return data
             else:
-                raise SchemaError('%r should be instance of %r' % (data, s), e)
+                raise MessageSchemaError('%r should be instance of %r' % (data, s), e)
         if callable(s):
             f = s.__name__
             try:
                 if s(data):
                     return data
-            except SchemaError as x:
-                raise SchemaError([None] + x.autos, [e] + x.errors)
+            except MessageSchemaError as x:
+                raise MessageSchemaError([None] + x.autos, [e] + x.errors)
             except BaseException as x:
-                raise SchemaError('%s(%r) raised %r' % (f, data, x),
+                raise MessageSchemaError('%s(%r) raised %r' % (f, data, x),
                                   self._error)
-            raise SchemaError('%s(%r) should evaluate to True' % (f, data), e)
+            raise MessageSchemaError('%s(%r) should evaluate to True' % (f, data), e)
         if s == data:
             return data
         else:
-            raise SchemaError('%r does not match %r' % (s, data), e)
+            raise MessageSchemaError('%r does not match %r' % (s, data), e)
 
 
-class SchemaError(Exception):
+class MessageSchemaError(Exception):
 
-    """Error during Schema validation."""
+    """Error during MessageSchema validation."""
 
     def __init__(self, autos, errors):
         self.autos = autos if type(autos) is list else [autos]
@@ -127,7 +127,7 @@ class And(object):
                            ', '.join(repr(a) for a in self._args))
 
     def validate(self, data):
-        for s in [Schema(s, error=self._error) for s in self._args]:
+        for s in [MessageSchema(s, error=self._error) for s in self._args]:
             data = s.validate(data)
         return data
 
@@ -135,13 +135,13 @@ class And(object):
 class Or(And):
 
     def validate(self, data):
-        x = SchemaError([], [])
-        for s in [Schema(s, error=self._error) for s in self._args]:
+        x = MessageSchemaError([], [])
+        for s in [MessageSchema(s, error=self._error) for s in self._args]:
             try:
                 return s.validate(data)
-            except SchemaError as _x:
+            except MessageSchemaError as _x:
                 x = _x
-        raise SchemaError(['%r did not validate %r' % (self, data)] + x.autos,
+        raise MessageSchemaError(['%r did not validate %r' % (self, data)] + x.autos,
                           [self._error] + x.errors)
 
 
@@ -158,11 +158,11 @@ class Use(object):
     def validate(self, data):
         try:
             return self._callable(data)
-        except SchemaError as x:
-            raise SchemaError([None] + x.autos, [self._error] + x.errors)
+        except MessageSchemaError as x:
+            raise MessageSchemaError([None] + x.autos, [self._error] + x.errors)
         except BaseException as x:
             f = self._callable.__name__
-            raise SchemaError('%s(%r) raised %r' % (f, data, x), self._error)
+            raise MessageSchemaError('%s(%r) raised %r' % (f, data, x), self._error)
 
 
 def priority(s):
@@ -181,6 +181,6 @@ def priority(s):
         return 1
 
 
-class Optional(Schema):
+class Optional(MessageSchema):
 
-    """Marker for an optional part of Schema."""
+    """Marker for an optional part of MessageSchema."""
