@@ -7,5 +7,5 @@ class IngestActionAdmin(admin.ModelAdmin):
 # admin.site.register(IngestAction, IngestActionAdmin)
 
 class NodeInfoAdmin(admin.ModelAdmin):
-    list_display = ('name', 'slug')
+    list_display = ['name', 'slug']
 admin.site.register(NodeInfo, NodeInfoAdmin)
