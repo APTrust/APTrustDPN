@@ -6,6 +6,7 @@
 """
 
 import json
+from datetime import datetime
 from io import BufferedReader
 
 from kombu.mixins import ConsumerMixin
@@ -14,7 +15,7 @@ from kombu import Queue, Exchange
 from dpnode.settings import DPN_NODE_NAME, DPN_TTL
 from dpnmq.handlers import broadcast_router, local_router
 from dpnmq.messages import DPNMessageError
-from dpnmq.util import dpn_strptime
+from dpnmq.util import dpn_strptime, dpn_strftime
 
 import logging
 logger = logging.getLogger('dpnmq.console')
@@ -118,13 +119,11 @@ class DPNConsumer(ConsumerMixin):
         :param msg: kombu.transport.base.Message instance.
         :return: Boolean
         """
-        try:            
-            date = dpn_strptime(msg.headers['date'])
+        try:
             ttl = dpn_strptime(msg.headers['ttl'])
+            now = dpn_strptime(dpn_strftime(datetime.now()))
 
-            if (ttl-date).seconds < DPN_TTL:
-                return True
-            return False
+            return ttl > now
 
         except KeyError:
             raise DPNMessageError("Invalid message received with no 'date' or 'ttl' set!")
