@@ -1,9 +1,9 @@
-'''
+"""
     Yeah, well, that's just, like, your opinion, man.
     
             - The Dude
 
-'''
+"""
 
 import re
 
