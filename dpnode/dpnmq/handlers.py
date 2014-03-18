@@ -33,9 +33,14 @@ class TaskRouter:
     def __init__(self):
         self._registry = {}
 
-    def register(self, key, klass, **options):
-        self._registry[key] = klass
-        pass
+    def register(self, key, func=None):
+        if func != None:
+            self._registry[key] = func
+        else:
+            # use it as decorator
+            def decorated(func):
+                self._registry[key] = func
+            return decorated
 
     def unregister(self, key):
         del self._registry[key]
@@ -63,9 +68,10 @@ def default_handler(msg, body):
                           (msg.headers.get('sequence', None),
                            msg.delivery_info.get('routing_key', None)))
 
-broadcast_router.register('default', default_handler) # TODO turn this into a decorator
+broadcast_router.register('default', default_handler)
 local_router.register('default', default_handler)
 
+@broadcast_router.register('info')
 def info_handler(msg, body):
     print("DELIVERY INFO: %r" % msg.delivery_info)
     print("DELIVERY TAG: %r" % msg.delivery_tag)
@@ -76,8 +82,7 @@ def info_handler(msg, body):
     print("PAYLOAD: %r" % msg.payload)
     print("-------------------------------")
 
-broadcast_router.register('info', info_handler)
-
+@broadcast_router.register('replication-init-query')
 def replication_init_query_handler(msg, body):
     """
     Accepts a Replication Init Query Message and produces a Replication 
@@ -132,9 +137,7 @@ def replication_init_query_handler(msg, body):
     rsp = ReplicationAvailableReply(headers, body)
     rsp.send(req.headers['reply_key'])
 
-broadcast_router.register("replication-init-query", 
-    replication_init_query_handler)
-
+@local_router.register('replication-available-reply')
 def replication_available_reply_handler(msg, body):
     """
     Accepts a Replication Available Reply and produces a Replication
@@ -176,9 +179,7 @@ def replication_available_reply_handler(msg, body):
     rsp = ReplicationLocationReply(headers, ack[req.body['protocol']])
     rsp.send(req.headers['reply_key'])
 
-local_router.register('replication-available-reply',
-    replication_available_reply_handler)
-
+@local_router.register('replication-location-cancel')
 def replication_location_cancel_handler(msg, body):
     """
     Accepts a Replication Location Cancel and cancels a file transfer.
@@ -194,9 +195,8 @@ def replication_location_cancel_handler(msg, body):
         msg.reject()
         raise DPNMessageError("Recieved bad message body: %s" 
             % err)
-local_router.register('replication-location-cancel', 
-    replication_location_cancel_handler)
 
+@local_router.register('replication-location-reply')
 def replication_location_reply_handler(msg, body):
     """
     Accepts a Replication Location Reply and produces a Replication
@@ -230,9 +230,8 @@ def replication_location_reply_handler(msg, body):
     }
     rsp = ReplicationTransferReply(headers, ack)
     rsp.send(req.headers['reply_key'])
-local_router.register('replication-location-reply', 
-    replication_location_reply_handler)
 
+@local_router.register('replication-transfer-reply')
 def replication_transfer_reply_handler(msg, body):
     """
     Accepts a Replication Transfer Reply and produces a Replication
@@ -266,9 +265,8 @@ def replication_transfer_reply_handler(msg, body):
     }
     rsp = ReplicationVerificationReply(headers, ack)
     rsp.send(req.headers['reply_key'])
-local_router.register('replication-transfer-reply', 
-    replication_transfer_reply_handler)
 
+@local_router.register('replication-verify-reply')
 def replication_verify_reply_handler(msg, body):
     """
     Accepts a Replication Verification Reply does nothing until
@@ -286,11 +284,10 @@ def replication_verify_reply_handler(msg, body):
         raise DPNMessageError("Recieved bad message body: %s" 
             % err)
     # End?  Do what?
-local_router.register('replication-verify-reply', 
-    replication_verify_reply_handler)
 
 
 # Registry Message Handlers
+@broadcast_router.register('registry-item-create')
 def registry_item_create_handler(msg, body):
     """
     Accepts a Registry Entry Creation directive and produces a Registry Entry
@@ -323,9 +320,8 @@ def registry_item_create_handler(msg, body):
     }
     rsp = RegistryEntryCreated(headers, ack)
     rsp.send(req.headers['reply_key'])
-broadcast_router.register("registry-item-create",
-    registry_item_create_handler)
 
+@local_router.register('registry-entry-created')
 def registry_entry_created_handler(msg, body):
     """
     Accepts a Registry Entry Creation reply and does nothing until more
@@ -343,5 +339,3 @@ def registry_entry_created_handler(msg, body):
         raise DPNMessageError("Recieved bad message body: %s"
             % err)
     # TODO Figure out where this goes from here?
-local_router.register('registry-entry-created',
-    registry_entry_created_handler)
