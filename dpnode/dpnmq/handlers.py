@@ -5,6 +5,8 @@
             - Unknown
 """
 
+import logging
+
 from datetime import datetime
 
 from django.core.exceptions import ValidationError
@@ -24,6 +26,8 @@ from dpn_workflows.handlers import send_available_workflow
 from dpn_workflows.handlers import DPNWorkflowError
 
 from dpn_workflows.models import PROTOCOL_DB_VALUES
+
+logger = logging.getLogger('dpnmq.console')
 
 class TaskRouter:
     def __init__(self):
@@ -83,7 +87,6 @@ def replication_init_query_handler(msg, body):
     :param body: Decoded JSON of the message payload.
     """
 
-
     try:
         req = ReplicationInitQuery(msg.headers, body)
         req.validate()
@@ -120,12 +123,10 @@ def replication_init_query_handler(msg, body):
                 'protocol': supported_protocols[0] # Take the first one for now.
             }
         except ValidationError as err:
-            # TODO log this error.
-            print(err)
+            logger.info('ValidationError: %s' % err)
             pass # Record not created nak sent
         except DPNWorkflowError as err:
-            # TODO log this error
-            print(err)
+            logger.info('DPN Workflow Error: %s' % err)
             pass # Record not created, nak sent
 
     rsp = ReplicationAvailableReply(headers, body)
