@@ -92,5 +92,9 @@ DPN_FIXITY_CHOICES = ['sha256',]
 # Max Size of allowable bags
 DPN_MAX_SIZE = 1099511627776 # 1 TB
 
+# Directory to be monitored for new added bags
+DPN_BAGS_DIR = os.path.join(PROJECT_PATH, '../dpn_bags_dir')
+DPN_BAGS_FILE_EXT = ['*.txt'] # set .txt just for testing
+
 # GRAPELLI SETTINGS
 GRAPPELLI_ADMIN_TITLE = 'APTrust Admin'
