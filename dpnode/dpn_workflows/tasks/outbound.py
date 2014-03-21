@@ -7,6 +7,8 @@
 # Handles tasks related to sending bags for replication across the
 # DPN Federation.
 
+import logging
+
 from datetime import datetime
 from uuid import uuid4
 
@@ -21,6 +23,8 @@ from dpnode.settings import DPN_XFER_OPTIONS, DPN_BROADCAST_KEY
 
 from dpnmq.messages import ReplicationInitQuery
 from dpnmq.util import str_expire_on, dpn_strftime
+
+logger = logging.getLogger('dpnmq.console')
 
 @task()
 def initiate_ingest(id, size):
@@ -45,7 +49,7 @@ def initiate_ingest(id, size):
     body = {
         "replication_size": size,
         "protocol": DPN_XFER_OPTIONS,
-        "dpn_object_id": uuid4()
+        "dpn_object_id": id
     }
 
     try:
@@ -58,5 +62,7 @@ def initiate_ingest(id, size):
     except Exception as err:
         action.state = FAILED
         action.note = "%s" % err
+        logger.info(err)
+
     action.save()
     return action

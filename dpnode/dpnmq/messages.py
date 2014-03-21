@@ -128,9 +128,12 @@ class ReplicationInitQuery(DPNMessage):
 
     directive = 'replication-init-query'
 
-    def set_body(self, replication_size=0, protocol=[], message_name=None):
+    def set_body(self, replication_size=0, protocol=[], message_name=None, dpn_object_id=None):
 
         self._set_message_name(message_name)
+
+        # set dpn_object_id to message
+        self.body['dpn_object_id'] = dpn_object_id
 
         if not isinstance(replication_size, int):
             raise DPNMessageError("Replication size of %s is invalid!" % 
