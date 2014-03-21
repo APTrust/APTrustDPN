@@ -44,7 +44,8 @@ def initiate_ingest(id, size):
     }
     body = {
         "replication_size": size,
-        "protocol": DPN_XFER_OPTIONS
+        "protocol": DPN_XFER_OPTIONS,
+        "dpn_object_id": uuid4()
     }
 
     try:
