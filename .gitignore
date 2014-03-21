@@ -48,4 +48,4 @@ sitemedia/*
 
 # Other Files
 .DS_Store
-dpn_bags_dir/*
+dpnode/dpn_bags_dir/*.*

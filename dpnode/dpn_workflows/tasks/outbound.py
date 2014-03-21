@@ -40,7 +40,7 @@ def initiate_ingest(id, size):
         "correlation_id": action.correlation_id,
         "date": dpn_strftime(datetime.utcnow()),
         "ttl": str_expire_on(datetime.utcnow()),
-        "sequence": 1,
+        "sequence": 1
     }
     body = {
         "replication_size": size,
@@ -50,6 +50,7 @@ def initiate_ingest(id, size):
     try:
         if id == 0: # Faking a fail condition for now to test.
             raise Exception("Trying to ingest invalid item ID 0!")
+
         msg = ReplicationInitQuery(headers, body)
         msg.send(DPN_BROADCAST_KEY)
         action.state = SUCCESS
