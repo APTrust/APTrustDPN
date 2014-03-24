@@ -72,7 +72,7 @@ class MessageSchema(object):
             coverage = set(k for k in coverage if type(k) is not Optional)
             required = set(k for k in s if type(k) is not Optional)
             if coverage != required:
-                raise MessageSchemaError('missed keys %r' % (required - coverage), e)
+                raise MessageSchemaError('missed keys %r in: %r' % (required - coverage, MsgTracker.data()), e)
             if len(new) != len(data):
                 wrong_keys = set(data.keys()) - set(new.keys())
                 s_wrong_keys = ', '.join('%r' % k for k in sorted(wrong_keys))
