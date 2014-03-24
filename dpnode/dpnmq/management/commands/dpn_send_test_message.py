@@ -27,5 +27,4 @@ class Command(BaseCommand):
             'dpn_object_id': uuid()
         }
         msg.set_body(**body)
-        msg.validate()
         msg.send(DPN_BROADCAST_KEY)

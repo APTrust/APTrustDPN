@@ -71,7 +71,7 @@ class DPNMessage(object):
 
         """
         self._set_date() # Set date just before it's sent.
-        self.validate_headers()
+        self.validate()
         # TODO change this to a connection pool
         with Connection(DPN_BROKER_URL) as conn:
             with conn.Producer(serializer='json') as producer:
