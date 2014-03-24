@@ -43,7 +43,7 @@ class DPNMessage(object):
             self.set_body(**body_dict)
 
     def set_headers(self, reply_key=DPN_LOCAL_KEY,
-        ttl=None, correlation_id=None, sequence=None, date=None,
+        ttl=DPN_TTL, correlation_id=None, sequence=None, date=None,
         **kwargs):
         self.headers = { 
             'from': kwargs.get('from', DPN_NODE_NAME),
@@ -105,10 +105,10 @@ class DPNMessage(object):
         self.body['message_name'] = message_name
 
     def validate_body(self):
-        if self.body.get('message_att', None) in ['ack', 'nak']:
-            VALID_AVAILABLE_BODY.validate(self.body) if self.body['message_att']=='ack' else VALID_NOT_AVAILABLE_BODY(self.body)
+        if self.body['message_att']=='ack' or self.body['message_att']=='nak':
+          VALID_AVAILABLE_BODY.validate(self.body) if self.body['message_att']=='ack' else VALID_NOT_AVAILABLE_BODY(self.body)
         else:
-            VALID_DIRECTIVES[self.directive].validate(self.body)
+          VALID_DIRECTIVES[self.directive].validate(self.body)
 
     def set_body(self, **kwargs):
         try:
@@ -128,12 +128,9 @@ class ReplicationInitQuery(DPNMessage):
 
     directive = 'replication-init-query'
 
-    def set_body(self, replication_size=0, protocol=[], message_name=None, dpn_object_id=None):
+    def set_body(self, replication_size=0, protocol=[], message_name=None):
 
         self._set_message_name(message_name)
-
-        # set dpn_object_id to message
-        self.body['dpn_object_id'] = dpn_object_id
 
         if not isinstance(replication_size, int):
             raise DPNMessageError("Replication size of %s is invalid!" % 
