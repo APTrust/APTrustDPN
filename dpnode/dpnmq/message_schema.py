@@ -6,11 +6,25 @@
 
 """
 
+class MsgTracker(object):
+    _original_data = None
+    
+    @classmethod
+    def set_data(cls,data):
+        cls._original_data = data
+        return cls._original_data
+        
+    @classmethod
+    def data(cls):
+        return cls._original_data
+  
+
 class MessageSchema(object):
 
-    def __init__(self, schema, error=None):
+    def __init__(self, schema, error=None, sub=False):
         self._schema = schema
         self._error = error
+        self._sub = sub
 
     def __repr__(self):
         return '%s(%r)' % (self.__class__.__name__, self._schema)
@@ -18,11 +32,13 @@ class MessageSchema(object):
     def validate(self, data):
         s = self._schema
         e = self._error
+        if self._sub == False:
+          MsgTracker.set_data(data)
         if type(s) in (list, tuple, set, frozenset):
-            data = MessageSchema(type(s), error=e).validate(data)
+            data = MessageSchema(type(s), error=e, sub=True).validate(data)
             return type(s)(Or(*s, error=e).validate(d) for d in data)
         if type(s) is dict:
-            data = MessageSchema(dict, error=e).validate(data)
+            data = MessageSchema(dict, error=e, sub=True).validate(data)
             new = type(data)()  # new - is a dict of the validated values
             x = None
             coverage = set()  # non-optional schema keys that were matched
@@ -34,12 +50,12 @@ class MessageSchema(object):
                 for skey in sorted_skeys:
                     svalue = s[skey]
                     try:
-                        nkey = MessageSchema(skey, error=e).validate(key)
+                        nkey = MessageSchema(skey, error=e, sub=True).validate(key)
                     except MessageSchemaError:
                         pass
                     else:
                         try:
-                            nvalue = MessageSchema(svalue, error=e).validate(value)
+                            nvalue = MessageSchema(svalue, error=e, sub=True).validate(value)
                         except MessageSchemaError as _x:
                             x = _x
                             raise
@@ -56,7 +72,7 @@ class MessageSchema(object):
             coverage = set(k for k in coverage if type(k) is not Optional)
             required = set(k for k in s if type(k) is not Optional)
             if coverage != required:
-                raise MessageSchemaError('missed keys %r' % (required - coverage), e)
+                raise MessageSchemaError('missed keys %r in: %r' % (required - coverage, MsgTracker.data()), e)
             if len(new) != len(data):
                 wrong_keys = set(data.keys()) - set(new.keys())
                 s_wrong_keys = ', '.join('%r' % k for k in sorted(wrong_keys))
@@ -69,13 +85,13 @@ class MessageSchema(object):
             except MessageSchemaError as x:
                 raise MessageSchemaError([None] + x.autos, [e] + x.errors)
             except BaseException as x:
-                raise MessageSchemaError('%r.validate(%r) raised %r' % (s, data, x),
+                raise MessageSchemaError('%r.validate(%r) raised %r in: %r' % (s, data, x, MsgTracker.data()),
                                   self._error)
         if type(s) is type:
             if isinstance(data, s):
                 return data
             else:
-                raise MessageSchemaError('%r should be instance of %r' % (data, s), e)
+                raise MessageSchemaError('%r should be instance of %r in: %r' % (data, s, MsgTracker.data()), e)
         if callable(s):
             f = s.__name__
             try:
@@ -127,7 +143,7 @@ class And(object):
                            ', '.join(repr(a) for a in self._args))
 
     def validate(self, data):
-        for s in [MessageSchema(s, error=self._error) for s in self._args]:
+        for s in [MessageSchema(s, error=self._error, sub=True) for s in self._args]:
             data = s.validate(data)
         return data
 
@@ -136,7 +152,7 @@ class Or(And):
 
     def validate(self, data):
         x = MessageSchemaError([], [])
-        for s in [MessageSchema(s, error=self._error) for s in self._args]:
+        for s in [MessageSchema(s, error=self._error, sub=True) for s in self._args]:
             try:
                 return s.validate(data)
             except MessageSchemaError as _x:

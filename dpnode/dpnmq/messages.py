@@ -15,12 +15,11 @@ from kombu import Connection
 from dpnode.settings import DPN_TTL, DPN_BROKER_URL, DPN_NODE_NAME, DPN_EXCHANGE
 from dpnode.settings import DPN_BROADCAST_QUEUE, DPN_BROADCAST_KEY
 from dpnode.settings import DPN_LOCAL_KEY, DPN_LOCAL_QUEUE, DPN_XFER_OPTIONS
+from dpnode.settings import PROTOCOL_LIST
 from dpnmq.util import dpn_strftime, is_string, dpn_strptime, str_expire_on
 from dpnmq.models import *
 
 logger = logging.getLogger('dpnmq.console')
-
-PROTOCOL_LIST = ['https', 'rsync']
 
 class DPNMessageError(Exception):
     pass
@@ -56,8 +55,10 @@ class DPNMessage(object):
 
     def _set_date(self):
         now = datetime.now()
-        self.headers["date"] = dpn_strftime(now)
-        self.headers["ttl"] = str_expire_on(now, self.ttl)
+        if self.headers["date"] == None:
+          self.headers["date"] = dpn_strftime(now)
+        if self.headers["ttl"] == None:
+          self.headers["ttl"] = str_expire_on(now, DPN_TTL)
 
     def validate_headers(self):
         VALID_HEADERS.validate(self.headers)
@@ -105,10 +106,10 @@ class DPNMessage(object):
         self.body['message_name'] = message_name
 
     def validate_body(self):
-        if self.body.get('message_att', None) in ['ack', 'nak']:
-            VALID_AVAILABLE_BODY.validate(self.body) if self.body['message_att']=='ack' else VALID_NOT_AVAILABLE_BODY(self.body)
+        if self.body.get('message_att',None)=='ack' or self.body.get('message_att',None)=='nak':
+          VALID_AVAILABLE_BODY.validate(self.body) if self.body['message_att']=='ack' else VALID_NOT_AVAILABLE_BODY(self.body)
         else:
-            VALID_DIRECTIVES[self.directive].validate(self.body)
+          VALID_DIRECTIVES[self.directive].validate(self.body)
 
     def set_body(self, **kwargs):
         try:
@@ -127,26 +128,6 @@ class DPNMessage(object):
 class ReplicationInitQuery(DPNMessage):
 
     directive = 'replication-init-query'
-
-    def set_body(self, replication_size=0, protocol=[], message_name=None, dpn_object_id=None):
-
-        self._set_message_name(message_name)
-
-        # set dpn_object_id to message
-        self.body['dpn_object_id'] = dpn_object_id
-
-        if not isinstance(replication_size, int):
-            raise DPNMessageError("Replication size of %s is invalid!" % 
-                replication_size)
-        self.body['replication_size'] = replication_size
-
-        try:
-            if not set(protocol) <= set(PROTOCOL_LIST):
-                raise DPNMessageError("Invalid protocol value: %s"
-                    % protocol)
-            self.body['protocol'] = protocol
-        except TypeError:
-            raise DPNMessageError("Protocol is not iterable.") 
 
 
 class ReplicationAvailableReply(DPNMessage):

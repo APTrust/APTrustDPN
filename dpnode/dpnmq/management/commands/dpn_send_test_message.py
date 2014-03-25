@@ -23,7 +23,9 @@ class Command(BaseCommand):
         body = {
             'message_name': 'replication-init-query',
             'replication_size': 4502,
-            'protocol': ['https', 'rsync']
+            'protocol': ['https', 'rsync'],
+            'dpn_object_id': uuid()
         }
         msg.set_body(**body)
+        msg.validate()
         msg.send(DPN_BROADCAST_KEY)

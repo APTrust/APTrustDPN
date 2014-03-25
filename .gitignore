@@ -28,6 +28,7 @@ pip-log.txt
 *.log
 *.db
 *.dump
+*.sqlite3
 
 # Unit test / coverage reports
 .coverage

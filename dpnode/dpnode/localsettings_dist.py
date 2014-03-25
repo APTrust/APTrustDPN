@@ -5,6 +5,8 @@ PROJECT_PATH = os.path.dirname(os.path.abspath(__file__))
 DEBUG = False # Always make False by default.
 TEMPLATE_DEBUG = DEBUG
 
+PROTOCOL_LIST = ['https', 'rsync']
+
 # CELERY WORKER CONFIG
 BROKER_URL = 'amqp://guest:guest@localhost:5672/'
 
