@@ -10,8 +10,8 @@ from django.core.management.base import BaseCommand
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
 
-from dpnode.settings import DPN_BAGS_DIR
-from dpnode.settings import DPN_BAGS_FILE_EXT
+from dpnode.settings import DPN_BAGS_DIR, DPN_BAGS_FILE_EXT
+from dpnode.settings import DPN_MAX_SIZE
 
 from dpn_workflows.tasks.outbound import initiate_ingest
 
@@ -42,7 +42,8 @@ class DPNFileEventHandler(PatternMatchingEventHandler):
             filesize = os.path.getsize(event.src_path)
             filename = os.path.splitext(base)[0] # filename to be used as id
 
-            # start the ingestion
-            initiate_ingest(filename, filesize)
-
-            logger.info("New bag '%s' detected. Starting ingestion..." % base)
+            if filesize < DPN_MAX_SIZE:
+                initiate_ingest(filename, filesize)
+                logger.info("New bag detected: %s. Starting ingestion..." % base)
+            else:
+                logger.info("Bag %s is too big to be replicated. Not ingested!" % base)
