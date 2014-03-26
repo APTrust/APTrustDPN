@@ -7,21 +7,52 @@
 """
 
 class MsgTracker(object):
+	"""
+	Due to the iterative nature of the MessageSchema, this class was 
+	introduced in order to keep track of the original data being
+	validated by a MessageSchema for later usage in error debugging.
+	"""
+	
     _original_data = None
     
     @classmethod
     def set_data(cls,data):
+		"""
+        Save the original data being validated by MessageSchema in 
+		_original_data variable.
+
+        :param data: original data being validated by Message Schema.
+		:return: Original MessageSchema data object.
+        """
+		
         cls._original_data = data
         return cls._original_data
         
     @classmethod
     def data(cls):
+		"""
+        Return from _original_data variable the original data being 
+		validated by MessageSchema.
+		
+		:return: Original MessageSchema data object.
+        """
+		
         return cls._original_data
   
 
 class MessageSchema(object):
 
     def __init__(self, schema, error=None, sub=False):
+		"""
+		A simple object-schema based validator in order to be used for 
+		Message validation.
+
+		:param schema: object containing structure and validations to be verified by the MessageSchema instance.
+		:param error: Custom error message to append to any validation error raised by MessageSchema.
+		:param sub: Defaults to false. Set to true only within MessageSchema iterations to make sure MsgTracker class data does not get overwritten.
+		:return: None
+		"""
+		
         self._schema = schema
         self._error = error
         self._sub = sub
@@ -110,7 +141,6 @@ class MessageSchema(object):
 
 
 class MessageSchemaError(Exception):
-
     """Error during MessageSchema validation."""
 
     def __init__(self, autos, errors=[]):
@@ -198,5 +228,4 @@ def priority(s):
 
 
 class Optional(MessageSchema):
-
     """Marker for an optional part of MessageSchema."""
