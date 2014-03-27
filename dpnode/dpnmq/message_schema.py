@@ -7,22 +7,22 @@
 """
 
 class MsgTracker(object):
-	"""
-	Due to the iterative nature of the MessageSchema, this class was 
-	introduced in order to keep track of the original data being
-	validated by a MessageSchema for later usage in error debugging.
-	"""
-	
+    """
+    Due to the iterative nature of the MessageSchema, this class was 
+    introduced in order to keep track of the original data being
+    validated by a MessageSchema for later usage in error debugging.
+    """
+    
     _original_data = None
     
     @classmethod
     def set_data(cls,data):
-		"""
+        """
         Save the original data being validated by MessageSchema in 
-		_original_data variable.
-
+        _original_data variable.
+        
         :param data: original data being validated by Message Schema.
-		:return: Original MessageSchema data object.
+        :return: Original MessageSchema data object.
         """
 		
         cls._original_data = data
@@ -30,11 +30,11 @@ class MsgTracker(object):
         
     @classmethod
     def data(cls):
-		"""
+        """
         Return from _original_data variable the original data being 
-		validated by MessageSchema.
+        validated by MessageSchema.
 		
-		:return: Original MessageSchema data object.
+        :return: Original MessageSchema data object.
         """
 		
         return cls._original_data
@@ -43,15 +43,15 @@ class MsgTracker(object):
 class MessageSchema(object):
 
     def __init__(self, schema, error=None, sub=False):
-		"""
-		A simple object-schema based validator in order to be used for 
-		Message validation.
+        """
+        A simple object-schema based validator in order to be used for 
+        Message validation.
 
-		:param schema: object containing structure and validations to be verified by the MessageSchema instance.
-		:param error: Custom error message to append to any validation error raised by MessageSchema.
-		:param sub: Defaults to false. Set to true only within MessageSchema iterations to make sure MsgTracker class data does not get overwritten.
-		:return: None
-		"""
+        :param schema: object containing structure and validations to be verified by the MessageSchema instance.
+        :param error: Custom error message to append to any validation error raised by MessageSchema.
+        :param sub: Defaults to false. Set to true only within MessageSchema iterations to make sure MsgTracker class data does not get overwritten.
+        :return: None
+        """
 		
         self._schema = schema
         self._error = error
@@ -133,7 +133,7 @@ class MessageSchema(object):
             except BaseException as x:
                 raise MessageSchemaError('%s(%r) raised %r' % (f, data, x),
                                   self._error)
-            raise MessageSchemaError('%s(%r) should evaluate to True' % (f, data), e)
+            raise MessageSchemaError('%s(%r) should evaluate to True in: %r' % (f, data, MsgTracker.data()), e)
         if s == data:
             return data
         else:
