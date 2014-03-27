@@ -94,19 +94,25 @@ class DPNMessage(object):
                                 DPN_EXCHANGE,
                                 rt_key,
                                 self.headers['correlation_id'],
-                                self.headers['sequence']))          
+                                self.headers['sequence']))
 
 
-    def _set_message_name(self):
-        if not self.body['message_name']:
-            self.body['message_name'] = self.directive
-        if self.body['message_name'] != self.directive:
+    def _set_message_name(self, message_name=None):
+        # TODO: add some docstrings here
+        if not message_name:
+            message_name = self.directive
+        
+        if not 'message_name' in self.body:
+            self.body['message_name'] = message_name
+        
+        # TODO: also fix the error message
+        if self.body.get('message_name', None) != self.directive:
             raise DPNMessageError('Passed %s message_name for %s' 
                 % (message_name, self.directive))
 
     def validate_body(self):
         self._set_message_name()
-        if self.body.get('message_att',None)=='ack' or self.body.get('message_att',None)=='nak':
+        if self.body.get('message_att', None) == 'ack' or self.body.get('message_att', None) == 'nak':
           VALID_AVAILABLE_BODY.validate(self.body) if self.body['message_att']=='ack' else VALID_NOT_AVAILABLE_BODY(self.body)
         else:
           VALID_DIRECTIVES[self.directive].validate(self.body)
@@ -137,11 +143,11 @@ class ReplicationAvailableReply(DPNMessage):
     def set_body(self, message_name=None, message_att='nak', protocol=None):
 
         self._set_message_name(message_name)
-		
+        
         self.body['message_att'] = message_att
 
         self.body['protocol'] = protocol
-		
+        
 
 class ReplicationLocationReply(DPNMessage):
     
