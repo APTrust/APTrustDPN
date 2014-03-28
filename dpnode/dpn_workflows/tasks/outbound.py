@@ -62,7 +62,7 @@ def initiate_ingest(id, size):
     except Exception as err:
         action.state = FAILED
         action.note = "%s" % err
-        logger.info(err)
+        logger.error(err)
 
     action.save()
     return action
