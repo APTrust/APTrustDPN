@@ -31,7 +31,7 @@ class Command(BaseCommand):
                 time.sleep(1)
         except KeyboardInterrupt:
             observer.stop()
-            print("Good Bye. No more bags watching!")
+            print("Good Bye. No more bag watching!")
         observer.join()
 
 class DPNFileEventHandler(PatternMatchingEventHandler):
@@ -41,6 +41,8 @@ class DPNFileEventHandler(PatternMatchingEventHandler):
             base = os.path.basename(event.src_path)            
             filesize = os.path.getsize(event.src_path)
             filename = os.path.splitext(base)[0] # filename to be used as id
+            if type(filename) == bytes:
+                filename = filename.decode(encoding='UTF-8')
 
             if filesize < DPN_MAX_SIZE:
                 initiate_ingest(filename, filesize)
