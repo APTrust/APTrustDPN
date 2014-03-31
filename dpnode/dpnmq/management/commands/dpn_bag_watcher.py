@@ -31,7 +31,7 @@ class Command(BaseCommand):
                 time.sleep(1)
         except KeyboardInterrupt:
             observer.stop()
-            print("Good Bye. No more bags watching!")
+            print("Good Bye. No more bag watching!")
         observer.join()
 
 class DPNFileEventHandler(PatternMatchingEventHandler):
@@ -41,6 +41,8 @@ class DPNFileEventHandler(PatternMatchingEventHandler):
             base = os.path.basename(event.src_path)            
             initial_filesize = os.path.getsize(event.src_path)            
             filename = os.path.splitext(base)[0] # filename to be used as id
+            if type(filename) == bytes:
+                filename = filename.decode(encoding='UTF-8')
 
             logger.info("New bag detected: %s. Let's wait 5 seconds and check size again..." % base)
             while True:
