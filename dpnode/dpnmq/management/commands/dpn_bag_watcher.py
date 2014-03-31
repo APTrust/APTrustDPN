@@ -42,7 +42,7 @@ class DPNFileEventHandler(PatternMatchingEventHandler):
             initial_filesize = os.path.getsize(event.src_path)            
             filename = os.path.splitext(base)[0] # filename to be used as id
             if type(filename) == bytes:
-                filename = filename.decode(encoding='UTF-8')
+                filename = filename.decode('utf-8')
 
             logger.info("New bag detected: %s. Let's wait 5 seconds and check size again..." % base)
             while True:
@@ -64,6 +64,6 @@ class DPNFileEventHandler(PatternMatchingEventHandler):
             
             if filesize < DPN_MAX_SIZE:
                 initiate_ingest(filename, filesize)
-                logger.info("Bag size looks good... starting ingestion of %s." % base)
+                logger.info("Bag size looks good. Starting ingestion of %s..." % base)
             else:
                 logger.info("Bag %s is too big to be replicated. Not ingested!" % base)
