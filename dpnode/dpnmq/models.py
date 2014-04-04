@@ -42,5 +42,10 @@ VALID_DIRECTIVES = {
         'replication_size'    : And(int, lambda i: i > 0),
         'protocol'            : Or(PROTOCOL_LIST,*PROTOCOL_LIST),
         'dpn_object_id'       : And(str, lambda s: len(s) > 0)
+    }),
+    'replication-location-reply'  : MessageSchema({ 
+        'message_name' : 'replication-location-reply',
+        'protocol'     : Or(*PROTOCOL_LIST),
+        'location'     : And(str, lambda s: len(s) > 0)
     })
 }
