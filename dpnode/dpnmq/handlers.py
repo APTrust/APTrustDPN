@@ -21,10 +21,10 @@ from dpnmq.messages import RegistryEntryCreated
 
 from dpnmq.util import dpn_strftime
 
-from dpn_workflows.handlers import receive_available_workflow
 from dpn_workflows.handlers import send_available_workflow
 from dpn_workflows.handlers import DPNWorkflowError
 
+from dpn_workflows.tasks.inbound import respond_to_replication_query
 from dpn_workflows.models import PROTOCOL_DB_VALUES
 
 logger = logging.getLogger('dpnmq.console')
@@ -101,41 +101,8 @@ def replication_init_query_handler(msg, body):
         raise DPNMessageError("Recieved bad message body: %s"
             % err)
 
-    # Prep Reply
-    headers = {
-        'correlation_id': req.headers['correlation_id'],
-        'sequence': 1,
-        'date': dpn_strftime(datetime.now())
-    }
-    body = {
-        'message_att': 'nak'
-    }
-
-    supported_protocols = [val for val in req.body['protocol']
-                           if val in DPN_XFER_OPTIONS]
-    if supported_protocols and req.body['replication_size'] < DPN_MAX_SIZE:
-        try:
-            # we need to switch 'https' to 'H' or 'rsync' to 'R'
-            # to prevent from getting a ValidationError
-            protocol = PROTOCOL_DB_VALUES[supported_protocols[0]] 
-
-            action = receive_available_workflow(
-                node=req.headers["from"],
-                protocol=protocol,
-                id=req.headers["correlation_id"])
-            body = {
-                'message_att': 'ack',
-                'protocol': supported_protocols[0] # Take the first one for now.
-            }
-        except ValidationError as err:
-            logger.info('ValidationError: %s' % err)
-            pass # Record not created nak sent
-        except DPNWorkflowError as err:
-            logger.info('DPN Workflow Error: %s' % err)
-            pass # Record not created, nak sent
-
-    rsp = ReplicationAvailableReply(headers, body)
-    rsp.send(req.headers['reply_key'])
+    # Request seems correct, check if node is available to replicate bag
+    respond_to_replication_query(req)
 
 @local_router.register('replication-available-reply')
 def replication_available_reply_handler(msg, body):

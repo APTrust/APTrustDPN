@@ -98,5 +98,9 @@ DPN_MAX_SIZE = 1099511627776 # 1 TB
 DPN_BAGS_DIR = os.path.join(PROJECT_PATH, '../dpn_bags_dir')
 DPN_BAGS_FILE_EXT = ['*.txt'] # set .txt just for testing
 
+# Absolute filesystem path to the directory where bags will be replicated.
+# Example: "/home/media/dpn.aptrust/bags.root/"
+DPN_REPLICATION_ROOT = ''
+
 # GRAPELLI SETTINGS
 GRAPPELLI_ADMIN_TITLE = 'APTrust Admin'
