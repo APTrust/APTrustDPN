@@ -7,7 +7,7 @@ from kombu.utils import uuid
 
 from dpnode.settings import DPN_BROADCAST_KEY
 from dpnmq.messages import RegistryItemCreate
-from dpnmq.util import dpn_strftime
+from dpnmq.utils import dpn_strftime
 
 class Command(BaseCommand):
     help = 'Sends a single registry-item-create broadcast message.'

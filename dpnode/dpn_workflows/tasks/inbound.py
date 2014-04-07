@@ -24,7 +24,7 @@ from dpnode.settings import DPN_XFER_OPTIONS, DPN_LOCAL_KEY, DPN_MAX_SIZE
 from dpnode.settings import DPN_REPLICATION_ROOT
 
 from dpnmq.messages import ReplicationAvailableReply
-from dpnmq.util import str_expire_on, dpn_strftime
+from dpnmq.utils import str_expire_on, dpn_strftime
 
 logger = logging.getLogger('dpnmq.console')
 

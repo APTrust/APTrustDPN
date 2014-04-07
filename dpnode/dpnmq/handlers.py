@@ -19,7 +19,7 @@ from dpnmq.messages import ReplicationLocationCancel, ReplicationTransferReply
 from dpnmq.messages import ReplicationVerificationReply, RegistryItemCreate
 from dpnmq.messages import RegistryEntryCreated
 
-from dpnmq.util import dpn_strftime
+from dpnmq.utils import dpn_strftime
 
 from dpn_workflows.handlers import send_available_workflow
 from dpn_workflows.handlers import DPNWorkflowError

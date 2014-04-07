@@ -13,7 +13,7 @@ from dpnmq.messages import DPNMessage, DPNMessageError, ReplicationInitQuery
 from dpnmq.messages import ReplicationAvailableReply, ReplicationLocationReply
 from dpnmq.messages import ReplicationLocationCancel, ReplicationTransferReply
 from dpnmq.messages import ReplicationVerificationReply, RegistryItemCreate
-from dpnmq.util import is_string, dpn_strftime, str_expire_on
+from dpnmq.utils import is_string, dpn_strftime, str_expire_on
 from dpnmq.handlers import replication_init_query_handler
 
 from dpn_workflows.models import ReceiveFileAction

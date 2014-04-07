@@ -15,7 +15,7 @@ from kombu import Queue, Exchange
 from dpnode.settings import DPN_NODE_NAME, DPN_TTL
 from dpnmq.handlers import broadcast_router, local_router
 from dpnmq.messages import DPNMessageError
-from dpnmq.util import dpn_strptime, dpn_strftime
+from dpnmq.utils import dpn_strptime, dpn_strftime
 
 import logging
 logger = logging.getLogger('dpnmq.console')
