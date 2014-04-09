@@ -6,6 +6,8 @@
 
 """
 
+import traceback
+
 class MsgTracker(object):
     """
     Due to the iterative nature of the MessageSchema, this class was 
@@ -14,6 +16,7 @@ class MsgTracker(object):
     """
     
     _original_data = None
+    _traceback = None
     
     @classmethod
     def set_data(cls,data):
@@ -24,9 +27,15 @@ class MsgTracker(object):
         :param data: original data being validated by Message Schema.
         :return: Original MessageSchema data object.
         """
-		
-        cls._original_data = data
-        return cls._original_data
+        try:
+            raise ValueError
+        except:
+            cls._traceback = traceback.format_stack()
+            for _ in range(2):
+                cls._traceback.pop()
+        finally:
+            cls._original_data = data
+            return cls._original_data
         
     @classmethod
     def data(cls):
@@ -38,6 +47,16 @@ class MsgTracker(object):
         """
 		
         return cls._original_data
+        
+    @classmethod
+    def trace(cls):
+        """
+        Returns a traceback string from the original moment when
+        message schema validation begun.
+		
+        :return: Traceback string
+        """
+        return '\n'.join(cls._traceback)
   
 
 class MessageSchema(object):
@@ -103,11 +122,11 @@ class MessageSchema(object):
             coverage = set(k for k in coverage if type(k) is not Optional)
             required = set(k for k in s if type(k) is not Optional)
             if coverage != required:
-                raise MessageSchemaError('missed keys %r in: %r' % (required - coverage, MsgTracker.data()), e)
+                raise MessageSchemaError(("missed keys %r in: %r \n" + MsgTracker.trace()) % (required - coverage, MsgTracker.data()), e)
             if len(new) != len(data):
                 wrong_keys = set(data.keys()) - set(new.keys())
                 s_wrong_keys = ', '.join('%r' % k for k in sorted(wrong_keys))
-                raise MessageSchemaError('wrong keys %s in %r' % (s_wrong_keys, data),
+                raise MessageSchemaError(("wrong keys %s in %r \n" + MsgTracker.trace()) % (s_wrong_keys, data),
                                   e)
             return new
         if hasattr(s, 'validate'):
@@ -116,13 +135,13 @@ class MessageSchema(object):
             except MessageSchemaError as x:
                 raise MessageSchemaError([None] + x.autos, [e] + x.errors)
             except BaseException as x:
-                raise MessageSchemaError('%r.validate(%r) raised %r in: %r' % (s, data, x, MsgTracker.data()),
+                raise MessageSchemaError(("%r.validate(%r) raised %r in: %r \n" + MsgTracker.trace()) % (s, data, x, MsgTracker.data()),
                                   self._error)
         if type(s) is type:
             if isinstance(data, s):
                 return data
             else:
-                raise MessageSchemaError('%r should be instance of %r in: %r' % (data, s, MsgTracker.data()), e)
+                raise MessageSchemaError(("%r should be instance of %r in: %r \n" + MsgTracker.trace()) % (data, s, MsgTracker.data()), e)
         if callable(s):
             f = s.__name__
             try:
@@ -133,7 +152,7 @@ class MessageSchema(object):
             except BaseException as x:
                 raise MessageSchemaError('%s(%r) raised %r' % (f, data, x),
                                   self._error)
-            raise MessageSchemaError('%s(%r) should evaluate to True in: %r' % (f, data, MsgTracker.data()), e)
+            raise MessageSchemaError(("%s(%r) should evaluate to True in: %r \n" + MsgTracker.trace()) % (f, data, MsgTracker.data()), e)
         if s == data:
             return data
         else:
