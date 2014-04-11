@@ -5,8 +5,6 @@ PROJECT_PATH = os.path.dirname(os.path.abspath(__file__))
 DEBUG = False # Always make False by default.
 TEMPLATE_DEBUG = DEBUG
 
-PROTOCOL_LIST = ['https', 'rsync']
-
 # CELERY WORKER CONFIG
 BROKER_URL = 'amqp://guest:guest@localhost:5672/'
 
@@ -101,6 +99,13 @@ DPN_BAGS_FILE_EXT = ['*.txt'] # set .txt just for testing
 # Absolute filesystem path to the directory where bags will be replicated.
 # Example: "/home/media/dpn.aptrust/bags.root/"
 DPN_REPLICATION_ROOT = ''
+
+DPN_BASE_LOCATION = {
+    'https': 'https://dpn.aptrust.org/outbound/',
+    'rsync': 'dpn@dpn.aptrust.org:/outbound/',
+}
+
+PROTOCOL_LIST = list(DPN_BASE_LOCATION.keys())
 
 # GRAPELLI SETTINGS
 GRAPPELLI_ADMIN_TITLE = 'APTrust Admin'

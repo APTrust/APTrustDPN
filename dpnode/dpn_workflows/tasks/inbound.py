@@ -43,7 +43,7 @@ def respond_to_replication_query(init_request):
         'correlation_id': init_request.headers['correlation_id'],
         'date': dpn_strftime(datetime.now()),
         'ttl': str_expire_on(datetime.now()),
-        'sequence': 2
+        'sequence': 1
     }
     body = {
         'message_att': 'nak'

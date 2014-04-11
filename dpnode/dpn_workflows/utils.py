@@ -3,6 +3,8 @@ import sys
 import ctypes
 import platform
 
+from dpnode.settings import DPN_NODE_LIST
+
 def available_storage(path):
     """
     Returns path/drive available storage in bytes
@@ -26,3 +28,12 @@ def available_storage(path):
         free_bytes = storage.f_bavail * storage.f_frsize
     
     return free_bytes
+
+def choose_nodes():
+    """
+    Chooses the nodes to replicate with 
+    based on some kind of match score 
+    """
+    
+    # getting this nodes randomly for now
+    pass

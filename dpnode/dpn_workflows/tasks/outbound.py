@@ -21,8 +21,9 @@ from dpn_workflows.models import SendFileAction, IngestAction, BaseCopyAction
 from dpn_workflows.handlers import send_available_workflow
 
 from dpnode.settings import DPN_XFER_OPTIONS, DPN_BROADCAST_KEY
+from dpnode.settings import DPN_BASE_LOCATION
 
-from dpnmq.messages import ReplicationInitQuery
+from dpnmq.messages import ReplicationInitQuery, ReplicationLocationReply
 from dpnmq.utils import str_expire_on, dpn_strftime
 
 logger = logging.getLogger('dpnmq.console')
@@ -43,9 +44,9 @@ def initiate_ingest(id, size):
 
     headers = {
         "correlation_id": action.correlation_id,
-        "date": dpn_strftime(datetime.utcnow()),
-        "ttl": str_expire_on(datetime.utcnow()),
-        "sequence": 1
+        "date": dpn_strftime(datetime.now()),
+        "ttl": str_expire_on(datetime.now()),
+        "sequence": 0
     }
     body = {
         "replication_size": size,
@@ -70,30 +71,36 @@ def initiate_ingest(id, size):
     
 def confirm_location(req):
     """
-    Initiates an ingest operation by minting the correlation ID
-    :param id: UUID of the DPN object to send to the federation.
-    :return: Ingest action object.
+    Produces the source location of the content package
+    :param req: ReplicationAvailableReply already validated
     """
 
     action = send_available_workflow(
-            node=req.headers['from'],
-            id=req.headers['correlation_id'],
-            protocol=req.body['protocol'],
-            confirm=req.body['message_att']
-        )
+        node=req.headers['from'],
+        id=req.headers['correlation_id'],
+        protocol=req.body['protocol'],
+        confirm=req.body['message_att']
+    )
+
     headers = {
         'correlation_id': req.headers['correlation_id'],
-        'sequence': 2,
-        'date': dpn_strftime(datetime.now())
+        'date': dpn_strftime(datetime.now()),
+        "ttl": str_expire_on(datetime.now()),
+        'sequence': 2
     }
+    
+    # base locations
+    https, rsync = DPN_BASE_LOCATION['https'], DPN_BASE_LOCATION['rsync']
+    bag_id = action.ingest.object_id
+
     ack = {
         'https': {
             'protocol': 'https',
-            'location': "https://www.interweb.com/%s" % (req.body['dpn_object_id']) # Location needs to be refined
+            'location': '{0}{1}'.format(https, bag_id)
         },
         'rsync': {
             'protocol': 'rsync',
-            'location': "rabbit@dpn-demo:/staging_directory/dpn_package_location/%s" % (req.body['dpn_object_id'])  # Location needs to be refined
+            'location': '{0}{1}'.format(rsync, bag_id)
         }
     }
     rsp = ReplicationLocationReply(headers, ack[req.body['protocol']])

@@ -10,10 +10,10 @@
 
 from django.core.exceptions import ValidationError
 
-from dpn_workflows.models import PENDING, STARTED, SUCCESS, FAILED, CANCELLED
-from dpn_workflows.models import HTTPS, RSYNC, COMPLETE
-from dpn_workflows.models import AVAILABLE, TRANSFER, VERIFY
-from dpn_workflows.models import ReceiveFileAction, SendFileAction, IngestAction
+from .models import PENDING, STARTED, SUCCESS, FAILED, CANCELLED
+from .models import HTTPS, RSYNC, COMPLETE, PROTOCOL_DB_VALUES
+from .models import AVAILABLE, TRANSFER, VERIFY
+from .models import ReceiveFileAction, SendFileAction, IngestAction
 
 
 class DPNWorkflowError(Exception):
@@ -84,7 +84,7 @@ def send_available_workflow(node=None, id=None, protocol=None,
     action.state = FAILED
     action.note = "Did not receive proper ack."
     if confirm == 'ack':
-        action.protocol = protocol
+        action.protocol = PROTOCOL_DB_VALUES[protocol]
         action.step = AVAILABLE
         action.state = SUCCESS
         action.note = None
