@@ -38,6 +38,7 @@ class DPNFileEventHandler(PatternMatchingEventHandler):
 
     def on_created(self, event):
         if not event.is_directory:
+            bag_error = False
             base = os.path.basename(event.src_path)            
             initial_filesize = os.path.getsize(event.src_path)            
             filename = os.path.splitext(base)[0] # filename to be used as id
@@ -46,24 +47,30 @@ class DPNFileEventHandler(PatternMatchingEventHandler):
 
             logger.info("New bag detected: %s. Let's wait 5 seconds and check size again..." % base)
             while True:
-                # wait 5 seconds to check bag size again
-                time.sleep(5)
-                filesize_now = os.path.getsize(event.src_path)
-                
-                # if initial filesize is equal to the filesize now
-                # we can start the bag ingestion
-                if initial_filesize == filesize_now:
-                    filesize = filesize_now
-                    break
-                else:
-                    initial_filesize = filesize_now
-                    print("Bag is not ready, check again in 5 seconds...")
-
                 # NOTE: how long should we wait to get the final size of the bag??
                 # discuss this with the team
+
+                # wait 5 seconds to check bag size again
+                time.sleep(5)
+                try:                    
+                    filesize_now = os.path.getsize(event.src_path)
+                    
+                    # if initial filesize is equal to the filesize now
+                    # we can start the bag ingestion
+                    if initial_filesize == filesize_now:
+                        filesize = filesize_now
+                        break
+                    else:
+                        initial_filesize = filesize_now
+                        print("Bag is not ready, check again in 5 seconds...")
+                except Exception as err:
+                    bag_error = err
+                    break
             
-            if filesize < DPN_MAX_SIZE:
+            if bag_error:
+                logger.error("Error processing the new bag %s. Msg -> %s" % (base, bag_error))
+            elif filesize < DPN_MAX_SIZE:
                 initiate_ingest(filename, filesize)
-                logger.info("Bag size looks good. Starting ingestion of %s..." % base)
+                logger.info("Bag looks good. Starting ingestion of %s..." % base)
             else:
                 logger.info("Bag %s is too big to be replicated. Not ingested!" % base)

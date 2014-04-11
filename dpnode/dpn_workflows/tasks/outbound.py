@@ -23,7 +23,7 @@ from dpn_workflows.handlers import send_available_workflow
 from dpnode.settings import DPN_XFER_OPTIONS, DPN_BROADCAST_KEY
 
 from dpnmq.messages import ReplicationInitQuery
-from dpnmq.util import str_expire_on, dpn_strftime
+from dpnmq.utils import str_expire_on, dpn_strftime
 
 logger = logging.getLogger('dpnmq.console')
 
