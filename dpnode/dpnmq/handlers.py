@@ -25,6 +25,7 @@ from dpn_workflows.handlers import send_available_workflow
 from dpn_workflows.handlers import DPNWorkflowError
 
 from dpn_workflows.tasks.inbound import respond_to_replication_query
+from dpn_workflows.tasks.outbound import confirm_location
 from dpn_workflows.models import PROTOCOL_DB_VALUES
 
 logger = logging.getLogger('dpnmq.console')
@@ -121,30 +122,8 @@ def replication_available_reply_handler(msg, body):
         msg.reject()
         raise DPNMessageError("Received bad message body: %s"
             % err)
-
-    send_available_workflow(
-        node=req.headers['from'],
-        id=req.headers['correlation_id'],
-        protocol=req.body['protocol'],
-        confirm=req.body['message_att']
-    )
-    headers = {
-        'correlation_id': req.headers['correlation_id'],
-        'sequence': 2,
-        'date': dpn_strftime(datetime.now())
-    }
-    ack = {
-        'https': {
-            'protocol': 'https',
-            'location': 'https://www.interweb.com/cornfritter.jpg'
-        },
-        'rsync': {
-            'protocol': 'rsync',
-            'location': 'rabbit@dpn-demo:/staging_directory/dpn_package_location'
-        }
-    }
-    rsp = ReplicationLocationReply(headers, ack[req.body['protocol']])
-    rsp.send(req.headers['reply_key'])
+    
+    confirm_location(req)
 
 @local_router.register('replication-location-cancel')
 def replication_location_cancel_handler(msg, body):

@@ -17,7 +17,8 @@ from celery import task
 from dpn_workflows.models import PENDING, STARTED, SUCCESS, FAILED, CANCELLED
 from dpn_workflows.models import HTTPS, RSYNC, COMPLETE
 from dpn_workflows.models import AVAILABLE, TRANSFER, VERIFY
-from dpn_workflows.models import SendFileAction, IngestAction
+from dpn_workflows.models import SendFileAction, IngestAction, BaseCopyAction
+from dpn_workflows.handlers import send_available_workflow
 
 from dpnode.settings import DPN_XFER_OPTIONS, DPN_BROADCAST_KEY
 
@@ -63,6 +64,40 @@ def initiate_ingest(id, size):
         action.state = FAILED
         action.note = "%s" % err
         logger.error(err)
+
+    action.save()
+    return action
+    
+def confirm_location(req):
+    """
+    Initiates an ingest operation by minting the correlation ID
+    :param id: UUID of the DPN object to send to the federation.
+    :return: Ingest action object.
+    """
+
+    action = send_available_workflow(
+            node=req.headers['from'],
+            id=req.headers['correlation_id'],
+            protocol=req.body['protocol'],
+            confirm=req.body['message_att']
+        )
+    headers = {
+        'correlation_id': req.headers['correlation_id'],
+        'sequence': 2,
+        'date': dpn_strftime(datetime.now())
+    }
+    ack = {
+        'https': {
+            'protocol': 'https',
+            'location': "https://www.interweb.com/%s" % (req.body['dpn_object_id']) # Location needs to be refined
+        },
+        'rsync': {
+            'protocol': 'rsync',
+            'location': "rabbit@dpn-demo:/staging_directory/dpn_package_location/%s" % (req.body['dpn_object_id'])  # Location needs to be refined
+        }
+    }
+    rsp = ReplicationLocationReply(headers, ack[req.body['protocol']])
+    rsp.send(req.headers['reply_key'])
 
     action.save()
     return action

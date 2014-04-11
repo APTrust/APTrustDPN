@@ -21,7 +21,7 @@ from dpn_workflows.models import AVAILABLE, TRANSFER, VERIFY
 from dpn_workflows.models import ReceiveFileAction, IngestAction
 
 from dpnode.settings import DPN_XFER_OPTIONS, DPN_LOCAL_KEY, DPN_MAX_SIZE
-from dpnode.settings import DPN_REPLICATION_ROOT
+from dpnode.settings import DPN_BAGS_DIR
 
 from dpnmq.messages import ReplicationAvailableReply
 from dpnmq.util import str_expire_on, dpn_strftime
@@ -50,7 +50,7 @@ def respond_to_replication_query(init_request):
     }
 
     bag_size = init_request.body['replication_size']
-    avail_storage = available_storage(DPN_REPLICATION_ROOT)
+    avail_storage = available_storage(DPN_BAGS_DIR)
     supported_protocols = [val for val in init_request.body['protocol']
                            if val in DPN_XFER_OPTIONS]
 
