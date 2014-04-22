@@ -37,7 +37,8 @@ PROTOCOL_DB_VALUES = {
 AVAILABLE = 'A'
 TRANSFER = 'T'
 VERIFY = 'V'
-STEP_CHOICES = ( # Noted it actually begins with a broadcast workflow.
+STEP_CHOICES = ( 
+    # Noted it actually begins with a broadcast workflow.
     # replication-init-query -> replication-available-reply
     (AVAILABLE, 'REPLICATION INIT'),
     # replication-location-reply -> replication-transfer-reply

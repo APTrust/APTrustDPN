@@ -1,6 +1,7 @@
 import os
 import sys
 import ctypes
+import random
 import platform
 
 from dpnode.settings import DPN_NODE_LIST
@@ -29,11 +30,17 @@ def available_storage(path):
     
     return free_bytes
 
-def choose_nodes():
+def choose_nodes(node_list):
     """
     Chooses the nodes to replicate with 
     based on some kind of match score 
+
+    :param node_list: A list of acknowledge or available nodes 
+    :returns: two appropiate nodes to replicate with.
     """
     
-    # getting this nodes randomly for now
-    pass
+    # TODO: define a way or ranking to choose nodes
+    # Doing random for now
+
+    return random.sample(node_list, 1) 
+    # TODO: change number to 2, now is 1 for testing purposes

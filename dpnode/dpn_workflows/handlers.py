@@ -88,6 +88,7 @@ def send_available_workflow(node=None, id=None, protocol=None,
         action.step = AVAILABLE
         action.state = SUCCESS
         action.note = None
+    # TODO: save action in case confirm is equal to 'nak'
 
     action.full_clean()
     action.save()

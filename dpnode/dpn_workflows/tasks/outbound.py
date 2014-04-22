@@ -17,14 +17,15 @@ from celery import task
 from dpn_workflows.models import PENDING, STARTED, SUCCESS, FAILED, CANCELLED
 from dpn_workflows.models import HTTPS, RSYNC, COMPLETE
 from dpn_workflows.models import AVAILABLE, TRANSFER, VERIFY
-from dpn_workflows.models import SendFileAction, IngestAction, BaseCopyAction
+from dpn_workflows.models import IngestAction, SendFileAction
 from dpn_workflows.handlers import send_available_workflow
+from dpn_workflows.utils import choose_nodes
 
 from dpnode.settings import DPN_XFER_OPTIONS, DPN_BROADCAST_KEY
 from dpnode.settings import DPN_BASE_LOCATION
 
 from dpnmq.messages import ReplicationInitQuery, ReplicationLocationReply
-from dpnmq.utils import str_expire_on, dpn_strftime
+from dpnmq.utils import str_expire_on, dpn_strftime, dpn_strptime
 
 logger = logging.getLogger('dpnmq.console')
 
@@ -67,44 +68,45 @@ def initiate_ingest(id, size):
         logger.error(err)
 
     action.save()
-    return action
-    
-def confirm_location(req):
+
+    return action.correlation_id
+
+@task()
+def choose_and_send_location(correlation_id):
     """
-    Produces the source location of the content package
-    :param req: ReplicationAvailableReply already validated
+    Chooses the appropiates nodes to replicate with and 
+    sends the ContentLocationQuery to these nodes
+
+    :param correlation_id: UUID of the IngestAction
     """
 
-    action = send_available_workflow(
-        node=req.headers['from'],
-        id=req.headers['correlation_id'],
-        protocol=req.body['protocol'],
-        confirm=req.body['message_att']
-    )
-
+    # prepare headers for ReplicationLocationReply
     headers = {
-        'correlation_id': req.headers['correlation_id'],
+        'correlation_id': correlation_id,
         'date': dpn_strftime(datetime.now()),
-        "ttl": str_expire_on(datetime.now()),
+        'ttl': str_expire_on(datetime.now()),
         'sequence': 2
     }
-    
-    # base locations
-    https, rsync = DPN_BASE_LOCATION['https'], DPN_BASE_LOCATION['rsync']
-    bag_id = action.ingest.object_id
 
-    ack = {
-        'https': {
-            'protocol': 'https',
-            'location': '{0}{1}'.format(https, bag_id)
-        },
-        'rsync': {
-            'protocol': 'rsync',
-            'location': '{0}{1}'.format(rsync, bag_id)
-        }
-    }
-    rsp = ReplicationLocationReply(headers, ack[req.body['protocol']])
-    rsp.send(req.headers['reply_key'])
+    file_actions = SendFileAction.objects.filter(ingest__pk=correlation_id, state=SUCCESS)
+    if file_actions.count() >= 1:
+        selected_nodes = choose_nodes(list(file_actions.values_list('node', flat=True)))
+        
+        for action in file_actions:
+            if action.node in selected_nodes:
+                protocol = action.get_protocol_display()
+                base_location = DPN_BASE_LOCATION[protocol]
+                bag_id = action.ingest.object_id
 
-    action.save()
-    return action
+                body = {
+                    'protocol': protocol,
+                    'location': '{0}{1}'.format(base_location, bag_id)
+                }
+                rsp = ReplicationLocationReply(headers, body)
+                rsp.send(action.node)
+
+                # mark file action as TRANSFER
+                action.step = TRANSFER
+                action.save()
+
+    # else? probably restart the IngestAction

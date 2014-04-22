@@ -25,7 +25,6 @@ from dpn_workflows.handlers import send_available_workflow
 from dpn_workflows.handlers import DPNWorkflowError
 
 from dpn_workflows.tasks.inbound import respond_to_replication_query
-from dpn_workflows.tasks.outbound import confirm_location
 from dpn_workflows.models import PROTOCOL_DB_VALUES
 
 logger = logging.getLogger('dpnmq.console')
@@ -123,7 +122,12 @@ def replication_available_reply_handler(msg, body):
         raise DPNMessageError("Received bad message body: %s"
             % err)
     
-    confirm_location(req)
+    send_available_workflow(
+        node=req.headers['from'],
+        id=req.headers['correlation_id'],
+        protocol=req.body['protocol'],
+        confirm=req.body['message_att']
+    )
 
 @local_router.register('replication-location-cancel')
 def replication_location_cancel_handler(msg, body):

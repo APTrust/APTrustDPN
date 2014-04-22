@@ -50,3 +50,4 @@ sitemedia/*
 # Other Files
 .DS_Store
 dpnode/dpn_bags_dir/*.*
+.venv

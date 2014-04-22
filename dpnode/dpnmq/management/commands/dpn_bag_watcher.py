@@ -13,7 +13,7 @@ from watchdog.events import PatternMatchingEventHandler
 from dpnode.settings import DPN_BAGS_DIR, DPN_BAGS_FILE_EXT
 from dpnode.settings import DPN_MAX_SIZE
 
-from dpn_workflows.tasks.outbound import initiate_ingest
+from dpn_workflows.tasks.outbound import initiate_ingest, choose_and_send_location
 
 logger = logging.getLogger('dpnmq.console')
 
@@ -71,7 +71,12 @@ class DPNFileEventHandler(PatternMatchingEventHandler):
             if bag_error:
                 logger.error("Error processing the new bag %s. Msg -> %s" % (base, bag_error))
             elif filesize < DPN_MAX_SIZE:
-                initiate_ingest(filename, filesize)
                 logger.info("Bag looks good. Starting ingestion of %s..." % base)
+                
+                # start ingestion and link task to choose nodes
+                initiate_ingest.apply_async(
+                    (filename, filesize), 
+                    link=choose_and_send_location.subtask((), countdown=10) # 10 seconds for now, after use TTL
+                )
             else:
                 logger.info("Bag %s is too big to be replicated. Not ingested!" % base)
