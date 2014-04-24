@@ -18,7 +18,6 @@ from dpn_workflows.models import PENDING, STARTED, SUCCESS, FAILED, CANCELLED
 from dpn_workflows.models import HTTPS, RSYNC, COMPLETE
 from dpn_workflows.models import AVAILABLE, TRANSFER, VERIFY
 from dpn_workflows.models import IngestAction, SendFileAction
-from dpn_workflows.handlers import send_available_workflow
 from dpn_workflows.utils import choose_nodes
 
 from dpnode.settings import DPN_XFER_OPTIONS, DPN_BROADCAST_KEY
@@ -103,7 +102,7 @@ def choose_and_send_location(correlation_id):
                     'location': '{0}{1}'.format(base_location, bag_id)
                 }
                 rsp = ReplicationLocationReply(headers, body)
-                rsp.send(action.node)
+                rsp.send(action.reply_key)
 
                 # mark file action as TRANSFER
                 action.step = TRANSFER

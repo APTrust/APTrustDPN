@@ -126,7 +126,8 @@ def replication_available_reply_handler(msg, body):
         node=req.headers['from'],
         id=req.headers['correlation_id'],
         protocol=req.body['protocol'],
-        confirm=req.body['message_att']
+        confirm=req.body['message_att'],
+        reply_key=req.headers['reply_key']
     )
 
 @local_router.register('replication-location-cancel')

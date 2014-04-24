@@ -119,6 +119,9 @@ class SendFileAction(BaseCopyAction):
     state = models.CharField(max_length=10, choices=STATE_CHOICES, help_text=stat_help)
     note = models.TextField(blank=True, null=True, help_text=note_help)
 
+    # Node reply_key
+    reply_key = models.CharField(max_length=25, blank=True)
+
     class Meta:
         unique_together = (('ingest', 'node'),)
 

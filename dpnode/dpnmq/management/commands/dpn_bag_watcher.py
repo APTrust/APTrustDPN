@@ -11,7 +11,7 @@ from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
 
 from dpnode.settings import DPN_BAGS_DIR, DPN_BAGS_FILE_EXT
-from dpnode.settings import DPN_MAX_SIZE
+from dpnode.settings import DPN_MAX_SIZE, DPN_TTL
 
 from dpn_workflows.tasks.outbound import initiate_ingest, choose_and_send_location
 
@@ -76,7 +76,11 @@ class DPNFileEventHandler(PatternMatchingEventHandler):
                 # start ingestion and link task to choose nodes
                 initiate_ingest.apply_async(
                     (filename, filesize), 
-                    link=choose_and_send_location.subtask((), countdown=10) # 10 seconds for now, after use TTL
+                    link=choose_and_send_location.subtask((), countdown=DPN_TTL)
                 )
+                # execute choose_and_send_location task DPN_TTL seconds after 
+                # ReplicationInitQuery has been sent to broadcast queue
+                # using countdown parameter of celery task to do that
+
             else:
                 logger.info("Bag %s is too big to be replicated. Not ingested!" % base)

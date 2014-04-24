@@ -54,7 +54,7 @@ def receive_available_workflow(node=None, protocol=None, id=None):
     return action
 
 def send_available_workflow(node=None, id=None, protocol=None,
-                                         confirm=None):
+                             confirm=None, reply_key=None):
     """
     Initiates or restarts a SendFileAction based on a nodes reply to
     my initial query for replication.
@@ -63,6 +63,7 @@ def send_available_workflow(node=None, id=None, protocol=None,
     :param id: String of correlation_id for transaction.
     :param protocol: Protocol code to use.
     :param confirm: Sting of ack or nak in the message.
+    :param reply_key: String of node direct reply key.
     :return: SendFileAction
     """
     try:
@@ -83,12 +84,18 @@ def send_available_workflow(node=None, id=None, protocol=None,
     action.step = AVAILABLE
     action.state = FAILED
     action.note = "Did not receive proper ack."
+
     if confirm == 'ack':
         action.protocol = PROTOCOL_DB_VALUES[protocol]
+        action.reply_key = reply_key
         action.step = AVAILABLE
         action.state = SUCCESS
         action.note = None
-    # TODO: save action in case confirm is equal to 'nak'
+
+    elif confirm == 'nak':
+        action.step = CANCELLED
+        action.state = CANCELLED
+        action.note = "Received a NAK reponse from node: %s" % node
 
     action.full_clean()
     action.save()
