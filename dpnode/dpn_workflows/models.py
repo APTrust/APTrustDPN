@@ -163,3 +163,11 @@ class NodeInfo(models.Model):
 
     class Meta:
         verbose_name_plural = "Node Info"
+        
+class SequenceInfo(models.Model):
+    """
+    Tracks the overall sequential workflow related to DPN node file transfers.
+    """
+    correlation_id = models.CharField(max_length=100, primary_key=True, help_text=cid_help)
+    node = models.CharField(max_length=25, help_text=node_help)
+    sequence = models.CharField(max_length=20)

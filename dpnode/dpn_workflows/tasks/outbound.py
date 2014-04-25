@@ -17,10 +17,10 @@ from celery import task
 from dpn_workflows.models import PENDING, STARTED, SUCCESS, FAILED, CANCELLED
 from dpn_workflows.models import HTTPS, RSYNC, COMPLETE
 from dpn_workflows.models import AVAILABLE, TRANSFER, VERIFY
-from dpn_workflows.models import IngestAction, SendFileAction
+from dpn_workflows.models import IngestAction, SendFileAction, SequenceInfo
 from dpn_workflows.utils import choose_nodes
 
-from dpnode.settings import DPN_XFER_OPTIONS, DPN_BROADCAST_KEY
+from dpnode.settings import DPN_XFER_OPTIONS, DPN_BROADCAST_KEY, DPN_NODE_NAME
 from dpnode.settings import DPN_BASE_LOCATION
 
 from dpnmq.messages import ReplicationInitQuery, ReplicationLocationReply
@@ -53,6 +53,9 @@ def initiate_ingest(id, size):
         "protocol": DPN_XFER_OPTIONS,
         "dpn_object_id": id
     }
+    
+    sequence_info = store_sequence(headers['correlation_id'],DPN_NODE_NAME,headers['sequence'])
+    validate_sequence(sequence_info)
 
     try:
         if id == 0: # Faking a fail condition for now to test.
@@ -93,6 +96,9 @@ def choose_and_send_location(correlation_id):
         
         for action in file_actions:
             if action.node in selected_nodes:
+                sequence_info = store_sequence(action.correlation_id,action.node,headers['sequence'])
+                validate_sequence(sequence_info)
+                
                 protocol = action.get_protocol_display()
                 base_location = DPN_BASE_LOCATION[protocol]
                 bag_id = action.ingest.object_id

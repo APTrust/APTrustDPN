@@ -5,6 +5,7 @@ import random
 import platform
 
 from dpnode.settings import DPN_NODE_LIST
+from dpn_workflows.models import SequenceInfo
 
 def available_storage(path):
     """
@@ -44,3 +45,25 @@ def choose_nodes(node_list):
 
     return random.sample(node_list, 1) 
     # TODO: change number to 2, now is 1 for testing purposes
+    
+def store_sequence(id,node_name,sequence_num):
+    try:
+        sequence = SequenceInfo.objects.get(correlation_id=id)
+        sequence.sequence = "%s,%s" % (sequence.sequence,sequence_num)
+        return sequence
+    except SequenceInfo.DoesNotExist:
+        sequence = SequenceInfo(correlation_id=id,node=node_name,sequence=str(sequence_num))
+        sequence.save()
+        return sequence
+    
+def validate_sequence(sequence_info):
+    sequence = sequence_info.sequence.split(',')
+    prev_num = -1
+    
+    for num in sequence:
+        if int(num) <= prev_num:
+            raise "Worklow sequence is out of sync in transaction %s from %s!" % (sequence_info.correlation_id, sequence_info.node)
+        prev_num = int(num)
+    
+    return True
+        

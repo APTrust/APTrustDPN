@@ -12,13 +12,13 @@ from uuid import uuid4
 
 from celery import task
 
-from dpn_workflows.utils import available_storage
+from dpn_workflows.utils import available_storage, store_sequence, validate_sequence
 from dpn_workflows.handlers import receive_available_workflow
 
 from dpn_workflows.models import PENDING, STARTED, SUCCESS, FAILED, CANCELLED
 from dpn_workflows.models import HTTPS, RSYNC, COMPLETE, PROTOCOL_DB_VALUES
 from dpn_workflows.models import AVAILABLE, TRANSFER, VERIFY
-from dpn_workflows.models import ReceiveFileAction, IngestAction
+from dpn_workflows.models import ReceiveFileAction, IngestAction, SequenceInfo
 
 from dpnode.settings import DPN_XFER_OPTIONS, DPN_LOCAL_KEY, DPN_MAX_SIZE
 from dpnode.settings import DPN_REPLICATION_ROOT
@@ -48,6 +48,9 @@ def respond_to_replication_query(init_request):
     body = {
         'message_att': 'nak'
     }
+    
+    sequence_info = store_sequence(headers['correlation_id'],init_request.headers['from'],headers['sequence'])
+    validate_sequence(sequence_info)
 
     bag_size = init_request.body['replication_size']
     avail_storage = available_storage(DPN_REPLICATION_ROOT)
