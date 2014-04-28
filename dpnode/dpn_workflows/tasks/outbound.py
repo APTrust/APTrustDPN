@@ -87,7 +87,7 @@ def choose_and_send_location(correlation_id):
         'correlation_id': correlation_id,
         'date': dpn_strftime(datetime.now()),
         'ttl': str_expire_on(datetime.now()),
-        'sequence': 5
+        'sequence': 2
     }
 
     file_actions = SendFileAction.objects.filter(ingest__pk=correlation_id, state=SUCCESS)
