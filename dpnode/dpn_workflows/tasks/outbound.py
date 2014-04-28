@@ -18,7 +18,7 @@ from dpn_workflows.models import PENDING, STARTED, SUCCESS, FAILED, CANCELLED
 from dpn_workflows.models import HTTPS, RSYNC, COMPLETE
 from dpn_workflows.models import AVAILABLE, TRANSFER, VERIFY
 from dpn_workflows.models import IngestAction, SendFileAction, SequenceInfo
-from dpn_workflows.utils import choose_nodes
+from dpn_workflows.utils import choose_nodes, store_sequence, validate_sequence
 
 from dpnode.settings import DPN_XFER_OPTIONS, DPN_BROADCAST_KEY, DPN_NODE_NAME
 from dpnode.settings import DPN_BASE_LOCATION
@@ -87,7 +87,7 @@ def choose_and_send_location(correlation_id):
         'correlation_id': correlation_id,
         'date': dpn_strftime(datetime.now()),
         'ttl': str_expire_on(datetime.now()),
-        'sequence': 2
+        'sequence': 5
     }
 
     file_actions = SendFileAction.objects.filter(ingest__pk=correlation_id, state=SUCCESS)
@@ -96,7 +96,7 @@ def choose_and_send_location(correlation_id):
         
         for action in file_actions:
             if action.node in selected_nodes:
-                sequence_info = store_sequence(action.correlation_id,action.node,headers['sequence'])
+                sequence_info = store_sequence(action.ingest.correlation_id, action.node, headers['sequence'])
                 validate_sequence(sequence_info)
                 
                 protocol = action.get_protocol_display()
