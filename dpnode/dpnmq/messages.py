@@ -112,10 +112,15 @@ class DPNMessage(object):
 
     def validate_body(self):
         self._set_message_name()
-        if self.body.get('message_att', None) == 'ack' or self.body.get('message_att', None) == 'nak':
-          VALID_AVAILABLE_BODY.validate(self.body) if self.body['message_att']=='ack' else VALID_NOT_AVAILABLE_BODY(self.body)
+        
+        if self.directive in VALID_DIRECTIVES:
+            VALID_DIRECTIVES[self.directive].validate(self.body)
         else:
-          VALID_DIRECTIVES[self.directive].validate(self.body)
+            if self.body['message_att']=='ack':
+                VALID_AVAILABLE_BODY.validate(self.body) 
+            else:
+                VALID_NOT_AVAILABLE_BODY.validate(self.body)
+          
 
     def set_body(self, **kwargs):
         try:
@@ -153,30 +158,11 @@ class ReplicationLocationReply(DPNMessage):
     
     directive = 'replication-location-reply'
 
-    def set_body(self, message_name=None, protocol=None, location=None):
-
-        self._set_message_name(message_name)
-
-        if protocol not in PROTOCOL_LIST:
-            raise DPNMessageError("Invalid protocol value: %s" % protocol)
-        self.body['protocol'] = protocol
-
-        if not is_string(location):
-            raise DPNMessageError("Invalid location value: %s" % location)
-        self.body['location'] = location
-
 
 class ReplicationLocationCancel(DPNMessage):
     
     directive = 'replication-location-cancel'
-
-    def set_body(self, message_name=None, message_att='nak'):
-
-        self._set_message_name(message_name)
-
-        if message_att != 'nak':
-            raise DPNMessageError("Invalid message_att value: %s" % message_att)
-        self.body['message_att'] = message_att
+    
 
 class ReplicationTransferReply(DPNMessage):
     
