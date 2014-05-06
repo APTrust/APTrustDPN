@@ -116,11 +116,10 @@ class DPNMessage(object):
         if self.directive in VALID_DIRECTIVES:
             VALID_DIRECTIVES[self.directive].validate(self.body)
         else:
-            if self.body['message_att']=='ack':
+            if self.body['message_att'] == 'ack':
                 VALID_AVAILABLE_BODY.validate(self.body) 
             else:
-                VALID_NOT_AVAILABLE_BODY.validate(self.body)
-          
+                VALID_NOT_AVAILABLE_BODY.validate(self.body)          
 
     def set_body(self, **kwargs):
         try:

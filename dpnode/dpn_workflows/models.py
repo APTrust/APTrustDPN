@@ -122,6 +122,9 @@ class SendFileAction(BaseCopyAction):
     # Node reply_key
     reply_key = models.CharField(max_length=25, blank=True)
 
+    # if node in this action is selected to replicate
+    chosen_to_transfer = models.BooleanField() 
+
     class Meta:
         unique_together = (('ingest', 'node'),)
 

@@ -19,13 +19,13 @@ from dpnmq.messages import ReplicationLocationCancel, ReplicationTransferReply
 from dpnmq.messages import ReplicationVerificationReply, RegistryItemCreate
 from dpnmq.messages import RegistryEntryCreated
 
-from dpnmq.utils import dpn_strftime
-
-from dpn_workflows.handlers import send_available_workflow
+from dpn_workflows.handlers import send_available_workflow, receive_cancel_workflow
 from dpn_workflows.handlers import DPNWorkflowError
 
 from dpn_workflows.tasks.inbound import respond_to_replication_query
 from dpn_workflows.models import PROTOCOL_DB_VALUES
+
+from dpnmq.utils import dpn_strftime
 
 logger = logging.getLogger('dpnmq.console')
 
@@ -146,6 +146,10 @@ def replication_location_cancel_handler(msg, body):
         msg.reject()
         raise DPNMessageError("Recieved bad message body: %s" 
             % err)
+    
+    correlation_id = msg.headers['correlation_id']
+    node = msg.headers['from']
+    receive_cancel_workflow(correlation_id, node)
 
 @local_router.register('replication-location-reply')
 def replication_location_reply_handler(msg, body):
@@ -164,6 +168,9 @@ def replication_location_reply_handler(msg, body):
         msg.reject()
         raise DPNMessageError("Recieved bad message body: %s" 
             % err)
+
+    # TODO: create a celery task responsible for transfer (replicate)
+    # the bag received in the LocationReply query
 
     headers = {
         'correlation_id': req.headers['correlation_id'],

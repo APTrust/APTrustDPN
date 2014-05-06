@@ -91,7 +91,7 @@ def choose_and_send_location(correlation_id):
     }
 
     file_actions = SendFileAction.objects.filter(ingest__pk=correlation_id, state=SUCCESS)
-    if file_actions.count() >= 1:
+    if file_actions.count() >= 1: # TODO: change number to 2
         selected_nodes = choose_nodes(list(file_actions.values_list('node', flat=True)))
         
         for action in file_actions:
@@ -109,6 +109,9 @@ def choose_and_send_location(correlation_id):
                 }
                 rsp = ReplicationLocationReply(headers, body)
                 rsp.send(action.reply_key)
+
+                # mark action as chosen to transfer
+                action.chosen_to_transfer = True
 
                 # mark file action as TRANSFER
                 action.step = TRANSFER

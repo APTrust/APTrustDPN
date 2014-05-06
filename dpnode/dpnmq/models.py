@@ -37,12 +37,14 @@ VALID_NOT_AVAILABLE_BODY = MessageSchema({
 })
 
 VALID_DIRECTIVES = { 
+    
     'replication-init-query'  : MessageSchema({
         'message_name'        : 'replication-init-query',
         'replication_size'    : And(int, lambda i: i > 0),
         'protocol'            : Or(PROTOCOL_LIST,*PROTOCOL_LIST),
         'dpn_object_id'       : And(str, lambda s: len(s) > 0)
     }),
+
     'replication-location-reply'  : MessageSchema({ 
         'message_name' : 'replication-location-reply',
         'protocol'     : Or(*PROTOCOL_LIST),

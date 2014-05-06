@@ -108,3 +108,34 @@ def receive_transfer_workflow(node=None, id=None, protocol=None, loc=None):
     except ReceiveFileAction.DoesNotExist as err:
         raise DPNWorkflowError(err)
     #Confirm last step was success.
+
+def receive_cancel_workflow(correlation_id, node):
+    """
+    Cancels any current replication workflow
+
+    :param correlation_id:  String of correlation id for transaction.
+    :param node:  String of node name.
+    """
+    try:
+        action, created = ReceiveFileAction.objects.get(
+            node=node,
+            correlation_id=correlation_id
+        )
+    except ReceiveFileAction.DoesNotExist as err:
+        raise DPNWorkflowError(err)
+
+    if action.state == CANCELLED:
+        raise DPNWorkflowError("Trying to cancel an already cancelled transaction.")
+
+    if action.step == COMPLETE:
+        # NOTE: seems that replication process is already completed.
+        # TODO: need to remove the replicated bag
+        pass 
+
+    action.step = CANCELLED
+    action.state = CANCELLED
+
+    action.clean_fields()
+    action.save()
+
+    return action
