@@ -12,7 +12,7 @@ import logging
 from datetime import datetime
 from uuid import uuid4
 
-from celery.task import task
+from dpnode.celery import app
 
 from dpn_workflows.models import PENDING, STARTED, SUCCESS, FAILED, CANCELLED
 from dpn_workflows.models import HTTPS, RSYNC, COMPLETE
@@ -28,7 +28,7 @@ from dpnmq.utils import str_expire_on, dpn_strftime, dpn_strptime
 
 logger = logging.getLogger('dpnmq.console')
 
-@task()
+@app.task()
 def initiate_ingest(id, size):
     """
     Initiates an ingest operation by minting the correlation ID
@@ -73,7 +73,7 @@ def initiate_ingest(id, size):
 
     return action.correlation_id
 
-@task()
+@app.task()
 def choose_and_send_location(correlation_id):
     """
     Chooses the appropiates nodes to replicate with and 

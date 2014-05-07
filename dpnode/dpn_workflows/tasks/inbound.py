@@ -10,7 +10,7 @@ import logging
 from datetime import datetime
 from uuid import uuid4
 
-from celery.task import task
+from dpnode.celery import app
 
 from dpn_workflows.utils import available_storage, store_sequence, validate_sequence
 from dpn_workflows.handlers import receive_available_workflow
@@ -30,7 +30,7 @@ logger = logging.getLogger('dpnmq.console')
 
 __author__ = 'swt8w'
 
-@task()
+@app.task()
 def respond_to_replication_query(init_request):
     """
     Verifies if current node is available and has enough storage 
