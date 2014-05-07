@@ -10,7 +10,7 @@ import logging
 from datetime import datetime
 from uuid import uuid4
 
-from celery import task
+from celery.task import task
 
 from dpn_workflows.utils import available_storage, store_sequence, validate_sequence
 from dpn_workflows.handlers import receive_available_workflow

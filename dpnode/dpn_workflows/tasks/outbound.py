@@ -12,7 +12,7 @@ import logging
 from datetime import datetime
 from uuid import uuid4
 
-from celery import task
+from celery.task import task
 
 from dpn_workflows.models import PENDING, STARTED, SUCCESS, FAILED, CANCELLED
 from dpn_workflows.models import HTTPS, RSYNC, COMPLETE
