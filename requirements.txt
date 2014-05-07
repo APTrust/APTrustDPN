@@ -3,7 +3,8 @@ anyjson==0.3.3
 amqp==1.2.1
 kombu==2.5.14
 django==1.5.5
-django-celery==3.0.23
+django-celery==3.1.10
 sphinx
 django-grappelli==2.4.6
 watchdog==0.7.1
+requests==2.2.1
