@@ -3,8 +3,12 @@ import sys
 import ctypes
 import random
 import platform
+import requests
+import hashlib
 
-from dpnode.settings import DPN_NODE_LIST
+from dpnode.settings import DPN_NODE_LIST, DPN_REPLICATION_ROOT
+from dpnode.settings import DPN_FIXITY_CHOICES
+
 from dpn_workflows.models import SequenceInfo
 
 def available_storage(path):
@@ -66,4 +70,54 @@ def validate_sequence(sequence_info):
         prev_num = int(num)
     
     return True
-        
+
+def download_bag(location, protocol):
+    """
+    Transfers the bag according to the selected protocol
+
+    :param location: url of the bag 
+    :param protocol: selected protocol by node
+    :returns: file
+    """
+
+    if protocol == 'https':
+        basefile = os.path.basename(location)
+        local_bagfile = os.path.join(DPN_REPLICATION_ROOT, basefile)
+
+        r = requests.get(location, stream=True)
+        with open(local_bagfile, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=1024): 
+                if chunk:
+                    f.write(chunk)
+                    f.flush()
+
+        return local_bagfile
+
+    # elif protocol == 'rsync':
+    # TODO: implement rsync transfer
+    else:
+        raise NotImplementedError
+
+def fixity_str(filename, algorithm='sha256'):
+    """
+    Returns the fixity value for a given bag file
+    stored in local 
+
+    :param filename: Local bag file path
+    :return 
+    """
+    blocksize = 65536
+
+    if algorithm not in DPN_FIXITY_CHOICES:
+        raise NotImplementedError
+
+    if algorithm == 'sha256':        
+        hasher = hashlib.sha256()
+        with open(filename, 'rb') as f:
+            buf = f.read(blocksize)
+            while len(buf) > 0:
+                hasher.update(buf)
+                buf = f.read(blocksize)                
+        return hasher.hexdigest()
+
+    # TODO: implement hashing checksum for other algorithms

@@ -22,7 +22,7 @@ from dpnmq.messages import RegistryEntryCreated
 from dpn_workflows.handlers import send_available_workflow, receive_cancel_workflow
 from dpn_workflows.handlers import DPNWorkflowError
 
-from dpn_workflows.tasks.inbound import respond_to_replication_query
+from dpn_workflows.tasks.inbound import respond_to_replication_query, transfer_content
 from dpn_workflows.models import PROTOCOL_DB_VALUES
 
 from dpnmq.utils import dpn_strftime
@@ -169,25 +169,26 @@ def replication_location_reply_handler(msg, body):
         raise DPNMessageError("Recieved bad message body: %s" 
             % err)
 
-    # TODO: create a celery task responsible for transfer (replicate)
-    # the bag received in the LocationReply query
+    # now we are ready to transfer the bag
+    transfer_content.apply_async((req,))
 
-    headers = {
-        'correlation_id': req.headers['correlation_id'],
-        'sequence': 4,
-        'date': dpn_strftime(datetime.now())
-    }
-    ack = {
-        'message_att': 'ack',
-        'fixity_algorithm': 'sha256',
-        'fixity_value': '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824',
-    }
-    nak = {
-        'message_att': 'nak',
-        'message_error':  "Automatic fail to test nak function."
-    }
-    rsp = ReplicationTransferReply(headers, ack)
-    rsp.send(req.headers['reply_key'])
+    # Move this to another inbound task
+    # headers = {
+    #     'correlation_id': req.headers['correlation_id'],
+    #     'sequence': 4,
+    #     'date': dpn_strftime(datetime.now())
+    # }
+    # ack = {
+    #     'message_att': 'ack',
+    #     'fixity_algorithm': 'sha256',
+    #     'fixity_value': '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824',
+    # }
+    # nak = {
+    #     'message_att': 'nak',
+    #     'message_error':  "Automatic fail to test nak function."
+    # }
+    # rsp = ReplicationTransferReply(headers, ack)
+    # rsp.send(req.headers['reply_key'])
 
 @local_router.register('replication-transfer-reply')
 def replication_transfer_reply_handler(msg, body):

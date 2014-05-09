@@ -12,8 +12,10 @@ from uuid import uuid4
 
 from dpnode.celery import app
 
-from dpn_workflows.utils import available_storage, store_sequence, validate_sequence
 from dpn_workflows.handlers import receive_available_workflow
+from dpn_workflows.utils import available_storage, store_sequence
+from dpn_workflows.utils import download_bag, validate_sequence
+from dpn_workflows.utils import fixity_str
 
 from dpn_workflows.models import PENDING, STARTED, SUCCESS, FAILED, CANCELLED
 from dpn_workflows.models import HTTPS, RSYNC, COMPLETE, PROTOCOL_DB_VALUES
@@ -49,7 +51,11 @@ def respond_to_replication_query(init_request):
         'message_att': 'nak'
     }
     
-    sequence_info = store_sequence(headers['correlation_id'],init_request.headers['from'],headers['sequence'])
+    sequence_info = store_sequence(
+       headers['correlation_id'], 
+       init_request.headers['from'], 
+       headers['sequence']
+    )
     validate_sequence(sequence_info)
 
     bag_size = init_request.body['replication_size']
@@ -84,3 +90,30 @@ def respond_to_replication_query(init_request):
 
     rsp = ReplicationAvailableReply(headers, body)
     rsp.send(init_request.headers['reply_key'])
+
+
+@app.task()
+def transfer_content(req):
+    """
+    Checks the protocol and transfer bag to the replication 
+    directory of the current node
+    
+    :param req: ReplicationLocationReply already validated
+
+    """
+
+    correlation_id = req.headers['correlation_id']
+    protocol = req.body['protocol']
+    location = req.body['location']
+
+    algorithm = 'sha256'
+    filename = download_bag(location, protocol)
+    fixity_value = fixity_str(filename, algorithm)
+    
+    print('%s has been transfered successfully. Correlation_id: %s' % (filename, correlation_id))
+    print('Bag fixity value is: %s. Used algorithm: %s' % (fixity_value, algorithm))
+
+    # TODO:
+    #   - register the transfered bag in DATABASE
+    #   - send the ReplicationTransferReply
+    #   - mark the corresponding ReceiveFileAction as TRANSFER or VERIFICATION. Ask @scott about it.
