@@ -8,3 +8,4 @@ sphinx
 django-grappelli==2.4.6
 watchdog==0.7.1
 requests==2.2.1
+django-extensions==1.3.6

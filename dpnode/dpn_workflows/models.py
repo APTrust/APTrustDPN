@@ -5,6 +5,7 @@
 """
 
 from django.db import models
+from django_extensions.db.fields import UUIDField
 
 # STATE INFORMATION
 PENDING = 'P'
@@ -139,6 +140,9 @@ class ReceiveFileAction(BaseCopyAction):
     step = models.CharField(max_length=1, choices=STEP_CHOICES, help_text=step_help)
     state = models.CharField(max_length=10, choices=STATE_CHOICES, help_text=stat_help)
     note = models.TextField(blank=True, null=True, help_text=note_help)
+
+    # Celery task ID to be able to track the progress of the transfer
+    task_id = UUIDField(blank=True)
 
     class Meta:
         unique_together = (('correlation_id', 'node'),)
