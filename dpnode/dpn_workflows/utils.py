@@ -1,13 +1,11 @@
 import os
-import sys
 import ctypes
 import random
 import platform
 import requests
 import hashlib
 
-from dpnode.settings import DPN_NODE_LIST, DPN_REPLICATION_ROOT
-from dpnode.settings import DPN_FIXITY_CHOICES
+from dpnode.settings import DPN_REPLICATION_ROOT, DPN_FIXITY_CHOICES
 
 from dpn_workflows.models import SequenceInfo
 

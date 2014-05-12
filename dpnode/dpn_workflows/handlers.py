@@ -10,9 +10,9 @@
 
 from django.core.exceptions import ValidationError
 
-from .models import PENDING, STARTED, SUCCESS, FAILED, CANCELLED
-from .models import HTTPS, RSYNC, COMPLETE, PROTOCOL_DB_VALUES
-from .models import AVAILABLE, TRANSFER, VERIFY
+from .models import STARTED, SUCCESS, FAILED, CANCELLED
+from .models import COMPLETE, PROTOCOL_DB_VALUES
+from .models import AVAILABLE, TRANSFER
 from .models import ReceiveFileAction, SendFileAction, IngestAction
 
 
