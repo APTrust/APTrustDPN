@@ -181,12 +181,12 @@ def replication_location_reply_handler(msg, body):
     task = transfer_content.apply_async((req, ))
     
     # save the task id to be able to check the progress of transferring
-    # just in case the is canceled by the first node
+    # just in case the replication is cancelled by the first node
 
     # NOTE: not sure about this functionality. In case of cancelling a replication
     # job, maybe we just need to pull the ReceiveFileAction registry and check the 
     # STEP value. 
-    
+
     # TODO: ask @streamweaver about this.
     action.task_id = task.id
     action.save()
