@@ -129,8 +129,7 @@ INSTALLED_APPS = (
     'django.contrib.admin',
     # Uncomment the next line to enable admin documentation:
     'django.contrib.admindocs',
-    # 'djcelery',
-    #'celerytest',
+    
     'dpnmq',
     'dpn_workflows',
     'dpn_registry',

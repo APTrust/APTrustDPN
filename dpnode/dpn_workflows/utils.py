@@ -7,6 +7,7 @@ import hashlib
 
 from dpnode.settings import DPN_REPLICATION_ROOT, DPN_FIXITY_CHOICES
 
+from dpn_workflows.models import PROTOCOL_DB_VALUES
 from dpn_workflows.models import SequenceInfo
 
 def available_storage(path):
@@ -119,3 +120,15 @@ def fixity_str(filename, algorithm='sha256'):
         return hasher.hexdigest()
 
     # TODO: implement hashing checksum for other algorithms
+
+def protocol_str2db(protocol_str):
+    """
+    Returns the right value to be stored in database.
+    We need to switch 'https' to 'H' or 'rsync' to 'R'
+
+    :param protocol_str: String of the protocol like 'https' or 'rsync'
+    """
+    try:
+        return PROTOCOL_DB_VALUES['protocol_str']
+    except KeyError as err:
+        raise KeyError('Mapping protocol key not found %s' % err)

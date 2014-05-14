@@ -20,7 +20,7 @@ from dpnmq.messages import ReplicationVerificationReply, RegistryItemCreate
 from dpnmq.messages import RegistryEntryCreated
 
 from dpn_workflows.handlers import send_available_workflow, receive_cancel_workflow
-from dpn_workflows.handlers import DPNWorkflowError
+from dpn_workflows.handlers import receive_transfer_workflow, DPNWorkflowError
 
 from dpn_workflows.tasks.inbound import respond_to_replication_query, transfer_content
 from dpn_workflows.models import PROTOCOL_DB_VALUES
@@ -149,7 +149,7 @@ def replication_location_cancel_handler(msg, body):
     
     correlation_id = msg.headers['correlation_id']
     node = msg.headers['from']
-    receive_cancel_workflow(correlation_id, node)
+    receive_cancel_workflow(node, correlation_id)
 
 @local_router.register('replication-location-reply')
 def replication_location_reply_handler(msg, body):
@@ -170,9 +170,30 @@ def replication_location_reply_handler(msg, body):
             % err)
 
     # now we are ready to transfer the bag
-    transfer_content.apply_async((req,))
+    action = receive_transfer_workflow(
+        node=req.headers['from'], 
+        id=req.headers['correlation_id'], 
+        protocol=req.body['protocol'], 
+        loc=req.body['location']
+    )
 
-    # Move this to another inbound task
+    # call the task responsible to transfer the content
+    task = transfer_content.apply_async((req, ))
+    
+    # save the task id to be able to check the progress of transferring
+    # just in case the is canceled by the first node
+
+    # NOTE: not sure about this functionality. In case of cancelling a replication
+    # job, maybe we just need to pull the ReceiveFileAction registry and check the 
+    # STEP value. 
+    
+    # TODO: ask @streamweaver about this.
+    action.task_id = task.id
+    action.save()
+
+    # TODO: link to other outbound task responsible to send 
+    # the ReplicationTransferReply once the transfer job has finished
+
     # headers = {
     #     'correlation_id': req.headers['correlation_id'],
     #     'sequence': 4,
@@ -297,4 +318,4 @@ def registry_entry_created_handler(msg, body):
         msg.ack()
         raise DPNMessageError("Recieved bad message body: %s"
             % err)
-    # TODO Figure out where this goes from here?
+    # TODO: Figure out where this goes from here?

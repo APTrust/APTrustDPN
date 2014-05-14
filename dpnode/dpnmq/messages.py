@@ -5,18 +5,15 @@
             - Emo Philips
 """
 
-from datetime import datetime
 import logging
-
-from django.forms import Form
+from datetime import datetime
 
 from kombu import Connection
 
 from dpnode.settings import DPN_TTL, DPN_BROKER_URL, DPN_NODE_NAME, DPN_EXCHANGE
-from dpnode.settings import DPN_BROADCAST_QUEUE, DPN_BROADCAST_KEY
-from dpnode.settings import DPN_LOCAL_KEY, DPN_LOCAL_QUEUE, DPN_XFER_OPTIONS
-from dpnode.settings import PROTOCOL_LIST
-from dpnmq.utils import dpn_strftime, is_string, dpn_strptime, str_expire_on
+from dpnode.settings import DPN_LOCAL_KEY
+
+from dpnmq.utils import dpn_strftime, is_string, str_expire_on
 from dpnmq.models import *
 
 logger = logging.getLogger('dpnmq.console')

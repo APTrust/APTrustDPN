@@ -15,6 +15,8 @@ from .models import COMPLETE, PROTOCOL_DB_VALUES
 from .models import AVAILABLE, TRANSFER
 from .models import ReceiveFileAction, SendFileAction, IngestAction
 
+from .utils import protocol_str2db
+
 
 class DPNWorkflowError(Exception):
     pass
@@ -102,14 +104,23 @@ def send_available_workflow(node=None, id=None, protocol=None,
     return action
 
 def receive_transfer_workflow(node=None, id=None, protocol=None, loc=None):
-
+    # TODO: add docstrings
     try:
         action = ReceiveFileAction.object.get(node=node, correlation_id=id)
     except ReceiveFileAction.DoesNotExist as err:
         raise DPNWorkflowError(err)
-    #Confirm last step was success.
+    
+    action.protocol = protocol_str2db(protocol)
+    action.location = loc
+    
+    action.step = TRANSFER
+    action.state = SUCCESS
 
-def receive_cancel_workflow(correlation_id, node):
+    action.full_clean()
+    action.save()
+    return action
+
+def receive_cancel_workflow(node, correlation_id):
     """
     Cancels any current replication workflow
 

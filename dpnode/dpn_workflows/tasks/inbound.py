@@ -15,7 +15,7 @@ from dpnode.celery import app
 from dpn_workflows.handlers import receive_available_workflow
 from dpn_workflows.utils import available_storage, store_sequence
 from dpn_workflows.utils import download_bag, validate_sequence
-from dpn_workflows.utils import fixity_str
+from dpn_workflows.utils import fixity_str, protocol_str2db
 
 from dpn_workflows.models import PENDING, STARTED, SUCCESS, FAILED, CANCELLED
 from dpn_workflows.models import HTTPS, RSYNC, COMPLETE, PROTOCOL_DB_VALUES
@@ -68,10 +68,7 @@ def respond_to_replication_query(init_request):
         bag_size < DPN_MAX_SIZE:
 
         try:
-            # we need to switch 'https' to 'H' or 'rsync' to 'R'
-            # to prevent from getting a ValidationError
-            protocol = PROTOCOL_DB_VALUES[supported_protocols[0]] 
-
+            protocol = protocol_str2db(supported_protocols[0])
             action = receive_available_workflow(
                 node=init_request.headers["from"],
                 protocol=protocol,
@@ -114,6 +111,6 @@ def transfer_content(req):
     print('Bag fixity value is: %s. Used algorithm: %s' % (fixity_value, algorithm))
 
     # TODO:
-    #   - register the transfered bag in DATABASE
-    #   - send the ReplicationTransferReply
-    #   - mark the corresponding ReceiveFileAction as TRANSFER or VERIFICATION. Ask @scott about it.
+    #   -register the transfered bag in DATABASE
+    #   -send the ReplicationTransferReply
+    #   -mark the corresponding ReceiveFileAction as TRANSFER or VERIFICATION. Ask @scott about it.
