@@ -133,6 +133,9 @@ INSTALLED_APPS = (
     'dpnmq',
     'dpn_workflows',
     'dpn_registry',
+
+    # thid-party apps
+    'djcelery', # used just for ResultBackend
 )
 
 # Support configurable localsettings.

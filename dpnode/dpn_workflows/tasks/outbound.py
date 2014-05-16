@@ -118,3 +118,9 @@ def choose_and_send_location(correlation_id):
                 action.save()
 
     # else? probably restart the IngestAction
+
+# transfer has finished, that means you boy are ready to notify 
+# first node the bag has been already replicated
+@app.task()
+def send_transfer_status(correlation_id, fixity_value):
+    pass

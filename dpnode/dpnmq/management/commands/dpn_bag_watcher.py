@@ -1,9 +1,6 @@
 import os
-import sys
 import time
 import logging
-
-from uuid import uuid4
 
 from django.core.management.base import BaseCommand
 
@@ -21,7 +18,8 @@ class Command(BaseCommand):
     help = 'Checks for new bags deposited in a directory'
 
     def handle(self, *args, **options):
-        event_handler = DPNFileEventHandler(patterns=DPN_BAGS_FILE_EXT)
+        pattern = ['*.%s' % DPN_BAGS_FILE_EXT]
+        event_handler = DPNFileEventHandler(patterns=pattern)
         observer = Observer()
         observer.schedule(event_handler, DPN_BAGS_DIR, recursive=False)
         observer.start()

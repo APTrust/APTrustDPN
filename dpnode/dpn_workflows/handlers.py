@@ -8,14 +8,21 @@
 
 # Handles various workflow steps as defined by the DPN MQ control flow messages
 
+import os
+
 from django.core.exceptions import ValidationError
+
+from dpnode.settings import DPN_REPLICATION_ROOT, DPN_BAGS_FILE_EXT
+from dpnode.celery import app
+
+from dpn_registry.models import RegistryEntry
 
 from .models import STARTED, SUCCESS, FAILED, CANCELLED
 from .models import COMPLETE, PROTOCOL_DB_VALUES
-from .models import AVAILABLE, TRANSFER
+from .models import AVAILABLE, TRANSFER, VERIFY
 from .models import ReceiveFileAction, SendFileAction, IngestAction
 
-from .utils import protocol_str2db
+from .utils import protocol_str2db, remove_bag
 
 
 class DPNWorkflowError(Exception):
@@ -106,7 +113,7 @@ def send_available_workflow(node=None, id=None, protocol=None,
 def receive_transfer_workflow(node=None, id=None, protocol=None, loc=None):
     # TODO: add docstrings
     try:
-        action = ReceiveFileAction.object.get(node=node, correlation_id=id)
+        action = ReceiveFileAction.objects.get(node=node, correlation_id=id)
     except ReceiveFileAction.DoesNotExist as err:
         raise DPNWorkflowError(err)
     
@@ -128,7 +135,7 @@ def receive_cancel_workflow(node, correlation_id):
     :param node:  String of node name.
     """
     try:
-        action, created = ReceiveFileAction.objects.get(
+        action = ReceiveFileAction.objects.get(
             node=node,
             correlation_id=correlation_id
         )
@@ -138,10 +145,28 @@ def receive_cancel_workflow(node, correlation_id):
     if action.state == CANCELLED:
         raise DPNWorkflowError("Trying to cancel an already cancelled transaction.")
 
-    if action.step == COMPLETE:
-        # NOTE: seems that replication process is already completed.
-        # TODO: need to remove the replicated bag
-        pass 
+    # TODO: move this below to the inbound delete_until_transferred task
+
+    bag_basename = os.path.basename(action.location)
+    dpn_object_id = os.path.splitext(bag_basename)[0]
+
+    if action.step == TRANSFER and action.task_id:
+        result = app.AsyncResult(action.task_id)
+        result.get() # this will wait until the task in completed
+
+    # at this point, the bag must have been transferred already
+    if action.step in [TRANSFER, VERIFY, COMPLETE]:
+        try:
+            registry = RegistryEntry.objects.get(
+                dpn_object_id=dpn_object_id,
+                first_node_name=node
+            )
+            filename = '%s.%s' % (registry.local_id, DPN_BAGS_FILE_EXT)
+            local_bag_path = os.path.join(DPN_REPLICATION_ROOT, filename)
+        except RegistryEntry.DoesNotExist as err:
+            raise DPNWorkflowError(err)
+
+        remove_bag(local_bag_path)
 
     action.step = CANCELLED
     action.state = CANCELLED

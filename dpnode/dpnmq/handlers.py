@@ -12,13 +12,13 @@ from datetime import datetime
 from django.core.exceptions import ValidationError
 
 from dpnode.settings import DPN_XFER_OPTIONS, DPN_MAX_SIZE
-
 from dpnmq.messages import DPNMessageError, ReplicationInitQuery
 from dpnmq.messages import ReplicationAvailableReply, ReplicationLocationReply
 from dpnmq.messages import ReplicationLocationCancel, ReplicationTransferReply
 from dpnmq.messages import ReplicationVerificationReply, RegistryItemCreate
 from dpnmq.messages import RegistryEntryCreated
 
+from dpn_workflows.handlers import DPNWorkflowError
 from dpn_workflows.handlers import send_available_workflow, receive_cancel_workflow
 from dpn_workflows.handlers import receive_transfer_workflow, DPNWorkflowError
 
@@ -178,16 +178,7 @@ def replication_location_reply_handler(msg, body):
     )
 
     # call the task responsible to transfer the content
-    task = transfer_content.apply_async((req, ))
-    
-    # save the task id to be able to check the progress of transferring
-    # just in case the replication is cancelled by the first node
-
-    # NOTE: not sure about this functionality. In case of cancelling a replication
-    # job, maybe we just need to pull the ReceiveFileAction registry and check the 
-    # STEP value. 
-
-    # TODO: ask @streamweaver about this.
+    task = transfer_content.apply_async((req, action))
     action.task_id = task.id
     action.save()
 

@@ -54,10 +54,10 @@ class RegistryEntry(models.Model):
                                          related_name='next_entry')
     forward_version = models.ForeignKey("self", null=True,
                                         related_name='previous_entry')
-    first_version = models.ForeignKey("self", related_name='children')
+    first_version = models.ForeignKey("self", related_name='children', null=True)
 
     # Many to Many Relationships.
-    replicating_nodes = models.ManyToManyField(Node)
+    replicating_nodes = models.ManyToManyField(Node, null=True)
     brightening_objects = models.ManyToManyField("self", null=True)
     rights_objects = models.ManyToManyField("self", null=True)
 

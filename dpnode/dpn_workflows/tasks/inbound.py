@@ -5,10 +5,13 @@
                 - Socrates
 """
 
+import os
 import logging
 
 from datetime import datetime
 from uuid import uuid4
+
+from django.core.exceptions import ValidationError
 
 from dpnode.celery import app
 
@@ -17,6 +20,7 @@ from dpn_workflows.utils import available_storage, store_sequence
 from dpn_workflows.utils import download_bag, validate_sequence
 from dpn_workflows.utils import fixity_str, protocol_str2db
 
+from dpn_workflows.handlers import DPNWorkflowError
 from dpn_workflows.models import PENDING, STARTED, SUCCESS, FAILED, CANCELLED
 from dpn_workflows.models import HTTPS, RSYNC, COMPLETE, PROTOCOL_DB_VALUES
 from dpn_workflows.models import AVAILABLE, TRANSFER, VERIFY
@@ -27,6 +31,8 @@ from dpnode.settings import DPN_REPLICATION_ROOT
 
 from dpnmq.messages import ReplicationAvailableReply
 from dpnmq.utils import str_expire_on, dpn_strftime
+
+from dpn_registry.models import RegistryEntry
 
 logger = logging.getLogger('dpnmq.console')
 
@@ -90,27 +96,57 @@ def respond_to_replication_query(init_request):
 
 
 @app.task()
-def transfer_content(req):
+def transfer_content(req, action):
     """
-    Checks the protocol and transfer bag to the replication 
-    directory of the current node
+    Transfers a bag to the replication directory of the 
+    current node with the given protocol in LocationQuery
     
     :param req: ReplicationLocationReply already validated
+    :param action: Current ReceiveFileAction registry
 
     """
 
     correlation_id = req.headers['correlation_id']
+    node = req.headers['from']
+
     protocol = req.body['protocol']
     location = req.body['location']
 
     algorithm = 'sha256'
-    filename = download_bag(location, protocol)
+    filename = download_bag(node, location, protocol)
     fixity_value = fixity_str(filename, algorithm)
+
+    # store the fixity value in DB
+    action.fixity_value = fixity_value
+    action.step = TRANSFER
+    action.save()
+
+    # register the transfered bag in DATABASE
+    bag_basename = os.path.basename(location)
+    dpn_object_id = os.path.splitext(bag_basename)[0]
     
+    local_basename = os.path.basename(filename)
+    local_id = os.path.splitext(local_basename)[0]
+    now = datetime.now()
+    
+    # NOTE: not sure of using this model
+    # TODO: ask @streamweaver about
+    registry = RegistryEntry.objects.create(
+        dpn_object_id=dpn_object_id,
+        local_id=local_id,
+        first_node_name=node,
+        version_number=1, # NOTE: 1 for now, ask @streamweaver
+        fixity_algorithm=algorithm,
+        fixity_value=fixity_value,
+        lastfixity_date=now,
+        creation_date=now,
+        last_modified_date=now,
+        bag_size=os.path.getsize(filename)
+    )
+
     print('%s has been transfered successfully. Correlation_id: %s' % (filename, correlation_id))
     print('Bag fixity value is: %s. Used algorithm: %s' % (fixity_value, algorithm))
 
-    # TODO:
-    #   -register the transfered bag in DATABASE
-    #   -send the ReplicationTransferReply
-    #   -mark the corresponding ReceiveFileAction as TRANSFER or VERIFICATION. Ask @scott about it.
+@app.task()
+def delete_until_transferred():
+    pass

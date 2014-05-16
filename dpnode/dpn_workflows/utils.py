@@ -4,11 +4,17 @@ import random
 import platform
 import requests
 import hashlib
+import logging
+
+from uuid import uuid4
 
 from dpnode.settings import DPN_REPLICATION_ROOT, DPN_FIXITY_CHOICES
+from dpnode.settings import DPN_BAGS_FILE_EXT
 
 from dpn_workflows.models import PROTOCOL_DB_VALUES
 from dpn_workflows.models import SequenceInfo
+
+logger = logging.getLogger('dpnmq.console')
 
 def available_storage(path):
     """
@@ -70,17 +76,23 @@ def validate_sequence(sequence_info):
     
     return True
 
-def download_bag(location, protocol):
+def download_bag(node, location, protocol):
     """
     Transfers the bag according to the selected protocol
-
-    :param location: url of the bag 
+    
+    :param node: String of node name
+    :param location: String url of the bag 
     :param protocol: selected protocol by node
     :returns: file
     """
 
-    if protocol == 'https':
-        basefile = os.path.basename(location)
+    if protocol == 'https':        
+        basefile = '%(node)s-%(local_id)s.%(ext)s' % {
+            'node': node.upper(), 
+            'local_id': str(uuid4()),
+            'ext': DPN_BAGS_FILE_EXT
+        }
+
         local_bagfile = os.path.join(DPN_REPLICATION_ROOT, basefile)
 
         r = requests.get(location, stream=True)
@@ -97,12 +109,12 @@ def download_bag(location, protocol):
     else:
         raise NotImplementedError
 
-def fixity_str(filename, algorithm='sha256'):
+def fixity_str(bag_path, algorithm='sha256'):
     """
     Returns the fixity value for a given bag file
     stored in local 
 
-    :param filename: Local bag file path
+    :param bag_path: The path of the local bag file
     :return 
     """
     blocksize = 65536
@@ -112,7 +124,7 @@ def fixity_str(filename, algorithm='sha256'):
 
     if algorithm == 'sha256':        
         hasher = hashlib.sha256()
-        with open(filename, 'rb') as f:
+        with open(bag_path, 'rb') as f:
             buf = f.read(blocksize)
             while len(buf) > 0:
                 hasher.update(buf)
@@ -129,6 +141,22 @@ def protocol_str2db(protocol_str):
     :param protocol_str: String of the protocol like 'https' or 'rsync'
     """
     try:
-        return PROTOCOL_DB_VALUES['protocol_str']
+        return PROTOCOL_DB_VALUES[protocol_str]
     except KeyError as err:
         raise KeyError('Mapping protocol key not found %s' % err)
+
+def remove_bag(bag_path):
+    """
+    Removes a bag from the local replication directory of the current node
+
+    :param bag_path: The path of the local bag file
+    :return: Boolean
+    """
+
+    try:
+        os.remove(bag_path)
+    except OSError as err:
+        logger.info(err)
+        return False
+
+    return True

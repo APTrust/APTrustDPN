@@ -94,7 +94,7 @@ DPN_MAX_SIZE = 1099511627776 # 1 TB
 
 # Directory to be monitored for new added bags
 DPN_BAGS_DIR = os.path.join(PROJECT_PATH, '../dpn_bags_dir')
-DPN_BAGS_FILE_EXT = ['*.txt'] # set .txt just for testing
+DPN_BAGS_FILE_EXT = 'tar' # Default DPN bag file extension
 
 # Absolute filesystem path to the directory where bags will be replicated.
 # Example: "/home/media/dpn.aptrust/bags.root/"
