@@ -72,8 +72,8 @@ class DPNConsumer(ConsumerMixin):
             msg.ack()
             return None
         try:
-            self._route_message(local_router, msg)
             logger.info("LOCAL MSG %s" % self._get_logentry(msg))
+            self._route_message(local_router, msg)
         except DPNMessageError as err:
             logger.info(err)
 
@@ -82,8 +82,8 @@ class DPNConsumer(ConsumerMixin):
             msg.ack()
             return None
         try:
-            self._route_message(broadcast_router, msg)
             logger.info("BROADCAST MSG %s" % self._get_logentry(msg))
+            self._route_message(broadcast_router, msg)
         except DPNMessageError as err:
             logger.info("DPN Message Error: %s" % err)
 

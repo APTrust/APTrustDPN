@@ -14,5 +14,5 @@ app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
 
 # using django-celery just for result backend
 app.conf.update(
-    CELERY_RESULT_BACKEND='djcelery.backends.database:DatabaseBackend',
+    CELERY_RESULT_BACKEND='redis://localhost:6379/0',
 )

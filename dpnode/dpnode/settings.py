@@ -135,7 +135,6 @@ INSTALLED_APPS = (
     'dpn_registry',
 
     # thid-party apps
-    'djcelery', # used just for ResultBackend
 )
 
 # Support configurable localsettings.

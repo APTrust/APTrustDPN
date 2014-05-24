@@ -142,7 +142,7 @@ class ReceiveFileAction(BaseCopyAction):
     note = models.TextField(blank=True, null=True, help_text=note_help)
 
     # Celery task ID to be able to track the progress of the transfer
-    task_id = UUIDField(blank=True)
+    task_id = UUIDField(auto=False, blank=True)
 
     class Meta:
         unique_together = (('correlation_id', 'node'),)

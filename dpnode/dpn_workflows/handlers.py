@@ -111,7 +111,16 @@ def send_available_workflow(node=None, id=None, protocol=None,
     return action
 
 def receive_transfer_workflow(node=None, id=None, protocol=None, loc=None):
-    # TODO: add docstrings
+    """
+    Updates the ReceiveFileAction with the trasfer step and a success state
+
+    :param node: String node name
+    :param id: Correlation Id
+    :param protocol: String with selected protocol to transfer the bag
+    :param loc: Bag location string (url)
+    :return: ReceiveFileAction instance
+    """
+
     try:
         action = ReceiveFileAction.objects.get(node=node, correlation_id=id)
     except ReceiveFileAction.DoesNotExist as err:
@@ -151,10 +160,10 @@ def receive_cancel_workflow(node, correlation_id):
     dpn_object_id = os.path.splitext(bag_basename)[0]
 
     if action.step == TRANSFER and action.task_id:
-        result = app.AsyncResult(action.task_id)
+        result = app.AsyncResult(action.task_id) # NOTE: this is stopping listener from accepting new messages
         result.get() # this will wait until the task in completed
 
-    # at this point, the bag must have been transferred already
+    # at this point, the bag has to be already transferred
     if action.step in [TRANSFER, VERIFY, COMPLETE]:
         try:
             registry = RegistryEntry.objects.get(

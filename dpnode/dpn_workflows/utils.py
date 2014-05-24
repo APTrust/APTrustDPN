@@ -109,6 +109,7 @@ def download_bag(node, location, protocol):
     else:
         raise NotImplementedError
 
+# NOTE: maybe change name to calculate_fixity_value or something
 def fixity_str(bag_path, algorithm='sha256'):
     """
     Returns the fixity value for a given bag file

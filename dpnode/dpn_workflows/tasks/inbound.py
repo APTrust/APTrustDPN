@@ -113,8 +113,12 @@ def transfer_content(req, action):
     location = req.body['location']
 
     algorithm = 'sha256'
+    
+    print("Transferring the bag...")
     filename = download_bag(node, location, protocol)
-    fixity_value = fixity_str(filename, algorithm)
+
+    print("Download complete. Now calculating fixity value")
+    fixity_value = fixity_str(filename, algorithm)    
 
     # store the fixity value in DB
     action.fixity_value = fixity_value

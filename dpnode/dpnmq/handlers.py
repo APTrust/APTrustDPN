@@ -179,7 +179,7 @@ def replication_location_reply_handler(msg, body):
 
     # call the task responsible to transfer the content
     task = transfer_content.apply_async((req, action))
-    action.task_id = task.id
+    action.task_id = task.task_id
     action.save()
 
     # TODO: link to other outbound task responsible to send 

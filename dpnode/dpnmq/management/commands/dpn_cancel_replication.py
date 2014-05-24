@@ -7,17 +7,17 @@ class Command(BaseCommand):
     help = 'Cancels a replication transaction in its tracks. Needs to be passed correlation id as argument.'
     
     def handle(self, *args, **options):
-        msg = ReplicationLocationCancel()
         headers = {
         	'correlation_id': args[0],
         	'sequence': 3
         }
-        msg.set_headers(**headers)
+        # msg.set_headers(**headers)
         body = {
             'message_name': 'replication-location-cancel',
             'message_att'  : 'nak'
         }
-        msg.set_body(**body)
+        # msg.set_body(**body)
+        msg = ReplicationLocationCancel(headers, body)
 
         # get the reply_key of nodes that were selected to replicate
         for action in SendFileAction.objects.filter(ingest__pk=args[0], chosen_to_transfer=True):
