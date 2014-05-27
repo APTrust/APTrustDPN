@@ -104,6 +104,7 @@ DPN_BASE_LOCATION = {
     'https': 'https://dpn.aptrust.org/outbound/',
     'rsync': 'dpn@dpn.aptrust.org:/outbound/',
 }
+DPN_DEFAULT_XFER_PROTOCOL = DPN_XFER_OPTIONS[0] # default HTTPS
 
 PROTOCOL_LIST = list(DPN_BASE_LOCATION.keys())
 

@@ -17,8 +17,7 @@ from dpnode.celery import app
 
 from dpn_registry.models import RegistryEntry
 
-from .models import STARTED, SUCCESS, FAILED, CANCELLED
-from .models import COMPLETE, PROTOCOL_DB_VALUES
+from .models import STARTED, SUCCESS, FAILED, CANCELLED, COMPLETE
 from .models import AVAILABLE, TRANSFER, VERIFY
 from .models import ReceiveFileAction, SendFileAction, IngestAction
 
@@ -95,7 +94,7 @@ def send_available_workflow(node=None, id=None, protocol=None,
     action.note = "Did not receive proper ack."
 
     if confirm == 'ack':
-        action.protocol = PROTOCOL_DB_VALUES[protocol]
+        action.protocol = protocol_str2db(protocol)
         action.reply_key = reply_key
         action.step = AVAILABLE
         action.state = SUCCESS

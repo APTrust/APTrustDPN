@@ -54,7 +54,7 @@ def initiate_ingest(id, size):
         "dpn_object_id": id
     }
     
-    sequence_info = store_sequence(headers['correlation_id'],DPN_NODE_NAME,headers['sequence'])
+    sequence_info = store_sequence(headers['correlation_id'], DPN_NODE_NAME, headers['sequence'])
     validate_sequence(sequence_info)
 
     try:

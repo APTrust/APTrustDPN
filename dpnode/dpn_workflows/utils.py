@@ -1,10 +1,12 @@
 import os
+import sys
 import ctypes
 import random
-import platform
-import requests
 import hashlib
 import logging
+import requests
+import platform
+import subprocess
 
 from uuid import uuid4
 
@@ -83,8 +85,10 @@ def download_bag(node, location, protocol):
     :param node: String of node name
     :param location: String url of the bag 
     :param protocol: selected protocol by node
-    :returns: file
+    :returns: bag file
     """
+
+    print("Trying to transfer via %s protocol" % protocol)
 
     if protocol == 'https':        
         basefile = '%(node)s-%(local_id)s.%(ext)s' % {
@@ -95,6 +99,7 @@ def download_bag(node, location, protocol):
 
         local_bagfile = os.path.join(DPN_REPLICATION_ROOT, basefile)
 
+        # TODO: catch exceptions. Need to define behavior in case of errors (same to rsync)
         r = requests.get(location, stream=True)
         with open(local_bagfile, 'wb') as f:
             for chunk in r.iter_content(chunk_size=1024): 
@@ -104,8 +109,25 @@ def download_bag(node, location, protocol):
 
         return local_bagfile
 
-    # elif protocol == 'rsync':
-    # TODO: implement rsync transfer
+    elif protocol == 'rsync':
+        command = "rsync -a -v %(location)s %(destiny)s" % {
+            'location': location,
+            'destiny': DPN_REPLICATION_ROOT
+        }
+        try:
+            retcode = subprocess.call(command, shell=True)            
+            if retcode < 0:
+                print("Child was terminated by signal", -retcode, file=sys.stderr)
+            else:
+                print("Child returned", retcode, file=sys.stderr)
+
+            # TODO: ask about the destiny filename for rsync protocol
+            return os.path.join(DPN_REPLICATION_ROOT, os.path.basename(location))
+
+        except OSError as err:
+            print("Transfer failed:", err, file=sys.stderr)
+            raise err
+
     else:
         raise NotImplementedError
 

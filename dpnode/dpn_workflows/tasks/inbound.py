@@ -27,7 +27,7 @@ from dpn_workflows.models import AVAILABLE, TRANSFER, VERIFY
 from dpn_workflows.models import ReceiveFileAction, IngestAction, SequenceInfo
 
 from dpnode.settings import DPN_XFER_OPTIONS, DPN_LOCAL_KEY, DPN_MAX_SIZE
-from dpnode.settings import DPN_REPLICATION_ROOT
+from dpnode.settings import DPN_REPLICATION_ROOT, DPN_DEFAULT_XFER_PROTOCOL
 
 from dpnmq.messages import ReplicationAvailableReply
 from dpnmq.utils import str_expire_on, dpn_strftime
@@ -38,6 +38,7 @@ logger = logging.getLogger('dpnmq.console')
 
 __author__ = 'swt8w'
 
+# TODO: move this to outbound.py
 @app.task()
 def respond_to_replication_query(init_request):
     """
@@ -82,7 +83,8 @@ def respond_to_replication_query(init_request):
             )
             body = {
                 'message_att': 'ack',
-                'protocol': supported_protocols[0] # TODO: what protocol are we going to choose?
+                'protocol': DPN_DEFAULT_XFER_PROTOCOL
+                # 'protocol': supported_protocols[0] # TODO: what protocol are we going to choose?
             }
         except ValidationError as err:
             logger.info('ValidationError: %s' % err)
