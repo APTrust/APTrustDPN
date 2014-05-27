@@ -91,12 +91,7 @@ def download_bag(node, location, protocol):
     print("Trying to transfer via %s protocol" % protocol)
 
     if protocol == 'https':        
-        basefile = '%(node)s-%(local_id)s.%(ext)s' % {
-            'node': node.upper(), 
-            'local_id': str(uuid4()),
-            'ext': DPN_BAGS_FILE_EXT
-        }
-
+        basefile = os.path.basename(location)
         local_bagfile = os.path.join(DPN_REPLICATION_ROOT, basefile)
 
         # TODO: catch exceptions. Need to define behavior in case of errors (same to rsync)
@@ -121,7 +116,6 @@ def download_bag(node, location, protocol):
             else:
                 print("Child returned", retcode, file=sys.stderr)
 
-            # TODO: ask about the destiny filename for rsync protocol
             return os.path.join(DPN_REPLICATION_ROOT, os.path.basename(location))
 
         except OSError as err:
