@@ -23,6 +23,7 @@ from dpn_workflows.handlers import send_available_workflow, receive_cancel_workf
 from dpn_workflows.handlers import receive_transfer_workflow, DPNWorkflowError
 
 from dpn_workflows.tasks.inbound import respond_to_replication_query, transfer_content
+from dpn_workflows.tasks.inbound import delete_until_transferred
 from dpn_workflows.models import PROTOCOL_DB_VALUES
 
 from dpnmq.utils import dpn_strftime
@@ -149,7 +150,11 @@ def replication_location_cancel_handler(msg, body):
     
     correlation_id = msg.headers['correlation_id']
     node = msg.headers['from']
-    receive_cancel_workflow(node, correlation_id)
+
+    action = receive_cancel_workflow(node, correlation_id)
+
+    # wait until the transfer is already completed
+    delete_until_transferred.apply_async((action,))
 
 @local_router.register('replication-location-reply')
 def replication_location_reply_handler(msg, body):

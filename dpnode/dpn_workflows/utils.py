@@ -144,7 +144,7 @@ def generate_fixity(bag_path, algorithm='sha256'):
             buf = f.read(blocksize)
             while len(buf) > 0:
                 hasher.update(buf)
-                buf = f.read(blocksize)                
+                buf = f.read(blocksize)
         return hasher.hexdigest()
 
     # TODO: implement hashing checksum for other algorithms

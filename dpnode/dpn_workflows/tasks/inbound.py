@@ -18,7 +18,7 @@ from dpnode.celery import app
 from dpn_workflows.handlers import receive_available_workflow
 from dpn_workflows.utils import available_storage, store_sequence
 from dpn_workflows.utils import download_bag, validate_sequence
-from dpn_workflows.utils import generate_fixity, protocol_str2db
+from dpn_workflows.utils import generate_fixity, protocol_str2db, remove_bag
 
 from dpn_workflows.handlers import DPNWorkflowError
 from dpn_workflows.models import PENDING, STARTED, SUCCESS, FAILED, CANCELLED
@@ -33,6 +33,7 @@ from dpnmq.messages import ReplicationAvailableReply
 from dpnmq.utils import str_expire_on, dpn_strftime
 
 from dpn_registry.models import RegistryEntry
+
 
 logger = logging.getLogger('dpnmq.console')
 
@@ -135,24 +136,49 @@ def transfer_content(req, action):
     local_id = os.path.splitext(local_basename)[0]
     now = datetime.now()
     
-    # NOTE: not sure of using this model
-    # TODO: ask @streamweaver about
-    registry = RegistryEntry.objects.create(
-        dpn_object_id=dpn_object_id,
-        local_id=local_id,
-        first_node_name=node,
-        version_number=1, # NOTE: 1 for now, ask @streamweaver
-        fixity_algorithm=algorithm,
-        fixity_value=fixity_value,
-        lastfixity_date=now,
-        creation_date=now,
-        last_modified_date=now,
-        bag_size=os.path.getsize(filename)
-    )
+    # NOTE: commenting this out. we are gonna use in next story
+    # about RegistryCreationEntry
+    # registry = RegistryEntry.objects.create(
+    #     dpn_object_id=dpn_object_id,
+    #     local_id=local_id,
+    #     first_node_name=node,
+    #     version_number=1, # NOTE: 1 for now, ask @streamweaver
+    #     fixity_algorithm=algorithm,
+    #     fixity_value=fixity_value,
+    #     lastfixity_date=now,
+    #     creation_date=now,
+    #     last_modified_date=now,
+    #     bag_size=os.path.getsize(filename)
+    # )
 
     print('%s has been transfered successfully. Correlation_id: %s' % (filename, correlation_id))
     print('Bag fixity value is: %s. Used algorithm: %s' % (fixity_value, algorithm))
 
-@app.task()
-def delete_until_transferred():
-    pass
+@app.task(bind=True)
+def delete_until_transferred(self, action):
+    """
+    Removes a bag already transfered when a Cancel Content Replication
+    is received as direct message in the local queue
+
+    :param action: ReceiveFileAction instance corresponding to canceling request
+    """
+
+    if action.step == TRANSFER and action.task_id:
+        result = app.AsyncResult(action.task_id)
+        if not result.ready():
+            raise self.retry(exc='Transfer not ready, retrying task', countdown=60)
+
+    bag_basename = os.path.basename(action.location)
+
+    # at this point, the bag has to be already transferred
+    if action.step in [TRANSFER, VERIFY, COMPLETE]:
+        local_bag_path = os.path.join(DPN_REPLICATION_ROOT, bag_basename)
+        remove_bag(local_bag_path)
+
+    action.step = CANCELLED
+    action.state = CANCELLED
+
+    action.clean_fields()
+    action.save()
+
+    return action

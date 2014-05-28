@@ -153,33 +153,4 @@ def receive_cancel_workflow(node, correlation_id):
     if action.state == CANCELLED:
         raise DPNWorkflowError("Trying to cancel an already cancelled transaction.")
 
-    # TODO: move this below to the inbound delete_until_transferred task
-
-    bag_basename = os.path.basename(action.location)
-    dpn_object_id = os.path.splitext(bag_basename)[0]
-
-    if action.step == TRANSFER and action.task_id:
-        result = app.AsyncResult(action.task_id) # NOTE: this is stopping listener from accepting new messages
-        result.get() # this will wait until the task in completed
-
-    # at this point, the bag has to be already transferred
-    if action.step in [TRANSFER, VERIFY, COMPLETE]:
-        try:
-            registry = RegistryEntry.objects.get(
-                dpn_object_id=dpn_object_id,
-                first_node_name=node
-            )
-            filename = '%s.%s' % (registry.local_id, DPN_BAGS_FILE_EXT)
-            local_bag_path = os.path.join(DPN_REPLICATION_ROOT, filename)
-        except RegistryEntry.DoesNotExist as err:
-            raise DPNWorkflowError(err)
-
-        remove_bag(local_bag_path)
-
-    action.step = CANCELLED
-    action.state = CANCELLED
-
-    action.clean_fields()
-    action.save()
-
     return action
