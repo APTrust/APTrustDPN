@@ -18,7 +18,7 @@ from dpnode.celery import app
 from dpn_workflows.handlers import receive_available_workflow
 from dpn_workflows.utils import available_storage, store_sequence
 from dpn_workflows.utils import download_bag, validate_sequence
-from dpn_workflows.utils import fixity_str, protocol_str2db
+from dpn_workflows.utils import generate_fixity, protocol_str2db
 
 from dpn_workflows.handlers import DPNWorkflowError
 from dpn_workflows.models import PENDING, STARTED, SUCCESS, FAILED, CANCELLED
@@ -120,7 +120,7 @@ def transfer_content(req, action):
     filename = download_bag(node, location, protocol)
 
     print("Download complete. Now calculating fixity value")
-    fixity_value = fixity_str(filename, algorithm)    
+    fixity_value = generate_fixity(filename, algorithm)    
 
     # store the fixity value in DB
     action.fixity_value = fixity_value
