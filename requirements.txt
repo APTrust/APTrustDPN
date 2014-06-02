@@ -1,6 +1,6 @@
 # Requirements file for python3
 anyjson==0.3.3
-amqp==1.2.1
+amqp==1.4.5
 kombu==3.0.16
 django==1.5.8
 celery==3.1.11
