@@ -72,10 +72,9 @@ class DPNFileEventHandler(PatternMatchingEventHandler):
                 logger.info("Bag looks good. Starting ingestion of %s..." % base)
                 
                 # start ingestion and link task to choose nodes
-                # TODO: validate name in order to prevent "spaces" errors
-                # with rsync transfer protocol
+                filename_id = os.path.splitext(filename)[0]
                 initiate_ingest.apply_async(
-                    (filename, filesize), 
+                    (filename_id, filesize), 
                     link=choose_and_send_location.subtask((), countdown=DPN_TTL)
                 )
                 # execute choose_and_send_location task DPN_TTL seconds after 

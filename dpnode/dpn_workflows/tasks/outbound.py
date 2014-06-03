@@ -21,7 +21,7 @@ from dpn_workflows.models import IngestAction, SendFileAction, SequenceInfo
 from dpn_workflows.utils import choose_nodes, store_sequence, validate_sequence
 
 from dpnode.settings import DPN_XFER_OPTIONS, DPN_BROADCAST_KEY, DPN_NODE_NAME
-from dpnode.settings import DPN_BASE_LOCATION
+from dpnode.settings import DPN_BASE_LOCATION, DPN_BAGS_FILE_EXT
 
 from dpnmq.messages import ReplicationInitQuery, ReplicationLocationReply
 from dpnmq.utils import str_expire_on, dpn_strftime, dpn_strptime
@@ -105,7 +105,7 @@ def choose_and_send_location(correlation_id):
 
                 body = {
                     'protocol': protocol,
-                    'location': '{0}{1}'.format(base_location, bag_id)
+                    'location': '{0}{1}.{2}'.format(base_location, bag_id, DPN_BAGS_FILE_EXT)
                 }
                 rsp = ReplicationLocationReply(headers, body)
                 rsp.send(action.reply_key)
