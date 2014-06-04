@@ -1,10 +1,13 @@
 from django.contrib import admin
-from dpn_workflows.models import IngestAction, NodeInfo
+from dpn_workflows.models import SendFileAction, ReceiveFileAction, NodeInfo
 
-class IngestActionAdmin(admin.ModelAdmin):
+class SendFileActionAdmin(admin.ModelAdmin):
     pass
+admin.site.register(SendFileAction, SendFileActionAdmin)
 
-# admin.site.register(IngestAction, IngestActionAdmin)
+class ReceiveFileActionAdmin(admin.ModelAdmin):
+    pass
+admin.site.register(ReceiveFileAction, ReceiveFileActionAdmin)
 
 class NodeInfoAdmin(admin.ModelAdmin):
     list_display = ['name', 'slug']
