@@ -13,6 +13,15 @@ from pytz import timezone
 
 from dpnode.settings import TIME_ZONE, DPN_DATE_FORMAT, DPN_TTL
 
+BYTE_SYMBOLS = {
+    'customary'     : ('B', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'),
+    'customary_ext' : ('byte', 'kilo', 'mega', 'giga', 'tera', 'peta', 'exa',
+                       'zetta', 'iotta'),
+    'iec'           : ('Bi', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi', 'Yi'),
+    'iec_ext'       : ('byte', 'kibi', 'mebi', 'gibi', 'tebi', 'pebi', 'exbi',
+                       'zebi', 'yobi'),
+}
+
 def dpn_strftime(dt):
     """
     Returns a string formatted datetime as per the DPN message format and 
@@ -66,3 +75,32 @@ def str_expire_on(date, ttl=DPN_TTL):
     :return:  String of the formatted datetime.
     """
     return dpn_strftime(expire_on(date, ttl))
+    
+def human_to_bytes(str):
+    """
+    Attempts to parse a human readable byte representation based
+    on default symbols and returns the corresponding bytes as an 
+    integer.
+    When unable to recognize the format ValueError is raised.
+    """
+    init = str
+    num = ""
+    while str and str[0:1].isdigit() or str[0:1] == '.':
+        num += str[0]
+        str = str[1:]
+    num = float(num)
+    letter = str.strip()
+    for name, sset in BYTE_SYMBOLS.items():
+        if letter in sset:
+            break
+    else:
+        if letter == 'k':
+            # treat 'k' as an alias for 'K' as per: http://goo.gl/kTQMs
+            sset = BYTE_SYMBOLS['customary']
+            letter = letter.upper()
+        else:
+            raise ValueError("can't interpret %r" % init)
+    prefix = {sset[0]:1}
+    for i, str in enumerate(sset[1:]):
+        prefix[str] = 1 << (i+1)*10
+    return int(num * prefix[letter])
