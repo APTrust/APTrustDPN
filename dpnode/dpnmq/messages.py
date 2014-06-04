@@ -169,26 +169,13 @@ class ReplicationTransferReply(DPNMessage):
 
         self._set_message_name(message_name)
 
-        if message_att not in ['ack', 'nak']:
-            raise DPNMessageError("Invalid message_att value: %s" % message_att)
-        self.body['message_att'] = message_att
-
-        if message_att == 'nak':
-            if not is_string(message_error):
-                raise DPNMessageError("Invalid message_err value: %s" 
-                    % message_error)
-            self.body["message_error"] = message_error
-
         if message_att == 'ack':
-            if fixity_algorithm != 'sha256':
-                raise DPNMessageError("Invalid fixity_algorithm value: %s" 
-                    % fixity_algorithm)
+            VALID_FIXITY['fixity_algorithm'].validate(fixity_algorithm)
             self.body['fixity_algorithm'] = fixity_algorithm
 
-            if not is_string(fixity_value):
-                raise DPNMessageError("Invalid fixity_value value: %s" 
-                    % fixity_value)
-            self.body["fixity_value"] = fixity_value
+            VALID_FIXITY['fixity_value'].validate(fixity_value)
+            self.body['fixity_value'] = fixity_value
+            
 
 class ReplicationVerificationReply(DPNMessage):
     
@@ -197,9 +184,7 @@ class ReplicationVerificationReply(DPNMessage):
     def set_body(self, message_name=None, message_att='nak'):
 
         self._set_message_name(message_name)
-
-        if message_att not in ['nak', 'ack', 'retry']:
-            raise DPNMessageError("Invalid message_att value: %s" % message_att)
+        
         self.body["message_att"] = message_att
 
 class RegistryItemCreate(DPNMessage):
