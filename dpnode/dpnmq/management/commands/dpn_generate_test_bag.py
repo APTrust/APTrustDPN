@@ -12,5 +12,5 @@ class Command(BaseCommand):
         bag_name = "%s/%s.%s" % (DPN_BAGS_DIR, uuid4(), DPN_BAGS_FILE_EXT)
         f = open(bag_name,"wb")
         f.seek(file_size-1)
-        f.write("\0")
+        f.write("\0".encode('utf-8'))
         f.close()
