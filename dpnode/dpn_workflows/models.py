@@ -90,6 +90,12 @@ class IngestAction(models.Model):
                              help_text=stat_help)
     note = models.TextField(blank=True, null=True, help_text=note_help)
 
+    def __str__(self):
+        return '%s' % self.correlation_id
+
+    def ___unicode__(self):
+        return self.__str__()
+
 class BaseCopyAction(models.Model):
     """
     Base class for all the common features of a file transfer action between DPN nodes.
@@ -143,7 +149,13 @@ class ReceiveFileAction(BaseCopyAction):
 
     # Celery task ID to be able to track the progress of the transfer
     task_id = UUIDField(auto=False, blank=True)
+    
+    def __unicode__(self):
+        return '%s' % self.correlation_id
 
+    def __str__(self):
+        return '%s' % self.__unicode__()
+    
     class Meta:
         unique_together = (('correlation_id', 'node'),)
 

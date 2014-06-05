@@ -34,6 +34,12 @@ class Node(models.Model):
     """
     name = models.CharField(max_length=10)
 
+    def __unicode__(self):
+        return '%s' % self.name
+
+    def __str__(self):
+        return '%s' % self.__unicode__()
+
 class RegistryEntry(models.Model):
 
     dpn_object_id = models.CharField(max_length=64, primary_key=True)
@@ -65,6 +71,14 @@ class RegistryEntry(models.Model):
     state = models.CharField(max_length=1, choices=REGISTRY_STATE_CHOICES,
                              default=PENDING)
 
+    def __unicode__(self):
+        return '%s' % self.dpn_object_id
+
+    def __str__(self):
+        return '%s' % self.__unicode__()
+
+    class Meta:
+        verbose_name_plural = "registry entries"
 
 class NodeEntry(RegistryEntry):
     """
@@ -74,5 +88,13 @@ class NodeEntry(RegistryEntry):
     """
     node = models.ForeignKey(Node)
 
-    class meta:
-        unique_together = ("node", "dpn_object_id")
+    def __unicode__(self):
+        return '%s' % self.dpn_object_id
+
+    def __str__(self):
+        return '%s' % self.__unicode__()
+
+    class Meta:
+        verbose_name_plural = "node entries"
+	# This was being refactored to have the above as an abstract model so commenting this out for now.
+        # unique_together = ("node", "dpn_object_id")
