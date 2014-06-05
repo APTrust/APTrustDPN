@@ -21,7 +21,7 @@ from dpn_workflows.models import IngestAction, SendFileAction, SequenceInfo
 from dpn_workflows.utils import choose_nodes, store_sequence, validate_sequence
 
 from dpnode.settings import DPN_XFER_OPTIONS, DPN_BROADCAST_KEY, DPN_NODE_NAME
-from dpnode.settings import DPN_BASE_LOCATION, DPN_BAGS_FILE_EXT
+from dpnode.settings import DPN_BASE_LOCATION, DPN_BAGS_FILE_EXT, DPN_NUM_XFERS
 
 from dpnmq.messages import ReplicationInitQuery, ReplicationLocationReply
 from dpnmq.utils import str_expire_on, dpn_strftime, dpn_strptime
@@ -91,7 +91,7 @@ def choose_and_send_location(correlation_id):
     }
 
     file_actions = SendFileAction.objects.filter(ingest__pk=correlation_id, state=SUCCESS)
-    if file_actions.count() >= 1: # TODO: change number to 2
+    if file_actions.count() >= DPN_NUM_XFERS: 
         selected_nodes = choose_nodes(list(file_actions.values_list('node', flat=True)))
         
         for action in file_actions:
