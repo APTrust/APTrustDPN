@@ -121,7 +121,7 @@ class SendFileAction(BaseCopyAction):
     note = models.TextField(blank=True, null=True, help_text=note_help)
 
     # Node reply_key
-    reply_key = models.CharField(max_length=25, blank=True)
+    reply_key = models.CharField(max_length=75, blank=True)
 
     # if node in this action is selected to replicate
     chosen_to_transfer = models.BooleanField() 

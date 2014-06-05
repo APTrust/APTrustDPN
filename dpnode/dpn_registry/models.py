@@ -41,7 +41,7 @@ class RegistryEntry(models.Model):
     first_node_name = models.CharField(max_length=20)
     version_number = models.PositiveIntegerField()
     fixity_algorithm = models.CharField(max_length=10)
-    fixity_value = models.CharField(max_length=64)
+    fixity_value = models.CharField(max_length=128)
     lastfixity_date = models.DateTimeField()
     creation_date = models.DateTimeField()
     last_modified_date = models.DateTimeField()
