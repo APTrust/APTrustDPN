@@ -11,7 +11,7 @@ import subprocess
 from uuid import uuid4
 
 from dpnode.settings import DPN_REPLICATION_ROOT, DPN_FIXITY_CHOICES
-from dpnode.settings import DPN_BAGS_FILE_EXT
+from dpnode.settings import DPN_BAGS_FILE_EXT, DPN_NUM_XFERS
 
 from dpn_workflows.models import PROTOCOL_DB_VALUES
 from dpn_workflows.models import SequenceInfo
@@ -54,7 +54,7 @@ def choose_nodes(node_list):
     # TODO: define a way or ranking to choose nodes
     # Doing random for now
 
-    return random.sample(node_list, 1) 
+    return random.sample(node_list, DPN_NUM_XFERS) 
     # TODO: change number to 2, now is 1 for testing purposes
     
 def store_sequence(id,node_name,sequence_num):

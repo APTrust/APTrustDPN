@@ -76,6 +76,7 @@ DPN_BROADCAST_KEY = "broadcast" # Routing key for broadcast messages
 DPN_LOCAL_QUEUE = "local" # Name of local queue to bind local routing key.
 DPN_LOCAL_KEY = "aptrust.dpn" # Name to use for routing direct reply messages.
 DPN_XFER_OPTIONS = ['https', 'rsync'] # List of lowercase protocols available for transfer.
+DPN_NUM_XFERS = 1 # Number of nodes to choose for transfers.
 
 # DPN COMMON SETTINGS
 DPN_DATE_FORMAT = "%Y-%m-%dT%H:%M:%SZ" # ISO 8601 format for strftime functions.
