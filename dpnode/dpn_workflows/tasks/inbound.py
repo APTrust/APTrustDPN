@@ -120,44 +120,50 @@ def transfer_content(req, action):
     algorithm = 'sha256'
     
     print("Transferring the bag...")
-    filename = download_bag(node, location, protocol)
+    try:
+        filename = download_bag(node, location, protocol)
 
-    print("Download complete. Now calculating fixity value")
-    fixity_value = generate_fixity(filename, algorithm)    
+        print("Download complete. Now calculating fixity value")
+        fixity_value = generate_fixity(filename, algorithm)    
 
-    # store the fixity value in DB
-    action.fixity_value = fixity_value
-    action.step = TRANSFER
-    action.save()
+        # store the fixity value in DB
+        action.fixity_value = fixity_value
+        action.step = TRANSFER
+        action.save()
 
-    # call the task responsible to transfer the content
-    task = send_transfer_status.apply_async((req, action))
+        # call the task responsible to transfer the content
+        task = send_transfer_status.apply_async((req, action))
 
-    # register the transfered bag in DATABASE
-    bag_basename = os.path.basename(location)
-    dpn_object_id = os.path.splitext(bag_basename)[0]
-    
-    local_basename = os.path.basename(filename)
-    local_id = os.path.splitext(local_basename)[0]
-    now = datetime.now()
-    
-    # NOTE: commenting this out. we are gonna use in next story
-    # about RegistryCreationEntry
-    # registry = RegistryEntry.objects.create(
-    #     dpn_object_id=dpn_object_id,
-    #     local_id=local_id,
-    #     first_node_name=node,
-    #     version_number=1, # NOTE: 1 for now, ask @streamweaver
-    #     fixity_algorithm=algorithm,
-    #     fixity_value=fixity_value,
-    #     lastfixity_date=now,
-    #     creation_date=now,
-    #     last_modified_date=now,
-    #     bag_size=os.path.getsize(filename)
-    # )
+        # register the transfered bag in DATABASE
+        bag_basename = os.path.basename(location)
+        dpn_object_id = os.path.splitext(bag_basename)[0]
+        
+        local_basename = os.path.basename(filename)
+        local_id = os.path.splitext(local_basename)[0]
+        now = datetime.now()
+        
+        # NOTE: commenting this out. we are gonna use in next story
+        # about RegistryCreationEntry
+        # registry = RegistryEntry.objects.create(
+        #     dpn_object_id=dpn_object_id,
+        #     local_id=local_id,
+        #     first_node_name=node,
+        #     version_number=1, # NOTE: 1 for now, ask @streamweaver
+        #     fixity_algorithm=algorithm,
+        #     fixity_value=fixity_value,
+        #     lastfixity_date=now,
+        #     creation_date=now,
+        #     last_modified_date=now,
+        #     bag_size=os.path.getsize(filename)
+        # )
 
-    print('%s has been transfered successfully. Correlation_id: %s' % (filename, correlation_id))
-    print('Bag fixity value is: %s. Used algorithm: %s' % (fixity_value, algorithm))
+        print('%s has been transfered successfully. Correlation_id: %s' % (filename, correlation_id))
+        print('Bag fixity value is: %s. Used algorithm: %s' % (fixity_value, algorithm))
+    except OSError as err:
+        action.state = FAILED
+        action.save()
+        task = send_transfer_status.apply_async((req, action, False, err))
+        print('ERROR, transfer with correlation_id %s has failed.' % (correlation_id))
 
 @app.task(bind=True)
 def delete_until_transferred(self, action):

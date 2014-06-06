@@ -122,7 +122,7 @@ def choose_and_send_location(correlation_id):
 # transfer has finished, that means you boy are ready to notify 
 # first node the bag has been already replicated
 @app.task()
-def send_transfer_status(req, action):
+def send_transfer_status(req, action, success=True, err=''):
     """
     Sends ReplicationTransferReply to original node 
     upon completion or failure
@@ -138,12 +138,20 @@ def send_transfer_status(req, action):
         'sequence': 4
     }
     
-    body = {
-        'message_name': 'replication-transfer-reply',
-        'message_att' : 'ack',
-        "fixity_algorithm" : "sha256",
-        "fixity_value" : fixity
-    }
+    if success:
+        body = {
+            'message_name': 'replication-transfer-reply',
+            'message_att' : 'ack',
+            "fixity_algorithm" : "sha256",
+            "fixity_value" : fixity
+        }
+    else:
+        body = {
+            'message_name': 'replication-transfer-reply',
+            'message_att' : 'nak',
+            'message_error': str(err)
+        }
+    
     
     msg = ReplicationTransferReply(headers, body)
     msg.send(req.headers['reply_key'])
