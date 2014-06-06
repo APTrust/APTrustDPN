@@ -58,7 +58,11 @@ class DPNConsumer(ConsumerMixin):
             logger.info("MSG TTL Expired") # TODO: improve this message
             return None
 
-        decoded_body = json.loads(str(msg.body, encoding="UTF-8"))
+        body_str = msg.body        
+        if type(body_str) == bytes:
+            body_str = str(body_str, encoding="UTF-8")
+
+        decoded_body = json.loads(body_str)
 
         try:
             message_name = decoded_body['message_name']

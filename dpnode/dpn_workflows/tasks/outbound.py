@@ -146,6 +146,6 @@ def send_transfer_status(req, action):
     }
     
     msg = ReplicationTransferReply(headers, body)
-    msg.send()
+    msg.send(req.headers['reply_key'])
         
         
