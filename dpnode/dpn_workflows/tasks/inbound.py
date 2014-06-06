@@ -26,6 +26,8 @@ from dpn_workflows.models import HTTPS, RSYNC, COMPLETE, PROTOCOL_DB_VALUES
 from dpn_workflows.models import AVAILABLE, TRANSFER, VERIFY
 from dpn_workflows.models import ReceiveFileAction, IngestAction, SequenceInfo
 
+from dpn_workflows.tasks.outbound import send_transfer_status
+
 from dpnode.settings import DPN_XFER_OPTIONS, DPN_LOCAL_KEY, DPN_MAX_SIZE
 from dpnode.settings import DPN_REPLICATION_ROOT, DPN_DEFAULT_XFER_PROTOCOL
 
@@ -127,6 +129,9 @@ def transfer_content(req, action):
     action.fixity_value = fixity_value
     action.step = TRANSFER
     action.save()
+
+    # call the task responsible to transfer the content
+    task = send_transfer_status.apply_async((req, action))
 
     # register the transfered bag in DATABASE
     bag_basename = os.path.basename(location)

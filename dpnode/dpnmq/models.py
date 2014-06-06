@@ -52,6 +52,10 @@ VALID_DIRECTIVES = {
     })
 }
 
+VALID_FIXITY = { 
+    'fixity_algorithm'  : MessageSchema(And(str, lambda s: s == 'sha256')),
+    'fixity_value'      : MessageSchema(str)
+}
 
 # ------------------------------
 # register some signals handlers

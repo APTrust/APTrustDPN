@@ -23,7 +23,7 @@ from dpn_workflows.utils import choose_nodes, store_sequence, validate_sequence
 from dpnode.settings import DPN_XFER_OPTIONS, DPN_BROADCAST_KEY, DPN_NODE_NAME
 from dpnode.settings import DPN_BASE_LOCATION, DPN_BAGS_FILE_EXT, DPN_NUM_XFERS
 
-from dpnmq.messages import ReplicationInitQuery, ReplicationLocationReply
+from dpnmq.messages import ReplicationInitQuery, ReplicationLocationReply, ReplicationTransferReply
 from dpnmq.utils import str_expire_on, dpn_strftime, dpn_strptime
 
 logger = logging.getLogger('dpnmq.console')
@@ -122,5 +122,30 @@ def choose_and_send_location(correlation_id):
 # transfer has finished, that means you boy are ready to notify 
 # first node the bag has been already replicated
 @app.task()
-def send_transfer_status(correlation_id, fixity_value):
-    pass
+def send_transfer_status(req, action):
+    """
+    Sends ReplicationTransferReply to original node 
+    upon completion or failure
+    
+    :param req: Original ReplicationLocationReply already performed
+    :param action: Original ReceiveFileAction registry
+    """
+    correlation_id = req.headers['correlation_id']
+    fixity = action.fixity_value
+    
+    headers = {
+        'correlation_id': correlation_id,
+        'sequence': 4
+    }
+    
+    body = {
+        'message_name': 'replication-transfer-reply',
+        'message_att' : 'ack',
+        "fixity_algorithm" : "sha256",
+        "fixity_value" : fixity
+    }
+    
+    msg = ReplicationTransferReply(headers, body)
+    msg.send()
+        
+        
