@@ -100,6 +100,22 @@ class MessageSchema(object):
                 for skey in sorted_skeys:
                     svalue = s[skey]
                     try:
+                        # validate if key depends on another key/value
+                        if type(skey) is RequiredOnly:
+                            
+                            for sskey in sorted_skeys:
+                                if type(sskey) is Optional and sskey._schema == skey.if_key:
+                                    raise KeyError("MessageSchemaError: %s key can't be Optional. It is required to validate %s key" % (skey.if_key, skey))
+                            
+                            if not skey.if_key in sorted_skeys:
+                                raise KeyError("MessageSchemaError: %s key is required to validate %s" % (skey.if_key, skey))
+                                
+                            required_value = MessageSchema(data[skey.if_key], error=e, sub=True).validate(data[skey.if_key])
+                            if required_value != skey.if_value:
+                                raise MessageSchemaError(
+                                    "Wrong key %s. It's only needed if %s has %s value" % (skey, skey.if_key, skey.if_value)
+                                )
+
                         nkey = MessageSchema(skey, error=e, sub=True).validate(key)
                     except MessageSchemaError:
                         pass
@@ -121,6 +137,19 @@ class MessageSchema(object):
                                           x.autos, [e] + x.errors)
             coverage = set(k for k in coverage if type(k) is not Optional)
             required = set(k for k in s if type(k) is not Optional)
+
+            # agregar los requeridos si los valores se cumplen
+            for k in s:
+                if type(k) is RequiredOnly:
+                    required_value = new.get(k.if_key, None)
+                    if required_value == k.if_value:
+                        required.add(k)
+                    else:
+                        if k in required:
+                            required.remove(k)
+
+            required = set(required)
+
             if coverage != required:
                 raise MessageSchemaError(("missed keys %r in: %r \n" + MsgTracker.trace()) % (required - coverage, MsgTracker.data()), e)
             if len(new) != len(data):
@@ -215,7 +244,7 @@ class Use(object):
     def __init__(self, callable_, error=None):
         assert callable(callable_)
         self._callable = callable_
-        self._error = error
+        self._error = errors
 
     def __repr__(self):
         return '%s(%r)' % (self.__class__.__name__, self._callable)
@@ -248,3 +277,29 @@ def priority(s):
 
 class Optional(MessageSchema):
     """Marker for an optional part of MessageSchema."""
+
+class RequiredOnly(MessageSchema):
+    """
+    Class inherit from MessageSchema to be able to have
+    params that are required only under especific circumstances.
+
+    Example: 
+        MessageSchema({            
+            'operating_system' : And(str, Or('linux', 'windows')),            
+            RequiredOnly('antivirus', with_=('operating_system', 'windows')) : And(str, lambda s: len(s) > 0)
+        })
+
+    :param schema: Inherit from MessageSchema
+    :param error: Inherit from MessageSchema
+    :param sub: Inherit from MessageSchema
+    :param schema: Tuple with the needed field and the expected value to be required
+
+    """
+
+    def __init__(self, schema, error=None, sub=False, with_=None):
+        # TODO: add validation for with_ param. It must be a tuple
+
+        self.if_key = with_[0]
+        self.if_value = with_[1]
+
+        super(RequiredOnly, self).__init__(schema, error, sub)

@@ -23,7 +23,7 @@ from dpn_workflows.handlers import send_available_workflow, receive_cancel_workf
 from dpn_workflows.handlers import receive_transfer_workflow, DPNWorkflowError
 
 from dpn_workflows.tasks.inbound import respond_to_replication_query, transfer_content
-from dpn_workflows.tasks.inbound import delete_until_transferred
+from dpn_workflows.tasks.inbound import delete_until_transferred, verify_fixity_and_reply
 from dpn_workflows.models import PROTOCOL_DB_VALUES
 
 from dpnmq.utils import dpn_strftime
@@ -187,26 +187,6 @@ def replication_location_reply_handler(msg, body):
     action.task_id = task.task_id
     action.save()
 
-    # TODO: link to other outbound task responsible to send 
-    # the ReplicationTransferReply once the transfer job has finished
-
-    # headers = {
-    #     'correlation_id': req.headers['correlation_id'],
-    #     'sequence': 4,
-    #     'date': dpn_strftime(datetime.now())
-    # }
-    # ack = {
-    #     'message_att': 'ack',
-    #     'fixity_algorithm': 'sha256',
-    #     'fixity_value': '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824',
-    # }
-    # nak = {
-    #     'message_att': 'nak',
-    #     'message_error':  "Automatic fail to test nak function."
-    # }
-    # rsp = ReplicationTransferReply(headers, ack)
-    # rsp.send(req.headers['reply_key'])
-
 @local_router.register('replication-transfer-reply')
 def replication_transfer_reply_handler(msg, body):
     """
@@ -224,23 +204,9 @@ def replication_transfer_reply_handler(msg, body):
         msg.reject()
         raise DPNMessageError("Recieved bad message body: %s" 
             % err)
-
-    headers = {
-        'correlation_id': req.headers['correlation_id'],
-        'sequence': 5,
-        'date': dpn_strftime(datetime.now())
-    }
-    ack = {
-        'message_att': 'ack',
-    }
-    nak = {
-        'message_att': 'nak',
-    }
-    retry = {
-        'message_att': 'retry',
-    }
-    rsp = ReplicationVerificationReply(headers, ack)
-    rsp.send(req.headers['reply_key'])
+    
+    # Check if fixity value is good and reply to replicating node
+    verify_fixity_and_reply.apply_async((req, ))
 
 @local_router.register('replication-verify-reply')
 def replication_verify_reply_handler(msg, body):
@@ -260,6 +226,9 @@ def replication_verify_reply_handler(msg, body):
         raise DPNMessageError("Recieved bad message body: %s" 
             % err)
     # End?  Do what?
+
+    print("--"*30)
+    print("Received Replication Verification Reply. End of the process?")
 
 
 # Registry Message Handlers

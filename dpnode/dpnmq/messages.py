@@ -168,6 +168,7 @@ class ReplicationTransferReply(DPNMessage):
         fixity_algorithm=None, fixity_value=None, message_error=None):
 
         self._set_message_name(message_name)
+        self.body['message_att'] = message_att
 
         if message_att == 'ack':
             VALID_FIXITY['fixity_algorithm'].validate(fixity_algorithm)
@@ -175,7 +176,7 @@ class ReplicationTransferReply(DPNMessage):
 
             VALID_FIXITY['fixity_value'].validate(fixity_value)
             self.body['fixity_value'] = fixity_value
-            
+
 
 class ReplicationVerificationReply(DPNMessage):
     
@@ -186,6 +187,7 @@ class ReplicationVerificationReply(DPNMessage):
         self._set_message_name(message_name)
         
         self.body["message_att"] = message_att
+
 
 class RegistryItemCreate(DPNMessage):
 
@@ -204,6 +206,7 @@ class RegistryItemCreate(DPNMessage):
         del attrs['message_name']
         for k, v in attrs.items():
             self.body[k] = v
+
 
 class RegistryEntryCreated(DPNMessage):
 

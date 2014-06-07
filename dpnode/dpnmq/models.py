@@ -7,7 +7,7 @@
 
 import re
 
-from dpnmq.message_schema import MessageSchema, And, Or
+from dpnmq.message_schema import MessageSchema, And, Or, RequiredOnly
 from dpnmq.utils import dpn_strptime
 from dpnode.settings import PROTOCOL_LIST
 
@@ -36,8 +36,13 @@ VALID_NOT_AVAILABLE_BODY = MessageSchema({
     'message_att'  : 'nak'
 })
 
-VALID_DIRECTIVES = { 
-    
+VALID_FIXITY = { 
+    'fixity_algorithm'  : MessageSchema(And(str, lambda s: s == 'sha256')),
+    'fixity_value'      : MessageSchema(str)
+}
+
+VALID_DIRECTIVES = {
+
     'replication-init-query'  : MessageSchema({
         'message_name'        : 'replication-init-query',
         'replication_size'    : And(int, lambda i: i > 0),
@@ -49,13 +54,23 @@ VALID_DIRECTIVES = {
         'message_name' : 'replication-location-reply',
         'protocol'     : Or(*PROTOCOL_LIST),
         'location'     : And(str, lambda s: len(s) > 0)
+    }),
+
+    'replication-transfer-reply': MessageSchema({
+        'message_name'          : 'replication-transfer-reply',
+        'message_att'           : And(str, Or('ack', 'nak')),
+        RequiredOnly('fixity_algorithm', with_=('message_att', 'ack')) : VALID_FIXITY['fixity_algorithm'],
+        RequiredOnly('fixity_value', with_=('message_att', 'ack'))     : VALID_FIXITY['fixity_value'],
+        RequiredOnly('message_error', with_=('message_att', 'nak'))    : And(str, lambda s: len(s) > 0)
+    }),
+
+    'replication-verify-reply': MessageSchema({
+        'message_name'        : 'replication-verify-reply',
+        'message_att'         : And(str, Or('ack', 'nak'))
     })
+
 }
 
-VALID_FIXITY = { 
-    'fixity_algorithm'  : MessageSchema(And(str, lambda s: s == 'sha256')),
-    'fixity_value'      : MessageSchema(str)
-}
 
 # ------------------------------
 # register some signals handlers

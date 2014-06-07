@@ -20,22 +20,20 @@ from dpn_workflows.utils import available_storage, store_sequence
 from dpn_workflows.utils import download_bag, validate_sequence
 from dpn_workflows.utils import generate_fixity, protocol_str2db, remove_bag
 
-from dpn_workflows.handlers import DPNWorkflowError
 from dpn_workflows.models import PENDING, STARTED, SUCCESS, FAILED, CANCELLED
 from dpn_workflows.models import HTTPS, RSYNC, COMPLETE, PROTOCOL_DB_VALUES
 from dpn_workflows.models import AVAILABLE, TRANSFER, VERIFY
-from dpn_workflows.models import ReceiveFileAction, IngestAction, SequenceInfo
+from dpn_workflows.models import SendFileAction
 
+from dpn_workflows.handlers import DPNWorkflowError
 from dpn_workflows.tasks.outbound import send_transfer_status
 
 from dpnode.settings import DPN_XFER_OPTIONS, DPN_LOCAL_KEY, DPN_MAX_SIZE
 from dpnode.settings import DPN_REPLICATION_ROOT, DPN_DEFAULT_XFER_PROTOCOL
+from dpnode.settings import DPN_BAGS_DIR, DPN_BAGS_FILE_EXT
 
-from dpnmq.messages import ReplicationAvailableReply
+from dpnmq.messages import ReplicationAvailableReply, ReplicationVerificationReply
 from dpnmq.utils import str_expire_on, dpn_strftime
-
-from dpn_registry.models import RegistryEntry
-
 
 logger = logging.getLogger('dpnmq.console')
 
@@ -99,7 +97,6 @@ def respond_to_replication_query(init_request):
     rsp = ReplicationAvailableReply(headers, body)
     rsp.send(init_request.headers['reply_key'])
 
-
 @app.task()
 def transfer_content(req, action):
     """
@@ -157,7 +154,7 @@ def transfer_content(req, action):
         #     bag_size=os.path.getsize(filename)
         # )
 
-        print('%s has been transfered successfully. Correlation_id: %s' % (filename, correlation_id))
+        print('%s has been transferred successfully. Correlation_id: %s' % (filename, correlation_id))
         print('Bag fixity value is: %s. Used algorithm: %s' % (fixity_value, algorithm))
     except OSError as err:
         action.state = FAILED
@@ -193,3 +190,52 @@ def delete_until_transferred(self, action):
     action.save()
 
     return action
+
+@app.task()
+def verify_fixity_and_reply(req):
+    """
+    Generates fixity value for local bag and compare it 
+    with fixity value of the transferred bag. Sends a Replication
+    Verification Reply with ack or nak or retry according to 
+    the fixities comparisons
+
+    :param req: ReplicationTransferReply already validated
+    """
+    
+    correlation_id = req.headers['correlation_id']
+
+    headers = {
+        'correlation_id': correlation_id,
+        'sequence': 5,
+        'date': dpn_strftime(datetime.now())
+    }
+
+    try:
+        action = SendFileAction.objects.get(
+            ingest__correlation_id=correlation_id,
+            node=req.headers['from'],
+            chosen_to_transfer=True
+        )
+    except SendFileAction.DoesNotExists as err:
+        logger.error("SendFileAction not found for correlation_id: %s. Exc msg: %s" % (correlation_id, err))
+        raise DPNWorkflowError(err)
+
+    local_bag_path = os.path.join(DPN_BAGS_DIR, os.path.basename(action.location))
+    print(local_bag_path)
+    local_fixity = generate_fixity(local_bag_path)
+
+    if local_fixity == req.body['fixity_value']:
+        message_att = 'ack'
+        print("Fixity value is correct. Correlation_id: %s" % correlation_id)
+    else:
+        message_att = 'nak'
+
+    # TODO: under which condition should we retry the transfer?
+    # retry = {
+    #     'message_att': 'retry',
+    # }
+
+    body = dict(message_att=message_att)
+
+    rsp = ReplicationVerificationReply(headers, body)
+    rsp.send(req.headers['reply_key'])

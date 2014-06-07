@@ -112,6 +112,7 @@ def choose_and_send_location(correlation_id):
 
                 # mark action as chosen to transfer
                 action.chosen_to_transfer = True
+                action.location = body['location']
 
                 # mark file action as TRANSFER
                 action.step = TRANSFER
