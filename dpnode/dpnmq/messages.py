@@ -139,14 +139,6 @@ class ReplicationInitQuery(DPNMessage):
 class ReplicationAvailableReply(DPNMessage):
     
     directive = "replication-available-reply"
-
-    def set_body(self, message_name=None, message_att='nak', protocol=None):
-
-        self._set_message_name(message_name)
-        
-        self.body['message_att'] = message_att
-
-        self.body['protocol'] = protocol
         
 
 class ReplicationLocationReply(DPNMessage):
@@ -163,25 +155,10 @@ class ReplicationTransferReply(DPNMessage):
     
     directive = 'replication-transfer-reply'
 
-    def set_body(self, message_name=None, message_att=None, 
-        fixity_algorithm=None, fixity_value=None, message_error=None):
-
-        self._set_message_name(message_name)
-        self.body['message_att'] = message_att
-        
-        self.body['fixity_algorithm'] = fixity_algorithm
-        self.body['fixity_value'] = fixity_value            
-
 
 class ReplicationVerificationReply(DPNMessage):
     
     directive = 'replication-verify-reply'
-
-    def set_body(self, message_name=None, message_att='nak'):
-
-        self._set_message_name(message_name)
-        
-        self.body["message_att"] = message_att
 
 
 class RegistryItemCreate(DPNMessage):

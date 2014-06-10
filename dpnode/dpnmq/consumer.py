@@ -55,10 +55,15 @@ class DPNConsumer(ConsumerMixin):
         """
         if not self._is_alive(msg):
             msg.ack()
-            logger.info("MSG TTL Expired") # TODO: improve this message
+            
+            # log error message notifying message TTL has expired
+            logger.error(
+                "Message time to live has expired. Message headers details %s | body details %s" % 
+                (msg.headers, msg.body)
+            )
             return None
 
-        body_str = msg.body        
+        body_str = msg.body
         if type(body_str) == bytes:
             body_str = str(body_str, encoding="UTF-8")
 
