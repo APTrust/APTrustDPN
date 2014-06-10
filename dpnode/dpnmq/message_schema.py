@@ -138,7 +138,7 @@ class MessageSchema(object):
             coverage = set(k for k in coverage if type(k) is not Optional)
             required = set(k for k in s if type(k) is not Optional)
 
-            # agregar los requeridos si los valores se cumplen
+            # add required fields if condition is valid
             for k in s:
                 if type(k) is RequiredOnly:
                     required_value = new.get(k.if_key, None)

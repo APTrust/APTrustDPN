@@ -2,6 +2,7 @@ import os
 import time
 import logging
 
+from uuid import uuid4
 from django.core.management.base import BaseCommand
 
 from watchdog.observers import Observer
@@ -73,8 +74,9 @@ class DPNFileEventHandler(PatternMatchingEventHandler):
                 
                 # start ingestion and link task to choose nodes
                 filename_id = os.path.splitext(filename)[0]
+                dpn_object_id = uuid4()
                 initiate_ingest.apply_async(
-                    (filename_id, filesize), 
+                    (dpn_object_id, filename_id, filesize), 
                     link=choose_and_send_location.subtask((), countdown=DPN_TTL)
                 )
                 # execute choose_and_send_location task DPN_TTL seconds after 

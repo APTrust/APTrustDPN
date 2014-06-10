@@ -29,18 +29,27 @@ from dpnmq.utils import str_expire_on, dpn_strftime, dpn_strptime
 logger = logging.getLogger('dpnmq.console')
 
 @app.task()
-def initiate_ingest(id, size):
+def initiate_ingest(dpn_object_id, bag_id, size):
     """
     Initiates an ingest operation by minting the correlation ID
-    :param id: UUID of the DPN object to send to the federation.
-    :return: Ingest action object.
+    :param dpn_object_id: UUID of the DPN object to send to the federation.
+    :param bag_id: String of the local bag ID
+    :param size: Integer of the bag size
+    :return: Correlation ID to be used by choose_and_send_location linked task.
     """
 
     # NOTE:  Before sending the request, when this is real, it should...
     #  1.  Stage or confirm presence of bag in the staging area.
     #  2.  Validate the bag before sending.
 
-    action = IngestAction(correlation_id=uuid4(), object_id=id, state=STARTED)
+    dpn_object_id = str(dpn_object_id)
+
+    action = IngestAction(
+        correlation_id=str(uuid4()),
+        object_id=dpn_object_id,
+        local_id=bag_id,
+        state=STARTED
+    )
 
     headers = {
         "correlation_id": action.correlation_id,
@@ -51,16 +60,13 @@ def initiate_ingest(id, size):
     body = {
         "replication_size": size,
         "protocol": DPN_XFER_OPTIONS,
-        "dpn_object_id": id
+        "dpn_object_id": dpn_object_id
     }
     
     sequence_info = store_sequence(headers['correlation_id'], DPN_NODE_NAME, headers['sequence'])
     validate_sequence(sequence_info)
 
     try:
-        if id == 0: # Faking a fail condition for now to test.
-            raise Exception("Trying to ingest invalid item ID 0!")
-
         msg = ReplicationInitQuery(headers, body)
         msg.send(DPN_BROADCAST_KEY)
         action.state = SUCCESS
@@ -101,7 +107,7 @@ def choose_and_send_location(correlation_id):
                 
                 protocol = action.get_protocol_display()
                 base_location = DPN_BASE_LOCATION[protocol]
-                bag_id = action.ingest.object_id
+                bag_id = action.ingest.local_id
 
                 body = {
                     'protocol': protocol,

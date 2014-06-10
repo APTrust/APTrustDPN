@@ -76,6 +76,7 @@ stat_help = "State of the current operation."
 fxty_help = "Fixity value for the file being copied."
 note_help = "Additional details."
 obid_help = "UUID of the DPN object."
+lbid_help = "Local bag ID"
 
 class IngestAction(models.Model):
     """
@@ -86,6 +87,7 @@ class IngestAction(models.Model):
     correlation_id = models.CharField(max_length=100, primary_key=True,
                                       help_text=cid_help)
     object_id = models.CharField(max_length=100, help_text=obid_help)
+    local_id = models.CharField(max_length=100, help_text=lbid_help)
     state = models.CharField(max_length=1, choices=STATE_CHOICES,
                              help_text=stat_help)
     note = models.TextField(blank=True, null=True, help_text=note_help)
