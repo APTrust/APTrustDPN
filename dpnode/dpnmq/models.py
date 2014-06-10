@@ -15,31 +15,38 @@ ack_nak_name_regex = '^registry|replication.*?(cancel|create|created|reply)$'
 
 utc_datetime_regex = '^\d{4}-\d{2}-\d{2}\D\d{2}:\d{2}:\d{2}.{1,6}$'
 
+# little util lambda to update and return a dictionary
+# it modifies the first parameter in-place.
+dict_merge = lambda x, y: x.update(y) or x
+
 
 VALID_HEADERS = MessageSchema({
     'from'            : And(str, lambda s: len(s) > 0),
     'reply_key'       : And(str, lambda s: len(s) > 0),
     'correlation_id'  : str,
     'sequence'        : And(int, lambda i: i > -1),
-    'date'            : Or(None,And(str, lambda s: re.search(utc_datetime_regex, s, re.MULTILINE))),
-    'ttl'             : Or(None,And(str, lambda s: re.search(utc_datetime_regex, s, re.MULTILINE)))
+    'date'            : Or(None, And(str, lambda s: re.search(utc_datetime_regex, s, re.MULTILINE))),
+    'ttl'             : Or(None, And(str, lambda s: re.search(utc_datetime_regex, s, re.MULTILINE)))
 })
 
-VALID_AVAILABLE_BODY = MessageSchema({
+# Basic valid body
+basic_body_dict = {
     'message_name': And(str, lambda s: re.search(ack_nak_name_regex, s, re.MULTILINE)),
-    'message_att' : 'ack',
-    'protocol'    : Or(PROTOCOL_LIST,*PROTOCOL_LIST)
-})
+    'message_att' : And(str, Or('ack', 'nak'))
+}
 
-VALID_NOT_AVAILABLE_BODY = MessageSchema({
-    'message_name' : And(str, lambda s: re.search(ack_nak_name_regex, s, re.MULTILINE)),
-    'message_att'  : 'nak'
-})
+VALID_BODY = MessageSchema(basic_body_dict)
 
-VALID_FIXITY = { 
+# Fixity stuff
+VALID_FIXITY = {
     'fixity_algorithm'  : MessageSchema(And(str, lambda s: s == 'sha256')),
     'fixity_value'      : MessageSchema(str)
 }
+
+# Some requiredonly fields
+fixity_algorithm = RequiredOnly('fixity_algorithm', with_=('message_att', 'ack'))
+fixity_value = RequiredOnly('fixity_value', with_=('message_att', 'ack'))
+message_error = RequiredOnly('message_error', with_=('message_att', 'nak'))
 
 VALID_DIRECTIVES = {
 
@@ -50,6 +57,11 @@ VALID_DIRECTIVES = {
         'dpn_object_id'       : And(str, lambda s: len(s) > 0)
     }),
 
+    'replication-available-reply' : MessageSchema(dict_merge({ 
+        'protocol' : Or(PROTOCOL_LIST, *PROTOCOL_LIST)
+        }, basic_body_dict)
+    ),
+
     'replication-location-reply'  : MessageSchema({ 
         'message_name' : 'replication-location-reply',
         'protocol'     : Or(*PROTOCOL_LIST),
@@ -59,14 +71,9 @@ VALID_DIRECTIVES = {
     'replication-transfer-reply': MessageSchema({
         'message_name'          : 'replication-transfer-reply',
         'message_att'           : And(str, Or('ack', 'nak')),
-        RequiredOnly('fixity_algorithm', with_=('message_att', 'ack')) : VALID_FIXITY['fixity_algorithm'],
-        RequiredOnly('fixity_value', with_=('message_att', 'ack'))     : VALID_FIXITY['fixity_value'],
-        RequiredOnly('message_error', with_=('message_att', 'nak'))    : And(str, lambda s: len(s) > 0)
-    }),
-
-    'replication-verify-reply': MessageSchema({
-        'message_name'        : 'replication-verify-reply',
-        'message_att'         : And(str, Or('ack', 'nak'))
+        fixity_algorithm        : VALID_FIXITY['fixity_algorithm'],
+        fixity_value            : VALID_FIXITY['fixity_value'],
+        message_error           : And(str, lambda s: len(s) > 0)
     })
 
 }

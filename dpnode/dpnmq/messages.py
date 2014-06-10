@@ -13,8 +13,8 @@ from kombu import Connection
 from dpnode.settings import DPN_TTL, DPN_BROKER_URL, DPN_NODE_NAME, DPN_EXCHANGE
 from dpnode.settings import DPN_LOCAL_KEY
 
-from dpnmq.utils import dpn_strftime, is_string, str_expire_on
-from dpnmq.models import *
+from .models import VALID_HEADERS, VALID_BODY, VALID_DIRECTIVES
+from .utils import dpn_strftime, is_string, str_expire_on
 
 logger = logging.getLogger('dpnmq.console')
 
@@ -95,7 +95,9 @@ class DPNMessage(object):
 
 
     def _set_message_name(self, message_name=None):
-        # TODO: add some docstrings here
+        """
+        Sets the name of the message based on directive attribute
+        """
         if not message_name:
             message_name = self.directive
         
@@ -109,14 +111,11 @@ class DPNMessage(object):
 
     def validate_body(self):
         self._set_message_name()
-        
+
         if self.directive in VALID_DIRECTIVES:
             VALID_DIRECTIVES[self.directive].validate(self.body)
         else:
-            if self.body['message_att'] == 'ack':
-                VALID_AVAILABLE_BODY.validate(self.body) 
-            else:
-                VALID_NOT_AVAILABLE_BODY.validate(self.body)          
+            VALID_BODY.validate(self.body)
 
     def set_body(self, **kwargs):
         try:
@@ -169,13 +168,9 @@ class ReplicationTransferReply(DPNMessage):
 
         self._set_message_name(message_name)
         self.body['message_att'] = message_att
-
-        if message_att == 'ack':
-            VALID_FIXITY['fixity_algorithm'].validate(fixity_algorithm)
-            self.body['fixity_algorithm'] = fixity_algorithm
-
-            VALID_FIXITY['fixity_value'].validate(fixity_value)
-            self.body['fixity_value'] = fixity_value
+        
+        self.body['fixity_algorithm'] = fixity_algorithm
+        self.body['fixity_value'] = fixity_value            
 
 
 class ReplicationVerificationReply(DPNMessage):
