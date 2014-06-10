@@ -32,7 +32,7 @@ class Node(models.Model):
     """
     Related model field to keep information about what is replicated where.
     """
-    name = models.CharField(max_length=10)
+    name = models.CharField(max_length=10, unique=True)
 
     def __unicode__(self):
         return '%s' % self.name

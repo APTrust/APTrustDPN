@@ -137,22 +137,6 @@ def transfer_content(req, action):
         
         local_basename = os.path.basename(filename)
         local_id = os.path.splitext(local_basename)[0]
-        now = datetime.now()
-        
-        # NOTE: commenting this out. we are gonna use in next story
-        # about RegistryCreationEntry
-        # registry = RegistryEntry.objects.create(
-        #     dpn_object_id=dpn_object_id,
-        #     local_id=local_id,
-        #     first_node_name=node,
-        #     version_number=1, # NOTE: 1 for now, ask @streamweaver
-        #     fixity_algorithm=algorithm,
-        #     fixity_value=fixity_value,
-        #     lastfixity_date=now,
-        #     creation_date=now,
-        #     last_modified_date=now,
-        #     bag_size=os.path.getsize(filename)
-        # )
 
         print('%s has been transferred successfully. Correlation_id: %s' % (filename, correlation_id))
         print('Bag fixity value is: %s. Used algorithm: %s' % (fixity_value, algorithm))
@@ -221,7 +205,6 @@ def verify_fixity_and_reply(req):
         raise DPNWorkflowError(err)
 
     local_bag_path = os.path.join(DPN_BAGS_DIR, os.path.basename(action.location))
-    print(local_bag_path)
     local_fixity = generate_fixity(local_bag_path)
 
     if local_fixity == req.body['fixity_value']:

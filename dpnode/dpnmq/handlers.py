@@ -22,9 +22,10 @@ from dpn_workflows.handlers import DPNWorkflowError
 from dpn_workflows.handlers import send_available_workflow, receive_cancel_workflow
 from dpn_workflows.handlers import receive_transfer_workflow, DPNWorkflowError
 
+from dpn_workflows.models import PROTOCOL_DB_VALUES
+from dpn_workflows.tasks.registry import create_registry_entry
 from dpn_workflows.tasks.inbound import respond_to_replication_query, transfer_content
 from dpn_workflows.tasks.inbound import delete_until_transferred, verify_fixity_and_reply
-from dpn_workflows.models import PROTOCOL_DB_VALUES
 
 from dpnmq.utils import dpn_strftime
 
@@ -225,10 +226,13 @@ def replication_verify_reply_handler(msg, body):
         msg.reject()
         raise DPNMessageError("Recieved bad message body: %s" 
             % err)
-    # End?  Do what?
 
-    print("--"*30)
-    print("Received Replication Verification Reply. End of the process?")
+    if req.body['message_att'] == 'ack':
+        create_registry_entry.apply_async(
+            (req.headers['correlation_id'], )
+        )
+
+    print("Transferring process successful. Now creating registry entry.")
 
 
 # Registry Message Handlers
