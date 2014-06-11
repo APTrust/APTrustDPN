@@ -5,7 +5,6 @@
 
 """
 
-import json
 from datetime import datetime
 from io import BufferedReader
 
@@ -15,7 +14,7 @@ from kombu import Queue, Exchange
 from dpnode.settings import DPN_NODE_NAME, DPN_TTL
 from dpnmq.handlers import broadcast_router, local_router
 from dpnmq.messages import DPNMessageError
-from dpnmq.utils import dpn_strptime, dpn_strftime
+from dpnmq.utils import dpn_strptime, dpn_strftime, json_loads
 
 import logging
 logger = logging.getLogger('dpnmq.console')
@@ -63,11 +62,7 @@ class DPNConsumer(ConsumerMixin):
             )
             return None
 
-        body_str = msg.body
-        if type(body_str) == bytes:
-            body_str = str(body_str, encoding="UTF-8")
-
-        decoded_body = json.loads(body_str)
+        decoded_body = json_loads(msg.body)
 
         try:
             message_name = decoded_body['message_name']
@@ -103,10 +98,12 @@ class DPNConsumer(ConsumerMixin):
         :return: None
         """
         # No validation at this point so form log whatever fields you can find.
-        header_fields = ['from', 'reply_key', 'correlation_id', 'sequence']
-        parts = ["%s: %s" % (field, msg.headers[field]) for field in header_fields if field in msg.headers]
+        data = json_loads(msg.body)
+        data.update(msg.headers)
+        fields = ['message_name', 'from', 'correlation_id', 'sequence']
+        parts = ["%s: %s" % (field, data[field]) for field in fields if field in data]
         if not parts:
-            return "Could Not Find Header Fields in %s" % msg.headers
+            return "Could Not Find Values in %s" % data
         return "RECIEVED %s" % (", ".join(parts),)
 
     def _skip(self, msg):

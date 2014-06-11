@@ -7,6 +7,7 @@
 
 # Various utilities and helpers specific for DPN MQ
 # functions.
+import json
 from datetime import datetime, timedelta
 
 from pytz import timezone
@@ -104,3 +105,14 @@ def human_to_bytes(str):
     for i, str in enumerate(sset[1:]):
         prefix[str] = 1 << (i+1)*10
     return int(num * prefix[letter])
+
+def json_loads(body):
+    """
+    Performs a json.loads operation on body, explicity converting it to string
+    if it of type bytes.
+    :param body: contents of a kombu.message.body
+    """
+    if type(body) == bytes:
+        body = str(body, encoding="UTF-8")
+
+    return json.loads(body)
