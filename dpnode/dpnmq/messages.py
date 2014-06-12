@@ -74,20 +74,20 @@ class DPNMessage(object):
             with conn.Producer(serializer='json') as producer:
                 producer.publish(self.body, headers=self.headers, 
                             exchange=DPN_EXCHANGE, routing_key=rt_key)
-                self._log_send_msg(rt_key)
-
-        conn.close()
+          
+            conn.close()
+        self._log_send_msg(rt_key)
 
     def _log_send_msg(self, rt_key):
         """
         Logs information about the message prefixing the log entry with the 
-        'prefix' input.
+        routing key supplied.
 
-        :param prefix: String to prefix to the log entry.
+        :param rt_key: string of routing key for this message.
         :return: None
         """
         logger.info("SENT %s to %s->%s with id: %s, sequence: %s" % 
-                                (self.__class__.__name__,
+                                (self.directive,
                                 DPN_EXCHANGE,
                                 rt_key,
                                 self.headers['correlation_id'],
