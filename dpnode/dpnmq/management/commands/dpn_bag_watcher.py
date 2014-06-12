@@ -39,8 +39,7 @@ class DPNFileEventHandler(PatternMatchingEventHandler):
         if not event.is_directory:
             bag_error = False
             filename = base = os.path.basename(event.src_path)            
-            initial_filesize = os.path.getsize(event.src_path)            
-            # filename = os.path.splitext(base)[0] # filename to be used as id
+            initial_filesize = os.path.getsize(event.src_path)
             
             if type(filename) == bytes:
                 filename = filename.decode('utf-8')
