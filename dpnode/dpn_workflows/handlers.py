@@ -8,20 +8,11 @@
 
 # Handles various workflow steps as defined by the DPN MQ control flow messages
 
-import os
-
-from django.core.exceptions import ValidationError
-
-from dpnode.settings import DPN_REPLICATION_ROOT, DPN_BAGS_FILE_EXT
-from dpnode.celery import app
-
-from dpn_registry.models import RegistryEntry
-
-from .models import STARTED, SUCCESS, FAILED, CANCELLED, COMPLETE
-from .models import AVAILABLE, TRANSFER, VERIFY
+from .models import AVAILABLE, TRANSFER
+from .models import SUCCESS, FAILED, CANCELLED, COMPLETE
 from .models import ReceiveFileAction, SendFileAction, IngestAction
 
-from .utils import protocol_str2db, remove_bag
+from .utils import protocol_str2db
 
 
 class DPNWorkflowError(Exception):
@@ -140,7 +131,9 @@ def receive_cancel_workflow(node, correlation_id):
     Cancels any current replication workflow
 
     :param correlation_id:  String of correlation id for transaction.
-    :param node:  String of node name.
+    :param node:  String of node name
+    :return: ReceiveFileAction instance
+
     """
     try:
         action = ReceiveFileAction.objects.get(
@@ -152,5 +145,43 @@ def receive_cancel_workflow(node, correlation_id):
 
     if action.state == CANCELLED:
         raise DPNWorkflowError("Trying to cancel an already cancelled transaction.")
+
+    return action
+
+def receive_verify_reply_workflow(req):
+    """
+    Updates or retry transferring process according to reponse from 
+    first node. Updates the ReceiveFileAction step and state
+
+    :param req: ReplicationVerificationReply already validated
+    :return: ReceiveFileAction instance
+    """
+
+    # TODO: if message_att is equal to retry, we need to decide how to proceed
+    # on retry the transferring process
+
+    # means fixity value is correct. So saving ReceiveFileAction as complete
+    message_att = req.body['message_att']
+    correlation_id = req.headers['correlation_id']
+
+    if message_att == 'ack':
+        try:
+            action = ReceiveFileAction.objects.get(correlation_id=correlation_id)
+        except ReceiveFileAction.DoesNotExist as err:
+            raise DPNWorkflowError("Received bad correlation id %s: %s" 
+                % (correlation_id, err))
+
+        action.step = COMPLETE
+        action.state = SUCCESS
+        action.save()
+        
+    elif message_att == 'retry':
+        print("Retrying transfer is not implemented yet")
+        # NOTE: which state and step should go for retry transfer?
+
+    else:
+        # means message_att is nak
+        # NOTE: what to do in this case
+        pass
 
     return action
