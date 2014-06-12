@@ -35,7 +35,7 @@ def create_registry_entry(correlation_id):
         ingest = IngestAction.objects.get(
             correlation_id=correlation_id
         )
-    except IngestAction.DoesNotExists as err:
+    except IngestAction.DoesNotExist as err:
         raise err
 
     local_bag_path = os.path.join(DPN_BAGS_DIR, "%s.%s" % (ingest.local_id, DPN_BAGS_FILE_EXT))

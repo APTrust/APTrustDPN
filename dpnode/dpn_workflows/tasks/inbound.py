@@ -27,6 +27,7 @@ from dpn_workflows.models import SendFileAction
 
 from dpn_workflows.handlers import DPNWorkflowError
 from dpn_workflows.tasks.outbound import send_transfer_status
+from dpn_workflows.tasks.registry import create_registry_entry
 
 from dpnode.settings import DPN_XFER_OPTIONS, DPN_LOCAL_KEY, DPN_MAX_SIZE
 from dpnode.settings import DPN_REPLICATION_ROOT, DPN_DEFAULT_XFER_PROTOCOL
@@ -210,6 +211,11 @@ def verify_fixity_and_reply(req):
     if local_fixity == req.body['fixity_value']:
         message_att = 'ack'
         print("Fixity value is correct. Correlation_id: %s" % correlation_id)
+        print("Creating registry entry...")
+        
+        create_registry_entry.apply_async(
+            (req.headers['correlation_id'], )
+        )
     else:
         message_att = 'nak'
 

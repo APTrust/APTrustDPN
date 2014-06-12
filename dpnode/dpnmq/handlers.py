@@ -104,7 +104,7 @@ def replication_init_query_handler(msg, body):
             % err)
 
     # Request seems correct, check if node is available to replicate bag
-    respond_to_replication_query(req)
+    respond_to_replication_query.apply_async((req,))
 
 @local_router.register('replication-available-reply')
 def replication_available_reply_handler(msg, body):
@@ -227,12 +227,7 @@ def replication_verify_reply_handler(msg, body):
         raise DPNMessageError("Recieved bad message body: %s" 
             % err)
 
-    if req.body['message_att'] == 'ack':
-        create_registry_entry.apply_async(
-            (req.headers['correlation_id'], )
-        )
-
-    print("Transferring process successful. Now creating registry entry.")
+    print("Transferring process successful. End of the process.")
 
 
 # Registry Message Handlers
