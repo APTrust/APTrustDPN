@@ -74,10 +74,10 @@ class DPNFileEventHandler(PatternMatchingEventHandler):
                 
                 # start ingestion and link task to choose nodes
                 filename_id = os.path.splitext(filename)[0]
-                dpn_object_id = uuid4()
                 delay = DPN_MSG_TTL.get('replication-init-query', DPN_TTL)
+                
                 initiate_ingest.apply_async(
-                    (dpn_object_id, filename_id, filesize),
+                    (filename_id, filesize),
                     link = choose_and_send_location.subtask((), countdown=delay)
                 )
                 # execute choose_and_send_location task DPN_TTL seconds after 

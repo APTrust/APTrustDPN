@@ -29,11 +29,10 @@ from dpnmq.utils import str_expire_on, dpn_strftime, dpn_strptime
 logger = logging.getLogger('dpnmq.console')
 
 @app.task()
-def initiate_ingest(dpn_object_id, bag_id, size):
+def initiate_ingest(dpn_object_id, size):
     """
     Initiates an ingest operation by minting the correlation ID
-    :param dpn_object_id: UUID of the DPN object to send to the federation.
-    :param bag_id: String of the local bag ID
+    :param dpn_object_id: UUID of the DPN object to send to the federation (extracted from bag filename)
     :param size: Integer of the bag size
     :return: Correlation ID to be used by choose_and_send_location linked task.
     """
@@ -42,12 +41,9 @@ def initiate_ingest(dpn_object_id, bag_id, size):
     #  1.  Stage or confirm presence of bag in the staging area.
     #  2.  Validate the bag before sending.
 
-    dpn_object_id = str(dpn_object_id)
-
     action = IngestAction(
         correlation_id=str(uuid4()),
         object_id=dpn_object_id,
-        local_id=bag_id,
         state=STARTED
     )
 
@@ -107,7 +103,7 @@ def choose_and_send_location(correlation_id):
                 
                 protocol = action.get_protocol_display()
                 base_location = DPN_BASE_LOCATION[protocol]
-                bag_id = action.ingest.local_id
+                bag_id = action.ingest.object_id
 
                 body = {
                     'protocol': protocol,

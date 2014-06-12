@@ -38,13 +38,12 @@ def create_registry_entry(correlation_id):
     except IngestAction.DoesNotExist as err:
         raise err
 
-    local_bag_path = os.path.join(DPN_BAGS_DIR, "%s.%s" % (ingest.local_id, DPN_BAGS_FILE_EXT))
+    local_bag_path = os.path.join(DPN_BAGS_DIR, "%s.%s" % (ingest.object_id, DPN_BAGS_FILE_EXT))
     fixity_value = generate_fixity(local_bag_path)
     now = datetime.now()
 
     registry = RegistryEntry.objects.create(
         dpn_object_id=ingest.object_id,
-        local_id=ingest.local_id,
         first_node_name=DPN_NODE_NAME,
         version_number=1, 
         fixity_algorithm=DPN_FIXITY_CHOICES[0],
@@ -58,7 +57,6 @@ def create_registry_entry(correlation_id):
     # now save replication nodes
     for action in ingest.sendfileaction_set.filter(chosen_to_transfer=True):
         node, created = Node.objects.get_or_create(name=action.node)
-
         registry.replicating_nodes.add(node)
 
     logger.info("Registry entry successfully created for transaction with correlation_id: %s" % correlation_id)
