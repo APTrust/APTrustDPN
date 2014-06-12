@@ -45,7 +45,8 @@ __author__ = 'swt8w'
 def respond_to_replication_query(init_request):
     """
     Verifies if current node is available and has enough storage 
-    to replicate bags
+    to replicate bags and sends a ReplicationAvailableReply.
+
     :param init_request: ReplicationInitQuery already validated
     """
 
@@ -126,25 +127,24 @@ def transfer_content(req, action):
 
         # store the fixity value in DB
         action.fixity_value = fixity_value
-        action.step = TRANSFER
+        action.step = VERIFY
+        action.state = SUCCESS
         action.save()
 
-        # call the task responsible to transfer the content
-        task = send_transfer_status.apply_async((req, action))
-
-        # register the transfered bag in DATABASE
-        bag_basename = os.path.basename(location)
-        dpn_object_id = os.path.splitext(bag_basename)[0]
-        
-        local_basename = os.path.basename(filename)
-        local_id = os.path.splitext(local_basename)[0]
+        # call the task responsible to send the transferring status
+        task = send_transfer_status.apply_async((req, action))        
 
         print('%s has been transferred successfully. Correlation_id: %s' % (filename, correlation_id))
         print('Bag fixity value is: %s. Used algorithm: %s' % (fixity_value, algorithm))
+
     except OSError as err:
+        action.step = TRANSFER
         action.state = FAILED
         action.save()
-        task = send_transfer_status.apply_async((req, action, False, err))
+
+        # call celery task to send transfer status with the generated error
+        send_transfer_status.apply_async((req, action, False, err))
+        
         print('ERROR, transfer with correlation_id %s has failed.' % (correlation_id))
 
 @app.task(bind=True)
@@ -209,7 +209,13 @@ def verify_fixity_and_reply(req):
     local_fixity = generate_fixity(local_bag_path)
 
     if local_fixity == req.body['fixity_value']:
-        message_att = 'ack'
+        message_att = 'ack'        
+
+        # save SendFileAction as complete and success
+        action.step = COMPLETE
+        action.state = SUCCESS
+        action.save()
+
         print("Fixity value is correct. Correlation_id: %s" % correlation_id)
         print("Creating registry entry...")
         

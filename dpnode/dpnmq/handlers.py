@@ -21,6 +21,7 @@ from dpnmq.messages import RegistryEntryCreated
 from dpn_workflows.handlers import DPNWorkflowError
 from dpn_workflows.handlers import send_available_workflow, receive_cancel_workflow
 from dpn_workflows.handlers import receive_transfer_workflow, DPNWorkflowError
+from dpn_workflows.handlers import receive_verify_reply_workflow
 
 from dpn_workflows.models import PROTOCOL_DB_VALUES
 from dpn_workflows.tasks.registry import create_registry_entry
@@ -227,6 +228,7 @@ def replication_verify_reply_handler(msg, body):
         raise DPNMessageError("Recieved bad message body: %s" 
             % err)
 
+    receive_verify_reply_workflow(req)
     print("Transferring process successful. End of the process.")
 
 
