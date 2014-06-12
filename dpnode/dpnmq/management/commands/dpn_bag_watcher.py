@@ -9,7 +9,7 @@ from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
 
 from dpnode.settings import DPN_BAGS_DIR, DPN_BAGS_FILE_EXT
-from dpnode.settings import DPN_MAX_SIZE, DPN_TTL
+from dpnode.settings import DPN_MAX_SIZE, DPN_TTL, DPN_MSG_TTL
 
 from dpn_workflows.tasks.outbound import initiate_ingest, choose_and_send_location
 
@@ -76,8 +76,9 @@ class DPNFileEventHandler(PatternMatchingEventHandler):
                 filename_id = os.path.splitext(filename)[0]
                 dpn_object_id = uuid4()
                 initiate_ingest.apply_async(
-                    (dpn_object_id, filename_id, filesize), 
-                    link=choose_and_send_location.subtask((), countdown=DPN_TTL)
+                    (dpn_object_id, filename_id, filesize),
+                    count = DPN_MSG_TTL.get('replication-init-query', DPN_TTL) 
+                    link=choose_and_send_location.subtask((), countdown=count)
                 )
                 # execute choose_and_send_location task DPN_TTL seconds after 
                 # ReplicationInitQuery has been sent to broadcast queue

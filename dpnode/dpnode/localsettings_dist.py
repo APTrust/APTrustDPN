@@ -69,7 +69,6 @@ STATICFILES_DIRS = (
 # DPN MQ SETTINGS
 DPN_NODE_NAME = "aptrust" # brief name of node as configured in Federation.
 DPN_BROKER_URL = 'amqp://guest:guest@localhost:5672/' #amqp://guest:guest@aptrust.duracloud.org:5672//" # amqp://guest:guest@www.mymq.org:5672//
-DPN_TTL = 3600 # time in seconds for default TTL in messages
 DPN_EXCHANGE = "dpn-control-exchange" # Name of DPN exchange
 DPN_BROADCAST_QUEUE = "test" # Name of queue configured for DPN Federation Plugin
 DPN_BROADCAST_KEY = "broadcast" # Routing key for broadcast messages
@@ -77,6 +76,17 @@ DPN_LOCAL_QUEUE = "local" # Name of local queue to bind local routing key.
 DPN_LOCAL_KEY = "aptrust.dpn" # Name to use for routing direct reply messages.
 DPN_XFER_OPTIONS = ['https', 'rsync'] # List of lowercase protocols available for transfer.
 DPN_NUM_XFERS = 1 # Number of nodes to choose for transfers.
+
+DPN_TTL = 3600 # default time in seconds for default TTL in messages
+DPN_MSG_TTL = {
+    'replication-init-query': 10,
+    'replication-available-reply': 10,
+    'replication-location-reply': 10,
+    'replication-location-cancel': 3600,
+    'replication-transfer-reply': 3600,
+    'replication-verify-reply': 3600,
+    'registry-item-create': 10,
+}
 
 # DPN COMMON SETTINGS
 DPN_DATE_FORMAT = "%Y-%m-%dT%H:%M:%SZ" # ISO 8601 format for strftime functions.
@@ -111,3 +121,74 @@ PROTOCOL_LIST = list(DPN_BASE_LOCATION.keys())
 
 # GRAPELLI SETTINGS
 GRAPPELLI_ADMIN_TITLE = 'APTrust Admin'
+
+
+# Setup local logging
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': True,
+    'formatters': {
+        'verbose': {
+            'format': '%(levelname)s %(asctime)s %(module)s %(process)d %(thread)d %(message)s'
+        },
+        'simple': {
+            'format': '%(levelname)s %(message)s'
+        },
+    },
+    'filters': {
+        'require_debug_true': {
+            '()': 'django.utils.log.RequireDebugTrue',
+            },
+        'require_debug_false': {
+            '()': 'django.utils.log.RequireDebugFalse',
+        }
+    },
+    'handlers': {
+        'null': {
+            'level': 'DEBUG',
+            'class': 'django.utils.log.NullHandler',
+            },
+        'console':{
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple'
+        },
+        'console_info':{
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple'
+        },
+        'mail_admins': {
+            'level': 'ERROR',
+            'class': 'django.utils.log.AdminEmailHandler',
+            'filters': ['require_debug_false'],
+        }
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['null'],
+            'propagate': True,
+            'level': 'INFO',
+            },
+        'django.request': {
+            'handlers': ['mail_admins'],
+            'level': 'ERROR',
+            'propagate': False,
+            },
+        'dpnmq.consumer': {
+            'handlers': ['console_info'],
+            'level': 'INFO',
+            'filters': ['require_debug_true'],
+        },
+        'dpnmq.producer': {
+            'handlers': ['console_info'],
+            'level': 'INFO',
+            'filters': ['require_debug_true'],
+        },
+        'dpnmq.console': {
+            'handlers': ['console_info'],
+            'level': 'INFO',
+            'filters': ['require_debug_true'],
+            },
+    },
+}

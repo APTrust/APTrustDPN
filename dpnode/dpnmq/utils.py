@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 
 from pytz import timezone
 
-from dpnode.settings import TIME_ZONE, DPN_DATE_FORMAT, DPN_TTL
+from dpnode.settings import TIME_ZONE, DPN_DATE_FORMAT, DPN_TTL, DPN_MSG_TTL
 
 BYTE_SYMBOLS = {
     'customary'     : ('B', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'),
@@ -110,6 +110,7 @@ def json_loads(body):
     """
     Performs a json.loads operation on body, explicity converting it to string
     if it of type bytes.
+
     :param body: contents of a kombu.message.body
     """
     if type(body) == bytes:

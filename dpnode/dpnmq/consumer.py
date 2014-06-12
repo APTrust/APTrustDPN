@@ -11,7 +11,7 @@ from io import BufferedReader
 from kombu.mixins import ConsumerMixin
 from kombu import Queue, Exchange
 
-from dpnode.settings import DPN_NODE_NAME, DPN_TTL
+from dpnode.settings import DPN_NODE_NAME
 from dpnmq.handlers import broadcast_router, local_router
 from dpnmq.messages import DPNMessageError
 from dpnmq.utils import dpn_strptime, dpn_strftime, json_loads

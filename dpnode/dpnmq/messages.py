@@ -11,7 +11,7 @@ from datetime import datetime
 from kombu import Connection
 
 from dpnode.settings import DPN_TTL, DPN_BROKER_URL, DPN_NODE_NAME, DPN_EXCHANGE
-from dpnode.settings import DPN_LOCAL_KEY
+from dpnode.settings import DPN_LOCAL_KEY, DPN_MSG_TTL
 
 from .models import VALID_HEADERS, VALID_BODY, VALID_DIRECTIVES
 from .utils import dpn_strftime, is_string, str_expire_on
@@ -25,7 +25,6 @@ class DPNMessageError(Exception):
 class DPNMessage(object):
 
     directive = None
-    ttl = DPN_TTL
 
     def __init__(self, headers_dict=None, body_dict=None):
         """
@@ -37,6 +36,7 @@ class DPNMessage(object):
         self.body = {}
         if body_dict:
             self.set_body(**body_dict)
+        self.ttl = DPN_MSG_TTL.get(self.directive, DPN_TTL)
 
     def set_headers(self, reply_key=DPN_LOCAL_KEY,
         ttl=None, correlation_id=None, sequence=None, date=None,
@@ -55,7 +55,7 @@ class DPNMessage(object):
         if self.headers["date"] == None:
           self.headers["date"] = dpn_strftime(now)
         if self.headers["ttl"] == None:
-          self.headers["ttl"] = str_expire_on(now, DPN_TTL)
+          self.headers["ttl"] = str_expire_on(now, self.ttl)
 
     def validate_headers(self):
         VALID_HEADERS.validate(self.headers)
@@ -85,6 +85,7 @@ class DPNMessage(object):
 
         :param rt_key: string of routing key for this message.
         :return: None
+
         """
         logger.info("SENT %s to %s->%s with id: %s, sequence: %s" % 
                                 (self.directive,
@@ -97,6 +98,7 @@ class DPNMessage(object):
     def _set_message_name(self, message_name=None):
         """
         Sets the name of the message based on directive attribute
+
         """
         if not message_name:
             message_name = self.directive
