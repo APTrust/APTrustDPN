@@ -140,6 +140,7 @@ def transfer_content(req, action):
     except OSError as err:
         action.step = TRANSFER
         action.state = FAILED
+        action.note = "%s" % err
         action.save()
 
         # call celery task to send transfer status with the generated error
