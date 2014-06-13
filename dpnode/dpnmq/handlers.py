@@ -5,8 +5,6 @@
             - Unknown
 """
 
-import logging
-
 from datetime import datetime
 
 from django.core.exceptions import ValidationError
@@ -29,8 +27,6 @@ from dpn_workflows.tasks.inbound import respond_to_replication_query, transfer_c
 from dpn_workflows.tasks.inbound import delete_until_transferred, verify_fixity_and_reply
 
 from dpnmq.utils import dpn_strftime
-
-logger = logging.getLogger('dpnmq.console')
 
 class TaskRouter:
     def __init__(self):
