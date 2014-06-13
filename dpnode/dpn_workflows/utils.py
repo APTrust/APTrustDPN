@@ -116,7 +116,8 @@ def download_bag(node, location, protocol):
             else:
                 print("Child returned", retcode, file=sys.stderr)
 
-            return os.path.join(DPN_REPLICATION_ROOT, os.path.basename(location))
+            filename = os.path.basename(location.split(":")[1])
+            return os.path.join(DPN_REPLICATION_ROOT, filename)
 
         except OSError as err:
             print("Transfer failed:", err, file=sys.stderr)
