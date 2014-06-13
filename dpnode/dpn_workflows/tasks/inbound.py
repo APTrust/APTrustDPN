@@ -132,7 +132,7 @@ def transfer_content(req, action):
         action.save()
 
         # call the task responsible to send the transferring status
-        task = send_transfer_status.apply_async((req, action))        
+        task = send_transfer_status.apply_async((req, action))
 
         print('%s has been transferred successfully. Correlation_id: %s' % (filename, correlation_id))
         print('Bag fixity value is: %s. Used algorithm: %s' % (fixity_value, algorithm))

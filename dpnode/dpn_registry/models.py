@@ -43,7 +43,7 @@ class Node(models.Model):
 class RegistryEntry(models.Model):
 
     dpn_object_id = models.CharField(max_length=64, primary_key=True)
-    local_id = models.TextField(max_length=100)
+    local_id = models.TextField(max_length=100, blank=True)
     first_node_name = models.CharField(max_length=20)
     version_number = models.PositiveIntegerField()
     fixity_algorithm = models.CharField(max_length=10)
