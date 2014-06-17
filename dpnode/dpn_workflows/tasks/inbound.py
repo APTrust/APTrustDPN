@@ -121,7 +121,7 @@ def transfer_content(req, action):
         filename = download_bag(node, location, protocol)
 
         print("Download complete. Now calculating fixity value")
-        fixity_value = generate_fixity(filename, algorithm)    
+        fixity_value = generate_fixity(filename, algorithm)
 
         # store the fixity value in DB
         action.fixity_value = fixity_value

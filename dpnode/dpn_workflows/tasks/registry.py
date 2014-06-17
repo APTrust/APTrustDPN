@@ -16,7 +16,7 @@ from dpnode.celery import app
 from dpnode.settings import DPN_NODE_NAME, DPN_FIXITY_CHOICES, DPN_BAGS_DIR
 from dpnode.settings import DPN_BAGS_FILE_EXT
 
-from dpn_workflows.models import IngestAction
+from dpn_workflows.models import IngestAction, COMPLETE, SUCCESS
 from dpn_workflows.utils import generate_fixity
 from dpn_registry.models import RegistryEntry, Node
 
@@ -55,7 +55,7 @@ def create_registry_entry(correlation_id):
     )
 
     # now save replication nodes
-    for action in ingest.sendfileaction_set.filter(chosen_to_transfer=True):
+    for action in ingest.sendfileaction_set.filter(chosen_to_transfer=True, step=COMPLETE):
         node, created = Node.objects.get_or_create(name=action.node)
         registry.replicating_nodes.add(node)
 
