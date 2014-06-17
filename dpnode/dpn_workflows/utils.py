@@ -106,9 +106,12 @@ def download_bag(node, location, protocol):
         return local_bagfile
 
     elif protocol == 'rsync':
+
+        filename = os.path.basename(location.split(":")[1])
+        dst = os.path.join(DPN_REPLICATION_ROOT, filename)
         command = "rsync -Lav --compress --compress-level=0 %(location)s %(destiny)s" % {
             'location': location,
-            'destiny': DPN_REPLICATION_ROOT
+            'destiny': dst
         }
         try:
             retcode = subprocess.call(command, shell=True)            
@@ -117,8 +120,7 @@ def download_bag(node, location, protocol):
             else:
                 print("Child returned", retcode, file=sys.stderr)
 
-            filename = os.path.basename(location.split(":")[1])
-            return os.path.join(DPN_REPLICATION_ROOT, filename)
+            return dst
 
         except OSError as err:
             print("Transfer failed:", err, file=sys.stderr)
