@@ -52,9 +52,9 @@ class DPNConsumer(ConsumerMixin):
         :param router:  TaskRouter instance to dispatch this message.
         :param msg: kombu.transport.base.Message to decode and dispatch.
         """
+
         if not self._is_alive(msg):
             msg.ack()
-            
             # log error message notifying message TTL has expired
             logger.error(
                 "Message time to live has expired. Message headers details %s | body details %s" % 

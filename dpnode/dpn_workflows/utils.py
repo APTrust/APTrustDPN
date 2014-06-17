@@ -106,7 +106,7 @@ def download_bag(node, location, protocol):
         return local_bagfile
 
     elif protocol == 'rsync':
-        command = "rsync -a -v --compress --compress-level=0 %(location)s %(destiny)s" % {
+        command = "rsync -Lav --compress --compress-level=0 %(location)s %(destiny)s" % {
             'location': location,
             'destiny': DPN_REPLICATION_ROOT
         }

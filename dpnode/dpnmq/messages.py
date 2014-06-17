@@ -36,7 +36,6 @@ class DPNMessage(object):
         self.body = {}
         if body_dict:
             self.set_body(**body_dict)
-        self.ttl = DPN_MSG_TTL.get(self.directive, DPN_TTL)
 
     def set_headers(self, reply_key=DPN_LOCAL_KEY,
         ttl=None, correlation_id=None, sequence=None, date=None,
@@ -50,12 +49,15 @@ class DPNMessage(object):
             'ttl': ttl,
         }
 
+    def _get_ttl(self):
+        return DPN_MSG_TTL.get(self.directive, DPN_TTL)
+
     def _set_date(self):
         now = datetime.now()
         if self.headers["date"] == None:
           self.headers["date"] = dpn_strftime(now)
         if self.headers["ttl"] == None:
-          self.headers["ttl"] = str_expire_on(now, self.ttl)
+          self.headers["ttl"] = str_expire_on(now, self._get_ttl())
 
     def validate_headers(self):
         VALID_HEADERS.validate(self.headers)
