@@ -74,6 +74,27 @@ VALID_DIRECTIVES = {
         fixity_algorithm        : VALID_FIXITY['fixity_algorithm'],
         fixity_value            : VALID_FIXITY['fixity_value'],
         message_error           : And(str, lambda s: len(s) > 0)
+    }),
+
+    'registry-item-create'      : MessageSchema({
+        'message_name'               : 'registry-item-create',
+        'dpn_object_id'              : str,
+        'local_id'                   : str,
+        'first_node_name'            : str,
+        'replicating_node_names'     : And(list, lambda s: all(type(i) == str for i in s)),
+        'version_number'             : int,
+        'previous_version_object_id' : Or('null', str),
+        'forward_version_object_id'  : Or('null', str),
+        'first_version_object_id'    : str,
+        'fixity_algorithm'           : VALID_FIXITY['fixity_algorithm'],
+        'fixity_value'               : VALID_FIXITY['fixity_value'],
+        'last_fixity_date'           : And(str, lambda s: re.search(utc_datetime_regex, s, re.MULTILINE)),
+        'creation_date'              : And(str, lambda s: re.search(utc_datetime_regex, s, re.MULTILINE)),
+        'last_modified_date'         : And(str, lambda s: re.search(utc_datetime_regex, s, re.MULTILINE)),
+        'bag_size'                   : int,
+        'brightening_object_id'      : And(list, lambda s: all(type(i) == str for i in s)),
+        'rights_object_id'           : And(list, lambda s: all(type(i) == str for i in s)),
+        'object_type'                : Or('data', 'rights', 'brightening')
     })
 
 }

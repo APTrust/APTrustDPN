@@ -117,3 +117,19 @@ def json_loads(body):
         body = str(body, encoding="UTF-8")
 
     return json.loads(body)
+
+def serialize_dict_date(dicc):
+    """
+    Serializes the date values to the DPN Date Format for a given dictionary
+
+    :param dicc: Dictionary to be normalize
+    :return: serialized date dictionary
+    """
+
+    new_dict = {}
+    for key, value in dicc.items():
+        if isinstance(value, datetime):
+            value = dpn_strftime(value)        
+        new_dict[key] = value
+
+    return new_dict

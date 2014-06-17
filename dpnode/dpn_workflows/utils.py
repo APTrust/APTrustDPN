@@ -1,5 +1,6 @@
 import os
 import sys
+import copy
 import ctypes
 import random
 import hashlib
@@ -177,3 +178,99 @@ def remove_bag(bag_path):
         return False
 
     return True
+
+class ModelToDict(object):
+    """
+    Utilty class to generate a dictionary from a given instance
+    with selected fields and renamed fields
+
+    ModelToDict(
+        instance,
+        fields=['name', ()]
+    )
+
+    # TODO: improve docstrings
+
+    """
+
+    def __init__(self, instance, fields=[], exclude=[], n_override={}, 
+                 v_override={}, relations={}, null_value='null'):
+        """
+        :param instance: Model instance
+        :param fields: Specific fields to be used
+        :param exclude: List of excluded fields
+        :param n_override: Dict key:value to override the name of fields in dict
+        :param v_override: Dict key:value to override the value of fields in dict
+        :param relations: Dict with 1st level of relation fields
+
+        # TODO: improve docstrings
+        # TODO: improve __init__ method (clean it up)
+        """
+
+        self.instance = instance
+
+        for field in (fields or self.get_model_fields()):
+            
+            # verify field name override
+            if field in n_override.keys():
+                key = n_override[field]
+            else:
+                key = field
+
+            if field in exclude:
+                continue
+
+            model_field = instance._meta.get_field_by_name(field)[0]
+            instance_attr = getattr(instance, field)
+
+            # verify field value override
+            if field in v_override.keys():
+                override_field = getattr(instance, v_override[field])
+                self[key] = override_field() if callable(override_field) else override_field
+                continue
+
+            if model_field.get_internal_type() == 'ForeignKey':
+                if field in relations.keys():
+                    flat = relations[field].get('flat', False)
+                    if flat == True:
+                        flat_field = relations[field]['fields'][0]
+                        self[key] = getattr(instance_attr, flat_field)
+                    else:
+                        self[key] = ModelToDict(instance_attr, relations[field]['fields']).as_dict()
+                else:
+                    if instance_attr:
+                        self[key] = getattr(instance_attr, 'pk')
+                    else:
+                        self[key] = null_value
+
+            elif model_field.get_internal_type() == 'ManyToManyField':
+                if field in relations.keys():
+                    flat = relations[field].get('flat', False)
+                    if flat == True:
+                        flat_fields = [relations[field]['fields'][0]]
+                    else:
+                        flat_fields = relations[field]['fields'] or self.get_model_fields(model_field)
+                else:
+                    flat = True
+                    flat_fields = ['pk']
+
+                if instance_attr:
+                    self[key] = list(instance_attr.all().values_list(*flat_fields, flat=flat))
+                else:
+                    self[key] = null_value
+
+            else: 
+                # now that we have the ending key, assign it as attribute
+                self[key] = instance_attr
+
+    def __setitem__(self, key, item):
+        setattr(self, key, item)
+
+    def as_dict(self):
+        dicc = copy.copy(self.__dict__)
+        del dicc['instance']
+        return dicc
+
+    def get_model_fields(self, model=None):
+        model = model or self.instance
+        return [f.name for f in model._meta.fields] + [f.name for f in model._meta.many_to_many]

@@ -167,20 +167,6 @@ class RegistryItemCreate(DPNMessage):
 
     directive = 'registry-item-create'
 
-    def set_body(self, message_name=None, dpn_object_id=None, local_id=None, first_node_name=None,
-                 replicating_node_names=[], version_number=1, previous_version_object_id='null',
-                 forward_version_object_id='null', first_version_object_id=None, fixity_algorithm=None,
-                 fixity_value=None, lastfixity_date=None, creation_date=None, last_modified_date=None,
-                 bag_size=None, brightening_object_id=[], rights_object_id=[], object_type=None):
-
-        self._set_message_name(message_name)
-
-        attrs = vars()
-        del attrs['self']
-        del attrs['message_name']
-        for k, v in attrs.items():
-            self.body[k] = v
-
 
 class RegistryEntryCreated(DPNMessage):
 

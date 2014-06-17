@@ -9,7 +9,6 @@ import os
 import logging
 
 from datetime import datetime
-from uuid import uuid4
 
 from django.core.exceptions import ValidationError
 
@@ -26,7 +25,7 @@ from dpn_workflows.models import AVAILABLE, TRANSFER, VERIFY
 from dpn_workflows.models import SendFileAction
 
 from dpn_workflows.handlers import DPNWorkflowError
-from dpn_workflows.tasks.outbound import send_transfer_status
+from dpn_workflows.tasks.outbound import send_transfer_status, broadcast_item_creation
 from dpn_workflows.tasks.registry import create_registry_entry
 
 from dpnode.settings import DPN_XFER_OPTIONS, DPN_LOCAL_KEY, DPN_MAX_SIZE
@@ -87,7 +86,6 @@ def respond_to_replication_query(init_request):
             body = {
                 'message_att': 'ack',
                 'protocol': DPN_DEFAULT_XFER_PROTOCOL
-                # 'protocol': supported_protocols[0] # TODO: what protocol are we going to choose?
             }
         except ValidationError as err:
             logger.info('ValidationError: %s' % err)
@@ -221,10 +219,17 @@ def verify_fixity_and_reply(req):
         print("Creating registry entry...")
         
         create_registry_entry.apply_async(
-            (req.headers['correlation_id'], )
+            (req.headers['correlation_id'], ),
+            link = broadcast_item_creation.subtask()
         )
     else:
         message_att = 'nak'
+        
+        # saving action status
+        action.step = VERIFY
+        action.state = FAILED
+        action.note = "Wrong fixity value of transferred bag. Sending nak verification reply"
+        action.save()
 
     # TODO: under which condition should we retry the transfer?
     # retry = {

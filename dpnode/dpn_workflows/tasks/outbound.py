@@ -24,6 +24,7 @@ from dpnode.settings import DPN_XFER_OPTIONS, DPN_BROADCAST_KEY, DPN_NODE_NAME
 from dpnode.settings import DPN_BASE_LOCATION, DPN_BAGS_FILE_EXT, DPN_NUM_XFERS
 
 from dpnmq.messages import ReplicationInitQuery, ReplicationLocationReply, ReplicationTransferReply
+from dpnmq.messages import RegistryItemCreate
 from dpnmq.utils import str_expire_on, dpn_strftime, dpn_strptime
 
 logger = logging.getLogger('dpnmq.console')
@@ -160,3 +161,21 @@ def send_transfer_status(req, action, success=True, err=''):
     msg.send(req.headers['reply_key'])
         
         
+@app.task()
+def broadcast_item_creation(entry):
+    """
+    Sends a RegistryEntryCreation message to the DPN broadcast queue
+    to other nodes update their local registries
+
+    :param entry: RegistryEntry instance
+    """
+
+    headers = {
+        'correlation_id' : str(uuid4()),
+        'sequence' : 0,
+    }
+
+    body = entry.to_message_dict()
+
+    reg = RegistryItemCreate(headers, body)
+    reg.send(DPN_BROADCAST_KEY)

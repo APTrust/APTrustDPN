@@ -7,6 +7,9 @@
 
 from django.db import models
 
+from dpnmq.utils import serialize_dict_date
+from dpn_workflows.utils import ModelToDict
+
 # REGISTRY STATE INFORMATION
 PENDING = 'P'
 CONFIRMED = 'C'
@@ -56,9 +59,9 @@ class RegistryEntry(models.Model):
     object_type = models.CharField(max_length=1, choices=TYPE_CHOICES, default=DATA)
 
     # Self referencing relationships.
-    previous_version = models.ForeignKey("self", null=True,
+    previous_version = models.ForeignKey("self", null=True, blank=True,
                                          related_name='next_entry')
-    forward_version = models.ForeignKey("self", null=True,
+    forward_version = models.ForeignKey("self", null=True, blank=True,
                                         related_name='previous_entry')
     first_version = models.ForeignKey("self", related_name='children', null=True)
 
@@ -79,6 +82,39 @@ class RegistryEntry(models.Model):
 
     class Meta:
         verbose_name_plural = "registry entries"
+
+    def object_type_text(self):
+        return self.get_object_type_display().lower()
+
+    def to_message_dict(self):
+
+        values_override = {
+            'object_type': 'object_type_text'
+        }
+
+        names_override = {
+            'lastfixity_date'       : 'last_fixity_date',
+            'replicating_nodes'     : 'replicating_node_names',
+            'previous_version'      : 'previous_version_object_id',
+            'forward_version'       : 'forward_version_object_id',
+            'first_version'         : 'first_version_object_id',
+            'brightening_objects'   : 'brightening_object_id',
+            'rights_objects'        : 'rights_object_id'
+        }
+
+        relations = {
+            'replicating_nodes': {'fields': ['name'], 'flat': True}
+        }
+
+        message_dict = ModelToDict(
+                instance=self,
+                exclude=['state'],
+                n_override=names_override, 
+                v_override=values_override,
+                relations=relations
+            ).as_dict()
+
+        return serialize_dict_date(message_dict)
 
 class NodeEntry(RegistryEntry):
     """
