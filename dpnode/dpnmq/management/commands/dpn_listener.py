@@ -11,6 +11,9 @@ from dpnode.settings import DPN_BROADCAST_QUEUE, DPN_BROADCAST_KEY
 from dpnode.settings import DPN_LOCAL_QUEUE, DPN_LOCAL_KEY
 from dpnmq.consumer import DPNConsumer
 
+from dpnmq.messages import DPNMessageError
+from dpn_workflows.handlers import DPNWorkflowError
+
 logger = logging.getLogger('dpnmq.console')
 
 class Command(BaseCommand):
@@ -45,5 +48,7 @@ class Command(BaseCommand):
                     conn.close()
                     print("Exiting.  No longer consuming!")
                     break
-                except Exception as err:
+                except (Exception, DPNWorkflowError, DPNMessageError) as err:
                     logger.exception('Exception detected with message: "%s". Continue listening...' % err)
+                    conn.close()
+                    continue

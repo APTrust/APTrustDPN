@@ -132,4 +132,5 @@ class DPNConsumer(ConsumerMixin):
             return ttl > now
 
         except KeyError:
+            msg.ack()
             raise DPNMessageError("Invalid message received with no 'date' or 'ttl' set!")
