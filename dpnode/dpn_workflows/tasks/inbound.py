@@ -30,7 +30,7 @@ from dpn_workflows.tasks.registry import create_registry_entry
 
 from dpnode.settings import DPN_XFER_OPTIONS, DPN_LOCAL_KEY, DPN_MAX_SIZE
 from dpnode.settings import DPN_REPLICATION_ROOT, DPN_DEFAULT_XFER_PROTOCOL
-from dpnode.settings import DPN_BAGS_DIR, DPN_BAGS_FILE_EXT
+from dpnode.settings import DPN_BAGS_DIR, DPN_BAGS_FILE_EXT, DPN_TTL
 
 from dpnmq.messages import ReplicationAvailableReply, ReplicationVerificationReply
 from dpnmq.utils import str_expire_on, dpn_strftime
@@ -220,7 +220,8 @@ def verify_fixity_and_reply(req):
         
         create_registry_entry.apply_async(
             (req.headers['correlation_id'], ),
-            link = broadcast_item_creation.subtask()
+            link = broadcast_item_creation.subtask(),
+            countdown=DPN_TTL
         )
     else:
         message_att = 'nak'
