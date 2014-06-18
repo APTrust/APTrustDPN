@@ -7,25 +7,31 @@
 # Handles tasks related to sending bags for replication across the
 # DPN Federation.
 
+import os
 import logging
 
-from datetime import datetime
 from uuid import uuid4
+from datetime import datetime
 
 from dpnode.celery import app
 
-from dpn_workflows.models import PENDING, STARTED, SUCCESS, FAILED, CANCELLED
-from dpn_workflows.models import HTTPS, RSYNC, COMPLETE
-from dpn_workflows.models import AVAILABLE, TRANSFER, VERIFY
-from dpn_workflows.models import IngestAction, SendFileAction, SequenceInfo
-from dpn_workflows.utils import choose_nodes, store_sequence, validate_sequence
+from dpn_workflows.models import STARTED, SUCCESS, FAILED
+from dpn_workflows.models import COMPLETE, TRANSFER, VERIFY
+from dpn_workflows.models import IngestAction, SendFileAction
 
-from dpnode.settings import DPN_XFER_OPTIONS, DPN_BROADCAST_KEY, DPN_NODE_NAME
+from dpn_workflows.utils import generate_fixity, choose_nodes
+from dpn_workflows.utils import store_sequence, validate_sequence
+
+from dpn_workflows.tasks.registry import create_registry_entry
+
 from dpnode.settings import DPN_BASE_LOCATION, DPN_BAGS_FILE_EXT, DPN_NUM_XFERS
+from dpnode.settings import DPN_XFER_OPTIONS, DPN_BROADCAST_KEY, DPN_NODE_NAME, DPN_BAGS_DIR
 
-from dpnmq.messages import ReplicationInitQuery, ReplicationLocationReply, ReplicationTransferReply
-from dpnmq.messages import RegistryItemCreate
-from dpnmq.utils import str_expire_on, dpn_strftime, dpn_strptime
+from dpnmq.messages import ReplicationVerificationReply
+from dpnmq.messages import RegistryItemCreate, ReplicationTransferReply
+from dpnmq.messages import ReplicationInitQuery, ReplicationLocationReply
+
+from dpnmq.utils import str_expire_on, dpn_strftime
 
 logger = logging.getLogger('dpnmq.console')
 
@@ -179,3 +185,69 @@ def broadcast_item_creation(entry):
 
     reg = RegistryItemCreate(headers, body)
     reg.send(DPN_BROADCAST_KEY)
+
+@app.task()
+def verify_fixity_and_reply(req):
+    """
+    Generates fixity value for local bag and compare it 
+    with fixity value of the transferred bag. Sends a Replication
+    Verification Reply with ack or nak or retry according to 
+    the fixities comparisons
+
+    :param req: ReplicationTransferReply already validated
+    """
+    
+    correlation_id = req.headers['correlation_id']
+
+    headers = {
+        'correlation_id': correlation_id,
+        'sequence': 5,
+        'date': dpn_strftime(datetime.now())
+    }
+
+    try:
+        action = SendFileAction.objects.get(
+            ingest__correlation_id=correlation_id,
+            node=req.headers['from'],
+            chosen_to_transfer=True
+        )
+    except SendFileAction.DoesNotExists as err:
+        logger.error("SendFileAction not found for correlation_id: %s. Exc msg: %s" % (correlation_id, err))
+        raise DPNWorkflowError(err)
+
+    local_bag_path = os.path.join(DPN_BAGS_DIR, os.path.basename(action.location))
+    local_fixity = generate_fixity(local_bag_path)
+
+    if local_fixity == req.body['fixity_value']:
+        message_att = 'ack'        
+
+        # save SendFileAction as complete and success
+        action.step = COMPLETE
+        action.state = SUCCESS
+        action.save()
+
+        print("Fixity value is correct. Correlation_id: %s" % correlation_id)
+        print("Creating registry entry...")
+        
+        create_registry_entry.apply_async(
+            (req.headers['correlation_id'], ),
+            link = broadcast_item_creation.subtask()
+        )
+    else:
+        message_att = 'nak'
+        
+        # saving action status
+        action.step = VERIFY
+        action.state = FAILED
+        action.note = "Wrong fixity value of transferred bag. Sending nak verification reply"
+        action.save()
+
+    # TODO: under which condition should we retry the transfer?
+    # retry = {
+    #     'message_att': 'retry',
+    # }
+
+    body = dict(message_att=message_att)
+
+    rsp = ReplicationVerificationReply(headers, body)
+    rsp.send(req.headers['reply_key'])

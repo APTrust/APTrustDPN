@@ -23,8 +23,9 @@ from dpn_workflows.handlers import receive_verify_reply_workflow
 
 from dpn_workflows.models import PROTOCOL_DB_VALUES
 from dpn_workflows.tasks.registry import create_registry_entry
+from dpn_workflows.tasks.inbound import delete_until_transferred
+from dpn_workflows.tasks.outbound import verify_fixity_and_reply
 from dpn_workflows.tasks.inbound import respond_to_replication_query, transfer_content
-from dpn_workflows.tasks.inbound import delete_until_transferred, verify_fixity_and_reply
 
 from dpnmq.utils import dpn_strftime
 
