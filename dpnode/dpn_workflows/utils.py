@@ -113,13 +113,13 @@ def download_bag(node, location, protocol):
             'location': location,
             'destiny': dst
         }
-        logger.debug("DEBUG: trying command %s" % command)
+        logger.info("DEBUG: trying command %s" % command)
         try:
-            retcode = subprocess.call(command, shell=True)            
+            retcode = subprocess.call(command, shell=True, executable="/bin/bash")            
             if retcode < 0:
-                logger.debug("Child was terminated by signal %d" % retcode)
+                logger.info("Child was terminated by signal %d" % retcode)
             else:
-                logger.debug("Child returned %s" % retcode)
+                logger.info("Child returned %s" % retcode)
 
             return dst
 
