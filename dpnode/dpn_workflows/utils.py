@@ -113,17 +113,18 @@ def download_bag(node, location, protocol):
             'location': location,
             'destiny': dst
         }
+        logger.debug("DEBUG: trying command %s" % command)
         try:
             retcode = subprocess.call(command, shell=True)            
             if retcode < 0:
-                print("Child was terminated by signal", -retcode, file=sys.stderr)
+                logger.debug("Child was terminated by signal %d" % retcode)
             else:
-                print("Child returned", retcode, file=sys.stderr)
+                logger.debug("Child returned %s" % retcode)
 
             return dst
 
         except OSError as err:
-            print("Transfer failed:", err, file=sys.stderr)
+            logger.error("ERROR Transfer failed: %s" % err)
             raise err
 
     else:
