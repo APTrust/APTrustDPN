@@ -25,8 +25,9 @@ from dpn_workflows.utils import store_sequence, validate_sequence
 from dpn_workflows.handlers import DPNWorkflowError
 from dpn_workflows.tasks.registry import create_registry_entry
 
+from dpnode.settings import DPN_TTL, DPN_MSG_TTL, DPN_BAGS_DIR
+from dpnode.settings import DPN_XFER_OPTIONS, DPN_BROADCAST_KEY, DPN_NODE_NAME
 from dpnode.settings import DPN_BASE_LOCATION, DPN_BAGS_FILE_EXT, DPN_NUM_XFERS
-from dpnode.settings import DPN_XFER_OPTIONS, DPN_BROADCAST_KEY, DPN_NODE_NAME, DPN_BAGS_DIR
 
 from dpnmq.messages import ReplicationVerificationReply
 from dpnmq.messages import RegistryItemCreate, ReplicationTransferReply
@@ -128,7 +129,15 @@ def choose_and_send_location(correlation_id):
                 action.step = TRANSFER
                 action.save()
 
-    # else? probably restart the IngestAction
+    # queue the task responsible to create registry entry 
+    # with a countdown giving time to replicating nodes
+    # to transfer the bag
+    reg_delay = (DPN_NUM_XFERS * DPN_MSG_TTL.get("replication-transfer-reply", DPN_TTL)) 
+    create_registry_entry.apply_async(
+        (correlation_id, ),
+        countdown=reg_delay,
+        link=broadcast_item_creation.subtask()
+    )
 
 # transfer has finished, that means you boy are ready to notify 
 # first node the bag has been already replicated
@@ -232,11 +241,7 @@ def verify_fixity_and_reply(req):
 
         print("Fixity value is correct. Correlation_id: %s" % correlation_id)
         print("Creating registry entry...")
-        
-        create_registry_entry.apply_async(
-            (req.headers['correlation_id'], ),
-            link = broadcast_item_creation.subtask()
-        )
+
     else:
         message_att = 'nak'
         
