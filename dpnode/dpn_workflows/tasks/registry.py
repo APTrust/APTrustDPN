@@ -13,8 +13,8 @@ import logging
 from datetime import datetime
 
 from dpnode.celery import app
-from dpnode.settings import DPN_NODE_NAME, DPN_FIXITY_CHOICES, DPN_BAGS_DIR
-from dpnode.settings import DPN_BAGS_FILE_EXT
+from dpnode.settings import DPN_BAGS_FILE_EXT, DPN_BAGS_DIR
+from dpnode.settings import DPN_NODE_NAME, DPN_FIXITY_CHOICES
 
 from dpn_workflows.models import IngestAction, COMPLETE, SUCCESS
 from dpn_workflows.utils import generate_fixity
@@ -61,9 +61,9 @@ def create_registry_entry(correlation_id):
             bag_size=os.path.getsize(local_bag_path)
         )
 
-        # now save replication nodes
-        for action in replicating_nodes:
-            node, created = Node.objects.get_or_create(name=action.node)
+        # now save replication nodes and own node
+        for node in [a.node for a in replicating_nodes] + [DPN_NODE_NAME]:
+            node, created = Node.objects.get_or_create(name=node)
             registry.replicating_nodes.add(node)
 
         logger.info("Registry entry successfully created for transaction with correlation_id: %s" % correlation_id)
