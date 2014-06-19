@@ -7,22 +7,16 @@
 
 from datetime import datetime
 
-from django.core.exceptions import ValidationError
-
-from dpnode.settings import DPN_XFER_OPTIONS, DPN_MAX_SIZE
+from dpnode.settings import DPN_MAX_SIZE
 from dpnmq.messages import DPNMessageError, ReplicationInitQuery
 from dpnmq.messages import ReplicationAvailableReply, ReplicationLocationReply
 from dpnmq.messages import ReplicationLocationCancel, ReplicationTransferReply
 from dpnmq.messages import ReplicationVerificationReply, RegistryItemCreate
 from dpnmq.messages import RegistryEntryCreated
 
-from dpn_workflows.handlers import DPNWorkflowError
 from dpn_workflows.handlers import send_available_workflow, receive_cancel_workflow
-from dpn_workflows.handlers import receive_transfer_workflow, DPNWorkflowError
-from dpn_workflows.handlers import receive_verify_reply_workflow
+from dpn_workflows.handlers import receive_transfer_workflow, receive_verify_reply_workflow
 
-from dpn_workflows.models import PROTOCOL_DB_VALUES
-from dpn_workflows.tasks.registry import create_registry_entry
 from dpn_workflows.tasks.inbound import delete_until_transferred
 from dpn_workflows.tasks.outbound import verify_fixity_and_reply
 from dpn_workflows.tasks.inbound import respond_to_replication_query, transfer_content

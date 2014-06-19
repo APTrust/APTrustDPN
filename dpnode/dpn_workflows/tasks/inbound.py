@@ -21,8 +21,8 @@ from dpn_workflows.utils import generate_fixity, protocol_str2db, remove_bag
 from dpn_workflows.models import SUCCESS, FAILED, CANCELLED
 from dpn_workflows.models import TRANSFER, VERIFY, COMPLETE
 
+from dpn_workflows.tasks.outbound import send_transfer_status
 from dpn_workflows.handlers import DPNWorkflowError, receive_available_workflow
-from dpn_workflows.tasks.outbound import send_transfer_status, broadcast_item_creation
 
 from dpnode.settings import DPN_XFER_OPTIONS, DPN_MAX_SIZE
 from dpnode.settings import DPN_REPLICATION_ROOT, DPN_DEFAULT_XFER_PROTOCOL
