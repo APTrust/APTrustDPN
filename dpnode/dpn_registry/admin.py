@@ -6,8 +6,9 @@ class NodeAdmin(admin.ModelAdmin):
 admin.site.register(Node, NodeAdmin)
 
 class RegistryEntryAdmin(admin.ModelAdmin):
-    list_display = ('dpn_object_id', 'first_node_name', 'bag_size', 'last_modified_date')
+    list_display = ('dpn_object_id', 'first_node_name', 'bag_size', 'last_modified_date', 'creation_date')
     list_filter = ('first_node_name',)
+    ordering = ('-creation_date', )
 admin.site.register(RegistryEntry, RegistryEntryAdmin)
 
 class NodeEntryAdmin(admin.ModelAdmin):
