@@ -22,6 +22,7 @@ from dpn_workflows.models import IngestAction, SendFileAction
 from dpn_workflows.utils import generate_fixity, choose_nodes
 from dpn_workflows.utils import store_sequence, validate_sequence
 
+from dpn_workflows.handlers import DPNWorkflowError
 from dpn_workflows.tasks.registry import create_registry_entry
 
 from dpnode.settings import DPN_BASE_LOCATION, DPN_BAGS_FILE_EXT, DPN_NUM_XFERS
@@ -168,13 +169,16 @@ def send_transfer_status(req, action, success=True, err=''):
         
         
 @app.task()
-def broadcast_item_creation(entry):
+def broadcast_item_creation(entry=None):
     """
     Sends a RegistryEntryCreation message to the DPN broadcast queue
     to other nodes update their local registries
 
-    :param entry: RegistryEntry instance
+    :param entry: RegistryEntry instance or None
     """
+
+    if not entry:
+        return None
 
     headers = {
         'correlation_id' : str(uuid4()),
