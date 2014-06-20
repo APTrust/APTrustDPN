@@ -19,14 +19,16 @@ utc_datetime_regex = '^\d{4}-\d{2}-\d{2}\D\d{2}:\d{2}:\d{2}.{1,6}$'
 # it modifies the first parameter in-place.
 dict_merge = lambda x, y: x.update(y) or x
 
+# some reusable valid values
+valid_dpn_date = And(str, lambda s: re.search(utc_datetime_regex, s, re.MULTILINE))
 
 VALID_HEADERS = MessageSchema({
     'from'            : And(str, lambda s: len(s) > 0),
     'reply_key'       : And(str, lambda s: len(s) > 0),
     'correlation_id'  : str,
     'sequence'        : And(int, lambda i: i > -1),
-    'date'            : Or(None, And(str, lambda s: re.search(utc_datetime_regex, s, re.MULTILINE))),
-    'ttl'             : Or(None, And(str, lambda s: re.search(utc_datetime_regex, s, re.MULTILINE)))
+    'date'            : Or(None, valid_dpn_date),
+    'ttl'             : Or(None, valid_dpn_date)
 })
 
 # Basic valid body
@@ -88,13 +90,18 @@ VALID_DIRECTIVES = {
         'first_version_object_id'    : str,
         'fixity_algorithm'           : VALID_FIXITY['fixity_algorithm'],
         'fixity_value'               : VALID_FIXITY['fixity_value'],
-        'last_fixity_date'           : And(str, lambda s: re.search(utc_datetime_regex, s, re.MULTILINE)),
-        'creation_date'              : And(str, lambda s: re.search(utc_datetime_regex, s, re.MULTILINE)),
-        'last_modified_date'         : And(str, lambda s: re.search(utc_datetime_regex, s, re.MULTILINE)),
+        'last_fixity_date'           : valid_dpn_date,
+        'creation_date'              : valid_dpn_date,
+        'last_modified_date'         : valid_dpn_date,
         'bag_size'                   : int,
         'brightening_object_id'      : And(list, lambda s: all(type(i) == str for i in s)),
         'rights_object_id'           : And(list, lambda s: all(type(i) == str for i in s)),
         'object_type'                : Or('data', 'rights', 'brightening')
+    }),
+
+    'registry-daterange-sync-request': MessageSchema({
+        'message_name'               : 'registry-daterange-sync-request',
+        'date_range'                 : And(list, lambda s: all(valid_dpn_date.validate(i) for i in s))
     })
 
 }

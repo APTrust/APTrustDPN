@@ -184,3 +184,7 @@ class RegistryEntryCreated(DPNMessage):
             self.body['message_error'] = message_error
         else:
             raise DPNMessageError("Attribute must be ack or nak!")
+
+class RegistryDateRangeSync(DPNMessage):
+
+    directive = 'registry-daterange-sync-request'

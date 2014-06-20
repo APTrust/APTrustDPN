@@ -12,7 +12,7 @@ from dpnmq.messages import DPNMessageError, ReplicationInitQuery
 from dpnmq.messages import ReplicationAvailableReply, ReplicationLocationReply
 from dpnmq.messages import ReplicationLocationCancel, ReplicationTransferReply
 from dpnmq.messages import ReplicationVerificationReply, RegistryItemCreate
-from dpnmq.messages import RegistryEntryCreated
+from dpnmq.messages import RegistryEntryCreated, RegistryDateRangeSync
 
 from dpn_workflows.handlers import send_available_workflow, receive_cancel_workflow
 from dpn_workflows.handlers import receive_transfer_workflow, receive_verify_reply_workflow
@@ -276,3 +276,24 @@ def registry_entry_created_handler(msg, body):
         raise DPNMessageError("Recieved bad message body: %s"
             % err)
     # TODO: Figure out where this goes from here?
+
+
+@broadcast_router.register('registry-daterange-sync-request')
+def registry_daterange_sync_request_handler(msg, body):
+    """
+    Accepts a Registry Date Range Sync Message Reply and produces a 
+    Registry Item List.
+
+    :param msg: kombu.transport.base.Message instance
+    :param body: Decoded JSON of the message payload.
+    """
+    try:
+        req = RegistryDateRangeSync(msg.headers, body)
+        req.validate()
+        msg.ack()
+    except TypeError as err:
+        msg.reject()
+        raise DPNMessageError("Recieved bad message body: %s" 
+            % err)
+
+    print("RegistryDateRangeSync received. More to come here.")

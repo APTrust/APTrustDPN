@@ -11,12 +11,10 @@ class Command(BaseCommand):
         	'correlation_id': args[0],
         	'sequence': 3
         }
-        # msg.set_headers(**headers)
         body = {
             'message_name': 'replication-location-cancel',
             'message_att'  : 'nak'
         }
-        # msg.set_body(**body)
         msg = ReplicationLocationCancel(headers, body)
 
         # get the reply_key of nodes that were selected to replicate
