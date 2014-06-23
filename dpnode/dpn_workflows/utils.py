@@ -13,7 +13,6 @@ from uuid import uuid4
 
 from dpnode.settings import DPN_REPLICATION_ROOT, DPN_FIXITY_CHOICES
 from dpnode.settings import DPN_BAGS_FILE_EXT, DPN_NUM_XFERS
-from dpnode.settings import DPN_REPLICATION_KEY
 
 from dpn_workflows.models import PROTOCOL_DB_VALUES
 from dpn_workflows.models import SequenceInfo
