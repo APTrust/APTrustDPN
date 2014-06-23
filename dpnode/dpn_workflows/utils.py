@@ -112,8 +112,7 @@ def download_bag(node, location, protocol):
         command = ["/usr/bin/rsync", "-Lav", "--compress", "--compress-level=0", location, dst]
         try:
             with subprocess.Popen(command, stdout=subprocess.PIPE) as proc:
-                logger.info("INFO %s" % proc.stdout.read())
-
+                logger.info("%s" % str(proc.communicate()[0], "utf-8"))
             return dst
 
         except Exception as err:
