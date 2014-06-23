@@ -13,6 +13,7 @@ from uuid import uuid4
 
 from dpnode.settings import DPN_REPLICATION_ROOT, DPN_FIXITY_CHOICES
 from dpnode.settings import DPN_BAGS_FILE_EXT, DPN_NUM_XFERS
+from dpnode.settings import DPN_REPLICATION_KEY
 
 from dpn_workflows.models import PROTOCOL_DB_VALUES
 from dpn_workflows.models import SequenceInfo
@@ -109,7 +110,8 @@ def download_bag(node, location, protocol):
 
         filename = os.path.basename(location.split(":")[1])
         dst = os.path.join(DPN_REPLICATION_ROOT, filename)
-        command = ["/usr/bin/rsync", "-Lav", "--compress", "--compress-level=0", location, dst]
+        command = ["rsync", "-Lav", "--compress",
+                   "--compress-level=0", location, dst]
         try:
             with subprocess.Popen(command, stdout=subprocess.PIPE) as proc:
                 logger.info("%s" % str(proc.communicate()[0], "utf-8"))
