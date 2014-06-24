@@ -163,6 +163,7 @@ def receive_verify_reply_workflow(req):
     # means fixity value is correct. So saving ReceiveFileAction as complete
     message_att = req.body['message_att']
     correlation_id = req.headers['correlation_id']
+    action = None # prevent error in return
 
     if message_att == 'ack':
         try:
