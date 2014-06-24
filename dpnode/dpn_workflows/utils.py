@@ -109,21 +109,15 @@ def download_bag(node, location, protocol):
 
         filename = os.path.basename(location.split(":")[1])
         dst = os.path.join(DPN_REPLICATION_ROOT, filename)
-        command = "rsync -Lav --compress --compress-level=0 %(location)s %(destiny)s" % {
-            'location': location,
-            'destiny': dst
-        }
+        command = ["rsync", "-Lav", "--compress",
+                   "--compress-level=0", location, dst]
         try:
-            retcode = subprocess.call(command, shell=True)            
-            if retcode < 0:
-                print("Child was terminated by signal", -retcode, file=sys.stderr)
-            else:
-                print("Child returned", retcode, file=sys.stderr)
-
+            with subprocess.Popen(command, stdout=subprocess.PIPE) as proc:
+                logger.info("%s" % str(proc.communicate()[0], "utf-8"))
             return dst
 
-        except OSError as err:
-            print("Transfer failed:", err, file=sys.stderr)
+        except Exception as err:
+            logger.error("ERROR Transfer failed: %s" % err)
             raise err
 
     else:
