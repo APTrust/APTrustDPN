@@ -185,6 +185,12 @@ class RegistryEntryCreated(DPNMessage):
         else:
             raise DPNMessageError("Attribute must be ack or nak!")
 
+
 class RegistryDateRangeSync(DPNMessage):
 
     directive = 'registry-daterange-sync-request'
+
+
+class RegistryListDateRangeReply(DPNMessage):
+
+    directive = 'registry-list-daterange-reply'

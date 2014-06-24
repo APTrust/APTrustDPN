@@ -20,6 +20,9 @@ from dpn_workflows.models import IngestAction, COMPLETE, SUCCESS
 from dpn_workflows.utils import generate_fixity
 from dpn_registry.models import RegistryEntry, Node
 
+from dpnmq.utils import dpn_strptime
+from dpnmq.messages import RegistryListDateRangeReply
+
 logger = logging.getLogger('dpnmq.console')
 
 @app.task()
@@ -71,3 +74,30 @@ def create_registry_entry(correlation_id):
     else:
         logger.info("Registry entry not created. The was not transferred by any node.")
         return None
+
+@app.task
+def reply_with_item_list(req):
+    """
+    Generates an item list by date range and sends
+    it as reply to requesting node
+
+    :param req: RegistryDateRangeSync already validated
+
+    """
+    unpack_date = lambda x: [dpn_strptime(i) for i in x]
+    entries = RegistryEntry.objects.filter(
+        creation_date__range=unpack_date(req.body['date_range'])
+    )
+    
+    headers = {
+        'correlation_id': req.headers['correlation_id'],
+        'sequence': 1
+    }
+
+    body = {
+        'date_range': req.body['date_range'],
+        'reg_sync_list': [e.to_message_dict() for e in entries]
+    }
+
+    rsp = RegistryListDateRangeReply(headers, body)
+    rsp.send(req.headers['reply_key'])

@@ -19,7 +19,7 @@ class Command(BaseCommand):
     )
 
     def validate_date(self, datestring):
-        try:            
+        try:
             return dpn_strptime("{0}T{1}Z".format(*datestring.split()))
         except ValueError:
             raise ValueError("Incorrect date format, should be 'YYYY-MM-DD HH:MM:SS'")

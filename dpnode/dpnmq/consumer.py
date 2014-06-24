@@ -6,7 +6,6 @@
 """
 
 from datetime import datetime
-from io import BufferedReader
 
 from kombu.mixins import ConsumerMixin
 from kombu import Queue, Exchange

@@ -7,19 +7,20 @@
 
 from datetime import datetime
 
-from dpnode.settings import DPN_MAX_SIZE
 from dpnmq.messages import DPNMessageError, ReplicationInitQuery
 from dpnmq.messages import ReplicationAvailableReply, ReplicationLocationReply
 from dpnmq.messages import ReplicationLocationCancel, ReplicationTransferReply
 from dpnmq.messages import ReplicationVerificationReply, RegistryItemCreate
 from dpnmq.messages import RegistryEntryCreated, RegistryDateRangeSync
+from dpnmq.messages import RegistryListDateRangeReply
 
 from dpn_workflows.handlers import send_available_workflow, receive_cancel_workflow
 from dpn_workflows.handlers import receive_transfer_workflow, receive_verify_reply_workflow
 
 from dpn_workflows.tasks.inbound import delete_until_transferred
-from dpn_workflows.tasks.outbound import verify_fixity_and_reply
 from dpn_workflows.tasks.inbound import respond_to_replication_query, transfer_content
+from dpn_workflows.tasks.outbound import verify_fixity_and_reply
+from dpn_workflows.tasks.registry import reply_with_item_list
 
 from dpnmq.utils import dpn_strftime
 
@@ -57,7 +58,7 @@ broadcast_router = TaskRouter()
 local_router = TaskRouter()
 
 def default_handler(msg, body):
-    msg.reject()
+    msg.ack()
     raise DPNMessageError("No handler defined for sequence %s for routing key %r" %
                           (msg.headers.get('sequence', None),
                            msg.delivery_info.get('routing_key', None)))
@@ -296,4 +297,24 @@ def registry_daterange_sync_request_handler(msg, body):
         raise DPNMessageError("Recieved bad message body: %s" 
             % err)
 
-    print("RegistryDateRangeSync received. More to come here.")
+    reply_with_item_list.apply_async((req, ))
+
+@local_router.register('registry-list-daterange-reply')
+def registry_list_daterange_reply(msg, body):
+    """
+    Accepts a Registry List Date Range Reply
+
+    :param msg: kombu.transport.base.Message instance
+    :param body: Decoded JSON of the message payload.
+
+    # TODO: this is for the next story :)
+    """
+
+    try:
+        req = RegistryListDateRangeReply(msg.headers, body)
+        req.validate()
+        msg.ack()
+    except TypeError as err:
+        msg.reject()
+        raise DPNMessageError("Recieved bad message body: %s" 
+            % err)

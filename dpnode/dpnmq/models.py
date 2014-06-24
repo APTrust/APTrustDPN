@@ -21,6 +21,7 @@ dict_merge = lambda x, y: x.update(y) or x
 
 # some reusable valid values
 valid_dpn_date = And(str, lambda s: re.search(utc_datetime_regex, s, re.MULTILINE))
+valid_date_range = And(list, lambda s: len(s) == 2 and all(valid_dpn_date.validate(i) for i in s))
 
 VALID_HEADERS = MessageSchema({
     'from'            : And(str, lambda s: len(s) > 0),
@@ -45,6 +46,29 @@ VALID_FIXITY = {
     'fixity_value'      : MessageSchema(str)
 }
 
+# Base valid registry entry dict
+basic_registry_entry_dict = {
+    'dpn_object_id'              : str,
+    'local_id'                   : str,
+    'first_node_name'            : str,
+    'replicating_node_names'     : And(list, lambda s: all(type(i) == str for i in s)),
+    'version_number'             : int,
+    'previous_version_object_id' : Or('null', str),
+    'forward_version_object_id'  : Or('null', str),
+    'first_version_object_id'    : str,
+    'fixity_algorithm'           : VALID_FIXITY['fixity_algorithm'],
+    'fixity_value'               : VALID_FIXITY['fixity_value'],
+    'last_fixity_date'           : valid_dpn_date,
+    'creation_date'              : valid_dpn_date,
+    'last_modified_date'         : valid_dpn_date,
+    'bag_size'                   : int,
+    'brightening_object_id'      : And(list, lambda s: all(type(i) == str for i in s)),
+    'rights_object_id'           : And(list, lambda s: all(type(i) == str for i in s)),
+    'object_type'                : Or('data', 'rights', 'brightening')
+}
+
+VALID_REGISTRY_ENTRY = MessageSchema(basic_registry_entry_dict)
+
 # Some requiredonly fields
 fixity_algorithm = RequiredOnly('fixity_algorithm', with_=('message_att', 'ack'))
 fixity_value = RequiredOnly('fixity_value', with_=('message_att', 'ack'))
@@ -59,9 +83,11 @@ VALID_DIRECTIVES = {
         'dpn_object_id'       : And(str, lambda s: len(s) > 0)
     }),
 
-    'replication-available-reply' : MessageSchema(dict_merge({ 
-        'protocol' : Or(PROTOCOL_LIST, *PROTOCOL_LIST)
-        }, basic_body_dict)
+    'replication-available-reply' : MessageSchema(
+        dict_merge(
+            {'protocol' : Or(PROTOCOL_LIST, *PROTOCOL_LIST)}, 
+            basic_body_dict
+        )
     ),
 
     'replication-location-reply'  : MessageSchema({ 
@@ -78,30 +104,22 @@ VALID_DIRECTIVES = {
         message_error           : And(str, lambda s: len(s) > 0)
     }),
 
-    'registry-item-create'      : MessageSchema({
-        'message_name'               : 'registry-item-create',
-        'dpn_object_id'              : str,
-        'local_id'                   : str,
-        'first_node_name'            : str,
-        'replicating_node_names'     : And(list, lambda s: all(type(i) == str for i in s)),
-        'version_number'             : int,
-        'previous_version_object_id' : Or('null', str),
-        'forward_version_object_id'  : Or('null', str),
-        'first_version_object_id'    : str,
-        'fixity_algorithm'           : VALID_FIXITY['fixity_algorithm'],
-        'fixity_value'               : VALID_FIXITY['fixity_value'],
-        'last_fixity_date'           : valid_dpn_date,
-        'creation_date'              : valid_dpn_date,
-        'last_modified_date'         : valid_dpn_date,
-        'bag_size'                   : int,
-        'brightening_object_id'      : And(list, lambda s: all(type(i) == str for i in s)),
-        'rights_object_id'           : And(list, lambda s: all(type(i) == str for i in s)),
-        'object_type'                : Or('data', 'rights', 'brightening')
-    }),
+    'registry-item-create'      : MessageSchema(
+        dict_merge({
+                'message_name'  : 'registry-item-create'
+            }, basic_registry_entry_dict
+        )
+    ),
 
     'registry-daterange-sync-request': MessageSchema({
         'message_name'               : 'registry-daterange-sync-request',
-        'date_range'                 : And(list, lambda s: all(valid_dpn_date.validate(i) for i in s))
+        'date_range'                 : valid_date_range
+    }),
+
+    'registry-list-daterange-reply'  : MessageSchema({
+        'message_name'  : 'registry-list-daterange-reply',
+        'date_range'    : valid_date_range,
+        'reg_sync_list' : And(list, lambda s: all(VALID_REGISTRY_ENTRY.validate(i) for i in s))
     })
 
 }

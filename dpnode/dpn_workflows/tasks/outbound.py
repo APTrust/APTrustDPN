@@ -232,7 +232,7 @@ def verify_fixity_and_reply(req):
     local_fixity = generate_fixity(local_bag_path)
 
     if local_fixity == req.body['fixity_value']:
-        message_att = 'ack'        
+        message_att = 'ack'
 
         # save SendFileAction as complete and success
         action.step = COMPLETE
