@@ -43,7 +43,10 @@ class Node(models.Model):
     def __str__(self):
         return '%s' % self.__unicode__()
 
-class RegistryEntry(models.Model):
+class BaseRegistry(models.Model):
+    """
+    Base Abstract modal for registry entries
+    """
 
     dpn_object_id = models.CharField(max_length=64, primary_key=True)
     local_id = models.TextField(max_length=100, blank=True)
@@ -81,10 +84,16 @@ class RegistryEntry(models.Model):
         return '%s' % self.__unicode__()
 
     class Meta:
+        abstract = True
         verbose_name_plural = "registry entries"
 
     def object_type_text(self):
         return self.get_object_type_display().lower()
+
+class RegistryEntry(BaseRegistry):
+    """
+    Django model to create Registry Entries
+    """
 
     def to_message_dict(self):
 
@@ -116,7 +125,8 @@ class RegistryEntry(models.Model):
 
         return serialize_dict_date(message_dict)
 
-class NodeEntry(RegistryEntry):
+
+class NodeEntry(BaseRegistry):
     """
     This represents registry entries from other nodes.  These may be sent as
     part of a registry sync operation when they need to be compared to determine
