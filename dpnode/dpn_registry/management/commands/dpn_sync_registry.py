@@ -1,9 +1,10 @@
 from uuid import uuid4
 
 from optparse import make_option
+from datetime import datetime
 from django.core.management.base import BaseCommand, CommandError
 
-from dpnode.settings import DPN_BROADCAST_KEY
+from dpnode.settings import DPN_BROADCAST_KEY, DPN_DATE_FORMAT
 
 from dpnmq.messages import RegistryDateRangeSync
 from dpnmq.utils import dpn_strptime, dpn_strftime
@@ -13,25 +14,27 @@ class Command(BaseCommand):
     
     option_list = BaseCommand.option_list + (
         make_option('--startdate',
-                    help='Starting datetime to sync registry'),
+                    help='Starting datetime to sync registry',
+                    default=dpn_strftime(datetime.utcnow())),
         make_option('--enddate', 
-                    help='End datetime to sync registry')
+                    help='End datetime to sync registry',
+                    default=dpn_strftime(datetime.utcnow()))
     )
 
     def validate_date(self, datestring):
         try:
-            return dpn_strptime("{0}T{1}Z".format(*datestring.split()))
+            return dpn_strptime(datestring)
         except ValueError:
-            raise ValueError("Incorrect date format, should be 'YYYY-MM-DD HH:MM:SS'")
+            raise ValueError("Incorrect date format, should be '%s' (i.e. %s)" % DPN_DATE_FORMAT,
+                     dpn_strftime(datetime.utcnow()))
 
     def handle(self, *args, **options):
-        required_params = ['startdate', 'enddate']
-        for param in required_params:
-            if not options[param]:
-                raise CommandError("%s option is required to execute this command." % param)
 
         start_datetime = self.validate_date(options['startdate'])
         end_datetime = self.validate_date(options['enddate'])
+
+        if start_datetime > end_datetime:
+            raise CommandError("Start date must be prior to End Date")
 
         headers = {
             'correlation_id': str(uuid4()),
