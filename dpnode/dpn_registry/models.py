@@ -83,9 +83,6 @@ class RegistryEntry(models.Model):
     class Meta:
         verbose_name_plural = "registry entries"
 
-    def object_type_text(self):
-        return self.get_object_type_display().lower()
-
     def to_message_dict(self):
 
         values_override = {
