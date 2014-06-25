@@ -92,7 +92,7 @@ class BaseRegistry(models.Model):
 
 class RegistryEntry(BaseRegistry):
     """
-    Django model to create Registry Entries
+    Django model to create Registry Entries from own node
     """
 
     def to_message_dict(self):
