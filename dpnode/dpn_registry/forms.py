@@ -14,16 +14,3 @@ class RegistryEntryForm(ModelForm):
 
     class Meta:
         model = RegistryEntry
-        # Best practice as of Django 1.6 will be to use this.
-        # fields = '__all__'
-        exclude = [
-            'replicating_nodes',
-            'brightening_objects',
-            'rights_objects',
-            'previous_version',
-            'first_version',
-            'previous_version',
-            'forward_version',
-            'state',
-            'object_type'
-            ]

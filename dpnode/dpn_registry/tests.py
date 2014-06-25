@@ -42,3 +42,7 @@ class RegistryEntryFormTest(TestCase):
     def test_validate(self):
         frm = RegistryEntryForm(self.good_body)
         self.assertTrue(frm.is_valid(), frm.errors)
+
+class RegistryEntryTest(TestCase):
+
+    def setUp(self):
