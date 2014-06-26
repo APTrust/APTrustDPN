@@ -16,8 +16,11 @@ class SimpleTest(TestCase):
         """
         self.assertEqual(1 + 1, 2)
 
-class RegistryEntryFormTest(TestCase):
-
+class RegistryEntryFormatTest(TestCase):
+    """
+    This tests the json values that will be expected to be recieved as part
+    of a dpn_registry_entry message.
+    """
     def setUp(self):
         self.good_body = {
             "dpn_object_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
@@ -42,7 +45,3 @@ class RegistryEntryFormTest(TestCase):
     def test_validate(self):
         frm = RegistryEntryForm(self.good_body)
         self.assertTrue(frm.is_valid(), frm.errors)
-
-class RegistryEntryTest(TestCase):
-
-    def setUp(self):
