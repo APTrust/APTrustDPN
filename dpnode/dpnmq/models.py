@@ -26,10 +26,10 @@ valid_date_range = And(list, lambda s: len(s) == 2 and all(valid_dpn_date.valida
 VALID_HEADERS = MessageSchema({
     'from'            : And(str, lambda s: len(s) > 0),
     'reply_key'       : And(str, lambda s: len(s) > 0),
-    'correlation_id'  : str,
+    'correlation_id'  : And(str, lambda s: len(s) > 0),
     'sequence'        : And(int, lambda i: i > -1),
-    'date'            : Or(None, valid_dpn_date),
-    'ttl'             : Or(None, valid_dpn_date)
+    'date'            : And(str, valid_dpn_date),
+    'ttl'             : And(str, valid_dpn_date)
 })
 
 # Basic valid body
