@@ -31,6 +31,18 @@ TYPE_CHOICES = (
     (BRIGHTENING, 'Brightening')
 )
 
+# We need this overriding because RegistryItemCreate message dict
+# has attributes that doesn't match with RegistryEntryModel fields
+NAMES_OVERRIDE = {
+    'lastfixity_date'       : 'last_fixity_date',
+    'replicating_nodes'     : 'replicating_node_names',
+    'previous_version'      : 'previous_version_object_id',
+    'forward_version'       : 'forward_version_object_id',
+    'first_version'         : 'first_version_object_id',
+    'brightening_objects'   : 'brightening_object_id',
+    'rights_objects'        : 'rights_object_id'
+}
+
 class Node(models.Model):
     """
     Related model field to keep information about what is replicated where.
@@ -66,12 +78,13 @@ class BaseRegistry(models.Model):
                                          related_name='next_entry')
     forward_version = models.ForeignKey("self", null=True, blank=True,
                                         related_name='previous_entry')
-    first_version = models.ForeignKey("self", related_name='children', null=True)
+    first_version = models.ForeignKey("self", related_name='children', 
+                                    null=True, blank=True)
 
     # Many to Many Relationships.
-    replicating_nodes = models.ManyToManyField(Node, null=True)
-    brightening_objects = models.ManyToManyField("self", null=True)
-    rights_objects = models.ManyToManyField("self", null=True)
+    replicating_nodes = models.ManyToManyField(Node, null=True, blank=True)
+    brightening_objects = models.ManyToManyField("self", null=True, blank=True)
+    rights_objects = models.ManyToManyField("self", null=True, blank=True)
 
     # State
     state = models.CharField(max_length=1, choices=REGISTRY_STATE_CHOICES,
@@ -99,17 +112,7 @@ class RegistryEntry(BaseRegistry):
 
         values_override = {
             'object_type': 'object_type_text'
-        }
-
-        names_override = {
-            'lastfixity_date'       : 'last_fixity_date',
-            'replicating_nodes'     : 'replicating_node_names',
-            'previous_version'      : 'previous_version_object_id',
-            'forward_version'       : 'forward_version_object_id',
-            'first_version'         : 'first_version_object_id',
-            'brightening_objects'   : 'brightening_object_id',
-            'rights_objects'        : 'rights_object_id'
-        }
+        }        
 
         relations = {
             'replicating_nodes': {'fields': ['name'], 'flat': True}
@@ -118,7 +121,7 @@ class RegistryEntry(BaseRegistry):
         message_dict = ModelToDict(
                 instance=self,
                 exclude=['state'],
-                n_override=names_override, 
+                n_override=NAMES_OVERRIDE, 
                 v_override=values_override,
                 relations=relations
             ).as_dict()
@@ -132,7 +135,7 @@ class NodeEntry(BaseRegistry):
     part of a registry sync operation when they need to be compared to determine
     the authoritative registry entry to use locally.
     """
-    node = models.ForeignKey(Node)
+    node = models.ForeignKey(Node, related_name='node_from')
 
     class Meta:
         verbose_name_plural = "node entries"

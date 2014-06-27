@@ -20,7 +20,7 @@ from dpn_workflows.handlers import receive_transfer_workflow, receive_verify_rep
 from dpn_workflows.tasks.inbound import delete_until_transferred
 from dpn_workflows.tasks.inbound import respond_to_replication_query, transfer_content
 from dpn_workflows.tasks.outbound import verify_fixity_and_reply
-from dpn_workflows.tasks.registry import reply_with_item_list
+from dpn_workflows.tasks.registry import reply_with_item_list, save_registries_from
 
 from dpnmq.utils import dpn_strftime
 
@@ -307,7 +307,6 @@ def registry_list_daterange_reply(msg, body):
     :param msg: kombu.transport.base.Message instance
     :param body: Decoded JSON of the message payload.
 
-    # TODO: this is for the next story :)
     """
 
     try:
@@ -318,3 +317,6 @@ def registry_list_daterange_reply(msg, body):
         msg.reject()
         raise DPNMessageError("Recieved bad message body: %s" 
             % err)
+
+    node = msg.headers['from']
+    save_registries_from(node, req)

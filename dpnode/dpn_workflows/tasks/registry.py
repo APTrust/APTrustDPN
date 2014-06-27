@@ -18,7 +18,9 @@ from dpnode.settings import DPN_NODE_NAME, DPN_FIXITY_CHOICES
 
 from dpn_workflows.models import IngestAction, COMPLETE, SUCCESS
 from dpn_workflows.utils import generate_fixity
-from dpn_registry.models import RegistryEntry, Node
+
+from dpn_registry.models import RegistryEntry, Node, NAMES_OVERRIDE
+from dpn_registry.forms import NodeEntryForm
 
 from dpnmq.utils import dpn_strptime
 from dpnmq.messages import RegistryListDateRangeReply
@@ -101,3 +103,37 @@ def reply_with_item_list(req):
 
     rsp = RegistryListDateRangeReply(headers, body)
     rsp.send(req.headers['reply_key'])
+
+# @app.task
+def save_registries_from(node, req):
+    """
+    Saves registry entries from other nodes to be compared
+    with local registries later
+
+    :param node: String name of neighbor node
+    :param req: RegistryListDateRangeReply already validated
+
+    """
+
+    # we need to override some dict keys because doesn't match with 
+    # model fields
+    keys_override = dict((v, k) for k, v in NAMES_OVERRIDE.items())
+
+    def rename_keys(dicc, keys_override):
+        for old_key, new_key in keys_override.items():
+            if old_key in dicc:
+                dicc[new_key] = dicc.pop(old_key)
+        return dicc
+
+    entry_list = req.body['reg_sync_list']
+    node_pk = Node.objects.get_or_create(name=node)[0].pk
+    
+    for entry_dict in entry_list:
+        entry_dict = rename_keys(entry_dict, keys_override)
+        entry_dict.update({'node': node_pk})
+        
+        node_entry = NodeEntryForm(data=entry_dict)
+        if node_entry.is_valid():
+            node_entry.save()
+
+    print("Entries for node %s has been saved." % node)
