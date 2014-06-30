@@ -8,6 +8,7 @@
 # DPN Federation.
 
 import os
+import time
 import logging
 
 from uuid import uuid4
@@ -131,13 +132,27 @@ def choose_and_send_location(correlation_id):
 
     # queue the task responsible to create registry entry 
     # with a countdown giving time to replicating nodes
-    # to transfer the bag
-    reg_delay = (DPN_NUM_XFERS * DPN_MSG_TTL.get("replication-transfer-reply", DPN_TTL)) 
-    create_registry_entry.apply_async(
-        (correlation_id, ),
-        countdown=reg_delay,
-        link=broadcast_item_creation.subtask()
-    )
+    # to transfer the bag. If broker connection is lost, retry
+    # sending the task for 5 minutes each 10
+    retry_seconds = 0
+    five_mins = 5*60
+
+    while retry_seconds < five_mins:
+        try:
+            reg_delay = (DPN_NUM_XFERS * DPN_MSG_TTL.get("replication-transfer-reply", DPN_TTL)) 
+            create_registry_entry.apply_async(
+                (correlation_id, ),
+                countdown=reg_delay,
+                link=broadcast_item_creation.subtask()
+            )
+            retry_seconds = five_mins
+        except OSError as err:
+            logger.info("Error trying to send registry task to queue. Message: %s" % err)
+            print('Retrying in 10 seconds')
+            
+            time.sleep(10)
+            retry_seconds += 10
+
 
 # transfer has finished, that means you boy are ready to notify 
 # first node the bag has been already replicated

@@ -27,7 +27,7 @@ from dpnmq.messages import RegistryListDateRangeReply
 
 logger = logging.getLogger('dpnmq.console')
 
-@app.task()
+@app.task
 def create_registry_entry(correlation_id):
     """
     Creates an entry in the local registry when transfer
@@ -74,7 +74,7 @@ def create_registry_entry(correlation_id):
         logger.info("Registry entry successfully created for transaction with correlation_id: %s" % correlation_id)
         return registry
     else:
-        logger.info("Registry entry not created. The was not transferred by any node.")
+        logger.info("Registry entry not created. The bag was not transferred by any node.")
         return None
 
 @app.task
@@ -104,7 +104,7 @@ def reply_with_item_list(req):
     rsp = RegistryListDateRangeReply(headers, body)
     rsp.send(req.headers['reply_key'])
 
-# @app.task
+@app.task
 def save_registries_from(node, req):
     """
     Saves registry entries from other nodes to be compared
