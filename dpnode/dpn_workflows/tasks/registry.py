@@ -137,3 +137,12 @@ def save_registries_from(node, req):
             node_entry.save()
 
     print("Entries for node %s has been saved." % node)
+
+@app.task
+def solve_registry_conflicts():
+    """
+    Reads registry entries of other nodes stored in local 
+    to check and solves conflicts with own node registry entries
+    """
+    
+    pass
