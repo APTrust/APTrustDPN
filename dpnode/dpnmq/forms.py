@@ -272,7 +272,7 @@ class RepTransferReplyForm(_DPNBaseForm):
             data.pop("message_error")
         return data
 
-class RegistryEntryForm(forms.ModelForm):
+class _RegistryEntryForm(forms.ModelForm):
     """
     Handles any registry item message body.
 
@@ -319,7 +319,7 @@ class RegistryEntryForm(forms.ModelForm):
             data["object_type"] = types[data["object_type"]]
         except KeyError:
             pass
-        super(RegistryEntryForm, self).__init__(data, *args, **kwargs)
+        super(_RegistryEntryForm, self).__init__(data, *args, **kwargs)
 
     def as_dpn_dict(self):
         data = map_to_json(self.field_map, self.cleaned_data)
@@ -348,9 +348,35 @@ class RegistryEntryForm(forms.ModelForm):
         exclude = ['state',]
 
 
-class RegistryItemCreateForm(RegistryEntryForm):
+class RegistryItemCreateForm(_RegistryEntryForm):
     """
     Handles registry item create message body.
     """
     message_name = forms.ChoiceField(
-        choices=_format_choices(['replication-transfer-reply']))
+        choices=_format_choices(['registry-item-create']))
+
+class RegistryEntryCreatedForm(_DPNBaseForm):
+    """
+    Handles registry entry created reply message body.
+    """
+    message_name = forms.ChoiceField(
+        choices=_format_choices(['registry-entry-created']))
+    message_att = forms.ChoiceField(choices=_format_choices(ACKS))
+    message_error = forms.CharField(required=False)
+
+    def clean(self):
+        cleaned_data = self.cleaned_data
+        att = cleaned_data.get("message_att")
+        err = cleaned_data.get("message_error")
+
+        if att == "ack":
+            if err != "":
+                raise forms.ValidationError("Error not valid for acks.")
+
+        return cleaned_data
+
+    def as_dpn_dict(self):
+        data = super(RegistryEntryCreatedForm, self).as_dpn_dict()
+        if data.get("message_att") == "ack":
+            data.pop("message_error")
+        return data

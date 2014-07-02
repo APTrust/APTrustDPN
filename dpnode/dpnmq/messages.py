@@ -13,6 +13,7 @@ from kombu import Connection
 from dpnode.settings import DPN_TTL, DPN_BROKER_URL, DPN_NODE_NAME, DPN_EXCHANGE
 from dpnode.settings import DPN_LOCAL_KEY, DPN_MSG_TTL
 
+from dpnmq import forms
 from .models import VALID_HEADERS, VALID_BODY, VALID_DIRECTIVES
 from .utils import dpn_strftime, is_string, str_expire_on
 
@@ -25,6 +26,8 @@ class DPNMessageError(Exception):
 class DPNMessage(object):
 
     directive = None
+    body_form = None
+    header_form = forms.MsgHeaderForm
 
     def __init__(self, headers_dict=None, body_dict=None):
         """
@@ -60,7 +63,9 @@ class DPNMessage(object):
           self.headers["ttl"] = str_expire_on(now, self._get_ttl())
 
     def validate_headers(self):
-        VALID_HEADERS.validate(self.headers)
+        frm = self.header_form(self.headers)
+        if not frm.is_valid():
+            raise DPNMessageError("Invalid message header %s" % frm.errors)
 
     def send(self, rt_key):
         """
@@ -116,10 +121,9 @@ class DPNMessage(object):
     def validate_body(self):
         self._set_message_name()
 
-        if self.directive in VALID_DIRECTIVES:
-            VALID_DIRECTIVES[self.directive].validate(self.body)
-        else:
-            VALID_BODY.validate(self.body)
+        frm = self.body_form(self.body)
+        if not frm.is_valid():
+            raise DPNMessageError("Invalid Body %s" % frm.body)
 
     def set_body(self, **kwargs):
         try:
@@ -138,32 +142,32 @@ class DPNMessage(object):
 class ReplicationInitQuery(DPNMessage):
 
     directive = 'replication-init-query'
-
+    body_form = forms.RepInitQueryForm
 
 class ReplicationAvailableReply(DPNMessage):
     
     directive = "replication-available-reply"
-        
+    body_form = forms.RepAvailableReplyForm
 
 class ReplicationLocationReply(DPNMessage):
     
     directive = 'replication-location-reply'
-
+    body_form = forms.RepLocationReplyForm
 
 class ReplicationLocationCancel(DPNMessage):
     
     directive = 'replication-location-cancel'
-    
+    body_form = forms.RepLocationCancelForm
 
 class ReplicationTransferReply(DPNMessage):
     
     directive = 'replication-transfer-reply'
-
+    body_form = forms.RepTransferReplyForm
 
 class ReplicationVerificationReply(DPNMessage):
     
     directive = 'replication-verify-reply'
-
+    body_form = forms.Rep
 
 class RegistryItemCreate(DPNMessage):
 

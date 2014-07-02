@@ -4,18 +4,21 @@
 
             - Steve Martin
 """
-import pprint, json
+import pprint
+import json
 from datetime import datetime
 
 from django.test import TestCase
 
 from dpnode.settings import DPN_DEFAULT_XFER_PROTOCOL, DPN_NODE_LIST
 from dpn_registry.models import RegistryEntry, Node
-from dpnmq.utils import is_string, dpn_strftime, str_expire_on, dpn_strptime
+from dpnmq.utils import dpn_strftime, str_expire_on, dpn_strptime
 from dpnmq.forms import MsgHeaderForm, RepInitQueryForm
 from dpnmq.forms import RepAvailableReplyForm, RepLocationReplyForm
 from dpnmq.forms import RepLocationCancelForm, RepTransferReplyForm
-from dpnmq.forms import RegistryEntryForm, RegistryItemCreateForm
+from dpnmq.forms import RegistryItemCreateForm
+from dpnmq.forms import RegistryEntryCreatedForm
+
 
 GOOD_HEADERS = {
     'from': 'testfrom',
@@ -25,6 +28,7 @@ GOOD_HEADERS = {
     'date': dpn_strftime(datetime.now()),
     'ttl': str_expire_on(datetime.now(), 566),
 }
+
 
 class TestMsgHeaderForm(TestCase):
     def setUp(self):
@@ -58,7 +62,6 @@ class TestMsgHeaderForm(TestCase):
 
 
 class DPNBodyFormTest(TestCase):
-
     def _test_validation(self, form_class, good_body, bad_body,
                          skip_missing=[]):
         """
@@ -76,7 +79,7 @@ class DPNBodyFormTest(TestCase):
                 tst_data[k] = val
                 frm = form_class(tst_data.copy())
                 msg = "Expected value: %r to be invalid for field: %s" % (
-                val, k)
+                    val, k)
                 self.assertFalse(frm.is_valid(), msg)
                 # Now test for missing data
             if k not in skip_missing:
@@ -87,7 +90,8 @@ class DPNBodyFormTest(TestCase):
 
         # NOTE Make sure good headers pass.
         frm = form_class(good_body.copy())
-        msg = "Expect a valid message for %s. Errors:" % pprint.pformat(good_body)
+        msg = "Expect a valid message for %s. Errors:" % pprint.pformat(
+            good_body)
         self.assertTrue(frm.is_valid(), "%s \n %s" % (msg, frm.errors))
 
     def _test_dpn_data(self, form_class, good_data):
@@ -103,10 +107,13 @@ class DPNBodyFormTest(TestCase):
         for k, v in good_data.items():
             if isinstance(v, list):
                 actual = len(set(v).intersection(set(data[k])))
-                self.failUnlessEqual(actual, len(v), "Expected %s and %s to comare." % (v, data[k]))
+                self.failUnlessEqual(actual, len(v),
+                                     "Expected %s and %s to comare." % (
+                                     v, data[k]))
             else:
                 self.assertTrue(data[k] == v,
-                    "Expected %r did not match %s for field %s" % (data[k], v, k))
+                                "Expected %r did not match %s for field %s" % (
+                                data[k], v, k))
 
 
     def test_replication_init_query(self):
@@ -215,34 +222,34 @@ class DPNBodyFormTest(TestCase):
                               ["message_error"])
         self._test_dpn_data(frm, good_body_nak)
 
-    def test_registry_entry_form(self):
-        frm = RegistryEntryForm
+    def test_registry_entry_create_form(self):
+        frm = RegistryItemCreateForm
         # Some related fixtures for the good_body values to work.
 
         registry_fixtures = [
-            { # Foward Version Object
-                "dpn_object_id": "a395e773-668f-4a4d-876e-4a4039d86735",
-                "object_type": "D"
+            {  # Foward Version Object
+               "dpn_object_id": "a395e773-668f-4a4d-876e-4a4039d86735",
+               "object_type": "D"
             },
-            { # First Version Object
-                "dpn_object_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
-                "object_type": "D"
+            {  # First Version Object
+               "dpn_object_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+               "object_type": "D"
             },
-            { # Brightening Object 1
-                "dpn_object_id": "a02de3cd-a74b-4cc6-adec-16f1dc65f726",
-                "object_type": "B"
+            {  # Brightening Object 1
+               "dpn_object_id": "a02de3cd-a74b-4cc6-adec-16f1dc65f726",
+               "object_type": "B"
             },
-            { # Brightening Object 2
-                "dpn_object_id": "C92de3cd-a789-4cc6-adec-16a40c65f726",
-                "object_type": "B"
+            {  # Brightening Object 2
+               "dpn_object_id": "C92de3cd-a789-4cc6-adec-16a40c65f726",
+               "object_type": "B"
             },
-            { # Rights Object 1
-                "dpn_object_id": "a02de3cd-a789-4cc6-adec-16a40c65f726",
-                "object_type": "R"
+            {  # Rights Object 1
+               "dpn_object_id": "a02de3cd-a789-4cc6-adec-16a40c65f726",
+               "object_type": "R"
             },
-            { # Rights Object 2
-                "dpn_object_id": "0df688d4-8dfb-4768-bee9-639558f40488",
-                "object_type": "R"
+            {  # Rights Object 2
+               "dpn_object_id": "0df688d4-8dfb-4768-bee9-639558f40488",
+               "object_type": "R"
             },
         ]
         for data in registry_fixtures:
@@ -267,6 +274,7 @@ class DPNBodyFormTest(TestCase):
             nd.save()
 
         good_body = {
+            "message_name": "registry-item-create",
             "dpn_object_id": "d47ac10b-58cc-4372-a567-0e02b2c3d479",
             "local_id": "test",
             "first_node_name": "tdr",
@@ -281,14 +289,19 @@ class DPNBodyFormTest(TestCase):
             "creation_date": "2013-01-05T09:49:28Z",
             "last_modified_date": "2013-01-05T09:49:28Z",
             "bag_size": 65536,
-            "brightening_object_id": [obj["dpn_object_id"] for obj in registry_fixtures if obj["object_type"] == "B"],
-            "rights_object_id": [obj["dpn_object_id"] for obj in registry_fixtures if obj["object_type"] == "R"],
+            "brightening_object_id": [obj["dpn_object_id"] for obj in
+                                      registry_fixtures if
+                                      obj["object_type"] == "B"],
+            "rights_object_id": [obj["dpn_object_id"] for obj in
+                                 registry_fixtures if
+                                 obj["object_type"] == "R"],
             "object_type": "data"
         }
         bad_body = {
+            "message_name": ["registry-item-created", None],
             "dpn_object_id": ["", None],
             # "local_id": [],
-            "first_node_name": [None,],
+            "first_node_name": [None, ],
             "replicating_node_names": ["notalist", ["google", "aptrust"]],
             "version_number": ["sdnfs", None, True],
             # "previous_version_object_id": [],
@@ -304,15 +317,45 @@ class DPNBodyFormTest(TestCase):
             # "rights_object_id": [],
             "object_type": ["record", "", None, 324234]
         }
-        self._test_validation(frm, good_body, bad_body, ['replicating_node_names'])
+        self._test_validation(frm, good_body, bad_body,
+                              ['replicating_node_names'])
         self._test_dpn_data(frm, good_body)
+
+    def test_registry_entry_created_form(self):
+        frm = RegistryEntryCreatedForm
+        good_body_ack = {
+            "message_name": "registry-entry-created",
+            "message_att": "ack"
+        }
+        bad_body_ack = {
+            "message_name": ["registry-entry-create", None],
+            "message_att": ["", None, True],
+            "message_error": ["This is a non blank error.", ]
+        }
+        self._test_validation(frm, good_body_ack, bad_body_ack,
+                              ['message_error'])
+        self._test_dpn_data(frm, good_body_ack)
+
+        good_body_nak = {
+            "message_name": "registry-entry-created",
+            "message_att": "nak",
+            "message_error": "Something happend!",
+        }
+        bad_body_nak = {
+            "message_name": ["registry-entry-create", None],
+            "message_att": ["ack", None, False],
+            "message_error": [],
+        }
+        self._test_validation(frm, good_body_nak, bad_body_nak,
+                              ['message_error'])
+        self._test_dpn_data(frm, good_body_nak)
 
 # ####################################################
 
 # tests for dpnmq/utils.py
 
 # class TestDPNStftime(TestCase):
-#     pass
+# pass
 
 # class TestDPNStptime(TestCase):
 #
