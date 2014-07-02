@@ -105,10 +105,10 @@ class MessageSchema(object):
                             
                             for sskey in sorted_skeys:
                                 if type(sskey) is Optional and sskey._schema == skey.if_key:
-                                    raise MessageSchemaError("%s key can't be Optional. It is required to validate %s key" % (skey.if_key, skey))
+                                    raise KeyError("MessageSchemaError: %s key can't be Optional. It is required to validate %s key" % (skey.if_key, skey))
                             
-                            if not skey.if_key in sorted_skeys or skey.if_key not in data:
-                                raise MessageSchemaError("%s key is required to validate %s" % (skey.if_key, skey))
+                            if not skey.if_key in sorted_skeys:
+                                raise KeyError("MessageSchemaError: %s key is required to validate %s" % (skey.if_key, skey))
                                 
                             required_value = MessageSchema(data[skey.if_key], error=e, sub=True).validate(data[skey.if_key])
                             if required_value != skey.if_value:

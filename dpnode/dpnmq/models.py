@@ -7,7 +7,7 @@
 
 import re
 
-from dpnmq.message_schema import MessageSchema, And, Or, RequiredOnly, Use
+from dpnmq.message_schema import MessageSchema, And, Or, RequiredOnly
 from dpnmq.utils import dpn_strptime
 from dpnode.settings import PROTOCOL_LIST
 
@@ -43,25 +43,25 @@ VALID_BODY = MessageSchema(basic_body_dict)
 # Fixity stuff
 VALID_FIXITY = {
     'fixity_algorithm'  : MessageSchema(And(str, lambda s: s == 'sha256')),
-    'fixity_value'      : MessageSchema(And(str, lambda s: len(s) == 64))
+    'fixity_value'      : MessageSchema(str)
 }
 
 # Base valid registry entry dict
 basic_registry_entry_dict = {
-    'dpn_object_id'              : And(str, lambda s: len(s) > 0),
-    'local_id'                   : Use(str),
-    'first_node_name'            : And(str, lambda s: len(s) > 0),
+    'dpn_object_id'              : str,
+    'local_id'                   : str,
+    'first_node_name'            : str,
     'replicating_node_names'     : And(list, lambda s: all(type(i) == str for i in s)),
-    'version_number'             : And(str, lambda i: i > 0),
-    'previous_version_object_id' : Or('null', And(str, lambda s: len(s) > 0)),
-    'forward_version_object_id'  : Or('null', And(str, lambda s: len(s) > 0)),
-    'first_version_object_id'    : Use(str),
+    'version_number'             : int,
+    'previous_version_object_id' : Or('null', str),
+    'forward_version_object_id'  : Or('null', str),
+    'first_version_object_id'    : str,
     'fixity_algorithm'           : VALID_FIXITY['fixity_algorithm'],
     'fixity_value'               : VALID_FIXITY['fixity_value'],
     'last_fixity_date'           : valid_dpn_date,
     'creation_date'              : valid_dpn_date,
     'last_modified_date'         : valid_dpn_date,
-    'bag_size'                   : Use(int),
+    'bag_size'                   : int,
     'brightening_object_id'      : And(list, lambda s: all(type(i) == str for i in s)),
     'rights_object_id'           : And(list, lambda s: all(type(i) == str for i in s)),
     'object_type'                : Or('data', 'rights', 'brightening')
@@ -73,7 +73,6 @@ VALID_REGISTRY_ENTRY = MessageSchema(basic_registry_entry_dict)
 fixity_algorithm = RequiredOnly('fixity_algorithm', with_=('message_att', 'ack'))
 fixity_value = RequiredOnly('fixity_value', with_=('message_att', 'ack'))
 message_error = RequiredOnly('message_error', with_=('message_att', 'nak'))
-protocol_available = RequiredOnly('protocol', with_=('message_att', 'ack'))
 
 VALID_DIRECTIVES = {
 
@@ -84,11 +83,12 @@ VALID_DIRECTIVES = {
         'dpn_object_id'       : And(str, lambda s: len(s) > 0)
     }),
 
-    'replication-available-reply' : MessageSchema({
-        'message_name'      : 'replication-available-reply',
-        'message_att'       : And(str, Or('ack', 'nak')),
-        protocol_available  : Or(*PROTOCOL_LIST)
-    }),
+    'replication-available-reply' : MessageSchema(
+        dict_merge(
+            {'protocol' : Or(PROTOCOL_LIST, *PROTOCOL_LIST)}, 
+            basic_body_dict
+        )
+    ),
 
     'replication-location-reply'  : MessageSchema({ 
         'message_name' : 'replication-location-reply',
