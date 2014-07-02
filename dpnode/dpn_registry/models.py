@@ -35,7 +35,7 @@ class Node(models.Model):
     """
     Related model field to keep information about what is replicated where.
     """
-    name = models.CharField(max_length=10, unique=True)
+    name = models.CharField(max_length=20, primary_key=True)
 
     def __unicode__(self):
         return '%s' % self.name
@@ -46,12 +46,12 @@ class Node(models.Model):
 class RegistryEntry(models.Model):
 
     dpn_object_id = models.CharField(max_length=64, primary_key=True)
-    local_id = models.TextField(max_length=100, blank=True)
+    local_id = models.TextField(max_length=100, blank=True, null=True)
     first_node_name = models.CharField(max_length=20)
     version_number = models.PositiveIntegerField()
     fixity_algorithm = models.CharField(max_length=10)
     fixity_value = models.CharField(max_length=128)
-    lastfixity_date = models.DateTimeField()
+    last_fixity_date = models.DateTimeField()
     creation_date = models.DateTimeField()
     last_modified_date = models.DateTimeField()
     bag_size = models.BigIntegerField()
@@ -66,9 +66,9 @@ class RegistryEntry(models.Model):
     first_version = models.ForeignKey("self", related_name='children', null=True)
 
     # Many to Many Relationships.
-    replicating_nodes = models.ManyToManyField(Node, null=True)
-    brightening_objects = models.ManyToManyField("self", null=True)
-    rights_objects = models.ManyToManyField("self", null=True)
+    replicating_nodes = models.ManyToManyField(Node, null=True, blank=True)
+    brightening_objects = models.ManyToManyField("self", null=True, blank=True)
+    rights_objects = models.ManyToManyField("self", null=True, blank=True)
 
     # State
     state = models.CharField(max_length=1, choices=REGISTRY_STATE_CHOICES,
