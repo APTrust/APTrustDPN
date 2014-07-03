@@ -272,6 +272,12 @@ class RepTransferReplyForm(_DPNBaseForm):
             data.pop("message_error")
         return data
 
+class RepVerificationReplyForm(_DPNBaseForm):
+    message_name = forms.ChoiceField(
+        choices=_format_choices(['replication-verify-reply']))
+    message_att = forms.ChoiceField(choices=_format_choices(ACKS + ['retry',]))
+
+
 class _RegistryEntryForm(forms.ModelForm):
     """
     Handles any registry item message body.

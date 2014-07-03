@@ -16,7 +16,7 @@ from dpnmq.utils import dpn_strftime, str_expire_on, dpn_strptime
 from dpnmq.forms import MsgHeaderForm, RepInitQueryForm
 from dpnmq.forms import RepAvailableReplyForm, RepLocationReplyForm
 from dpnmq.forms import RepLocationCancelForm, RepTransferReplyForm
-from dpnmq.forms import RegistryItemCreateForm
+from dpnmq.forms import RegistryItemCreateForm, RepVerificationReplyForm
 from dpnmq.forms import RegistryEntryCreatedForm
 
 
@@ -221,6 +221,17 @@ class DPNBodyFormTest(TestCase):
         self._test_validation(frm, good_body_nak, bad_body_nak,
                               ["message_error"])
         self._test_dpn_data(frm, good_body_nak)
+
+    def test_replication_verification_reply_form(self):
+        frm = RepVerificationReplyForm
+        good_body = {
+            "message_name": "replication-verify-reply",
+            "message_att": "ack"
+        }
+        bad_body = {
+            "message_name": [None, "registry-item-create"],
+            "message_att": [True, False, "again", "null", None, ""]
+        }
 
     def test_registry_entry_create_form(self):
         frm = RegistryItemCreateForm

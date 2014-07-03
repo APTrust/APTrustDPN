@@ -167,16 +167,18 @@ class ReplicationTransferReply(DPNMessage):
 class ReplicationVerificationReply(DPNMessage):
     
     directive = 'replication-verify-reply'
-    body_form = forms.Rep
+    body_form = forms.RepVerificationReplyForm
 
 class RegistryItemCreate(DPNMessage):
 
     directive = 'registry-item-create'
+    body_form = forms.RegistryItemCreateForm
 
 
 class RegistryEntryCreated(DPNMessage):
 
     directive = 'registry-entry-created'
+    body_form = forms.RegistryEntryCreatedForm
 
     def set_body(self, message_name=None, message_att='nak',
                  message_error="No reason given."):
