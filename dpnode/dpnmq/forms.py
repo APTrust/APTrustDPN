@@ -111,18 +111,6 @@ def _format_choices(choices):
     """
     return [(item, item) for item in choices]
 
-# Custom Fields
-# -------------
-class TypedListField(forms.TypedMultipleChoiceField):
-    widget = forms.SelectMultiple
-
-    def __init__(self, *args, **kwargs):
-        kwargs["choices"] = [("none", "none"),]
-        super(TypedListField, self).__init__(*args, **kwargs)
-
-    def valid_value(self, value):
-        return True
-
 # Message Forms
 # -------------
 # I'm using these forms as a convienent means to validate and clean json from
@@ -167,7 +155,7 @@ class MsgHeaderForm(_DPNBaseForm):
     frm = forms.CharField(min_length=1, label="from")
     reply_key = forms.CharField(min_length=1)
     correlation_id = forms.CharField(min_length=1)
-    sequence = forms.IntegerField(min_value=1)
+    sequence = forms.IntegerField(min_value=0)
     date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT,])
     ttl = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT,])
 
@@ -310,7 +298,7 @@ class _RegistryEntryForm(forms.ModelForm):
     last_modified_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT,])
     # object_type = forms.ChoiceField(choices=OBJECT_TYPES)
 
-    def __init__(self, data=None, *args, **kwargs):
+    def __init__(self, data={}, *args, **kwargs):
         # Sanitize null field values.
         for fieldname in [name for name in self.default_null if name in data.keys()]:
             if data[fieldname] == "null":

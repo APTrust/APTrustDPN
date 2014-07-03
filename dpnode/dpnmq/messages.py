@@ -28,6 +28,7 @@ class DPNMessage(object):
     directive = None
     body_form = None
     header_form = forms.MsgHeaderForm
+    sequence = 1000 # Default to a bad sequence.
 
     def __init__(self, headers_dict=None, body_dict=None):
         """
@@ -36,7 +37,9 @@ class DPNMessage(object):
         self.set_headers()
         if headers_dict:
             self.set_headers(**headers_dict)
-        self.body = {}
+        self.body = {
+            "message_name": self.directive,
+        }
         if body_dict:
             self.set_body(**body_dict)
 
@@ -46,8 +49,8 @@ class DPNMessage(object):
         self.headers = { 
             'from': kwargs.get('from', DPN_NODE_NAME),
             'reply_key': reply_key,
-            'correlation_id': "%s" % correlation_id,
-            'sequence': sequence,
+            'correlation_id': correlation_id,
+            'sequence': sequence or self.sequence,
             'date': date,
             'ttl': ttl,
         }
@@ -119,6 +122,9 @@ class DPNMessage(object):
                 % (message_name, self.directive))
 
     def validate_body(self):
+        if not self.body_form:
+            raise DPNMessageError("No validation set for message body.")
+
         self._set_message_name()
 
         frm = self.body_form(self.body)
@@ -143,42 +149,50 @@ class ReplicationInitQuery(DPNMessage):
 
     directive = 'replication-init-query'
     body_form = forms.RepInitQueryForm
+    sequence = 0
 
 class ReplicationAvailableReply(DPNMessage):
     
     directive = "replication-available-reply"
     body_form = forms.RepAvailableReplyForm
+    sequence = 1
 
 class ReplicationLocationReply(DPNMessage):
     
     directive = 'replication-location-reply'
     body_form = forms.RepLocationReplyForm
+    sequence = 2
 
 class ReplicationLocationCancel(DPNMessage):
     
     directive = 'replication-location-cancel'
     body_form = forms.RepLocationCancelForm
+    sequence = 3
 
 class ReplicationTransferReply(DPNMessage):
     
     directive = 'replication-transfer-reply'
     body_form = forms.RepTransferReplyForm
+    sequence = 4
 
 class ReplicationVerificationReply(DPNMessage):
     
     directive = 'replication-verify-reply'
     body_form = forms.RepVerificationReplyForm
+    sequence = 5
 
 class RegistryItemCreate(DPNMessage):
 
     directive = 'registry-item-create'
     body_form = forms.RegistryItemCreateForm
+    sequence = 0
 
 
 class RegistryEntryCreated(DPNMessage):
 
     directive = 'registry-entry-created'
     body_form = forms.RegistryEntryCreatedForm
+    sequence = 1
 
     def set_body(self, message_name=None, message_att='nak',
                  message_error="No reason given."):
