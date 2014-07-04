@@ -84,9 +84,9 @@ VALID_DIRECTIVES = {
     }),
 
     'replication-available-reply' : MessageSchema(
-        dict_merge(
-            {'protocol' : Or(PROTOCOL_LIST, *PROTOCOL_LIST)}, 
-            basic_body_dict
+        dict_merge({
+            'protocol' : Or(PROTOCOL_LIST, *PROTOCOL_LIST)
+            }, basic_body_dict
         )
     ),
 
@@ -120,7 +120,14 @@ VALID_DIRECTIVES = {
         'message_name'  : 'registry-list-daterange-reply',
         'date_range'    : valid_date_range,
         'reg_sync_list' : And(list, lambda s: all(VALID_REGISTRY_ENTRY.validate(i) for i in s))
-    })
+    }),
+
+    'registry-entry-created': MessageSchema(
+        dict_merge({
+            message_error : And(str, lambda s: len(s) > 0)
+            }, basic_body_dict
+        )
+    )
 
 }
 

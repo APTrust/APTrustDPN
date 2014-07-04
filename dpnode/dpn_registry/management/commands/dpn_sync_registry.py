@@ -41,7 +41,7 @@ class Command(BaseCommand):
 
         headers = {
             'correlation_id': str(uuid4()),
-            'sequence': 0            
+            'sequence': 0
         }
 
         body = {

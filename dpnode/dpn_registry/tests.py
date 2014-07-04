@@ -6,7 +6,7 @@
 
 from django.test import TestCase
 
-from dpn_registry.forms import RegistryEntryForm
+from dpn_registry.forms import TestRegistryEntryForm
 from dpnmq.utils import dpn_strptime
 
 class SimpleTest(TestCase):

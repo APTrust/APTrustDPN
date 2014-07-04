@@ -190,8 +190,8 @@ def send_transfer_status(req, action, success=True, err=''):
     
     msg = ReplicationTransferReply(headers, body)
     msg.send(req.headers['reply_key'])
-        
-        
+
+
 @app.task()
 def broadcast_item_creation(entry=None):
     """
