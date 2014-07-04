@@ -6,7 +6,6 @@
 """
 
 import logging
-from datetime import datetime
 
 from dpnmq.messages import DPNMessageError, ReplicationInitQuery
 from dpnmq.messages import ReplicationAvailableReply, ReplicationLocationReply

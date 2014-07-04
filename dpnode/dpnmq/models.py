@@ -8,7 +8,6 @@
 import re
 
 from dpnmq.message_schema import MessageSchema, And, Or, RequiredOnly
-from dpnmq.utils import dpn_strptime
 from dpnode.settings import PROTOCOL_LIST
 
 ack_nak_name_regex = '^registry|replication.*?(cancel|create|created|reply)$'

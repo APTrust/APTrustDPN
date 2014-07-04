@@ -57,7 +57,7 @@ class BaseEntryForm(object):
             
             kwargs['data'] = data
 
-        return super(BaseEntryForm, self).__init__(*args, **kwargs)
+        super(BaseEntryForm, self).__init__(*args, **kwargs)
 
     def rename_keys(self, data, keys_override):
         # TODO: add docstrings
