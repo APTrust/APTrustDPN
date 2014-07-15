@@ -10,9 +10,7 @@
 import json
 from datetime import datetime, timedelta
 
-from pytz import timezone
-
-from dpnode.settings import TIME_ZONE, DPN_DATE_FORMAT, DPN_TTL, DPN_MSG_TTL
+from dpnode.settings import DPN_DATE_FORMAT, DPN_TTL
 
 BYTE_SYMBOLS = {
     'customary'     : ('B', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'),

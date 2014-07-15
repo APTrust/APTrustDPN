@@ -4,7 +4,10 @@ from optparse import make_option
 from datetime import datetime
 from django.core.management.base import BaseCommand, CommandError
 
+from dpnode.settings import DPN_TTL, DPN_MSG_TTL
 from dpnode.settings import DPN_BROADCAST_KEY, DPN_DATE_FORMAT
+
+from dpn_workflows.tasks.registry import solve_registry_conflicts
 
 from dpnmq.messages import RegistryDateRangeSync
 from dpnmq.utils import dpn_strptime, dpn_strftime
@@ -38,7 +41,7 @@ class Command(BaseCommand):
 
         headers = {
             'correlation_id': str(uuid4()),
-            'sequence': 0            
+            'sequence': 0
         }
 
         body = {
@@ -48,5 +51,5 @@ class Command(BaseCommand):
         reg_sync = RegistryDateRangeSync(headers, body)
         reg_sync.send(DPN_BROADCAST_KEY)
 
-        # TODO: queue task responsible for resolving registry conflicts
-        pass
+        delay = DPN_MSG_TTL.get("registry-daterange-sync-request", DPN_TTL)
+        solve_registry_conflicts.apply_async(countdown=delay)

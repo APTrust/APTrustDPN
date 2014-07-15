@@ -18,6 +18,8 @@ from dpnode.settings import DPN_NODE_NAME, DPN_FIXITY_CHOICES
 
 from dpn_workflows.models import IngestAction, COMPLETE, SUCCESS
 from dpn_workflows.utils import generate_fixity
+
+from dpn_registry.forms import NodeEntryForm
 from dpn_registry.models import RegistryEntry, Node
 
 from dpnmq.utils import dpn_strptime
@@ -25,7 +27,7 @@ from dpnmq.messages import RegistryListDateRangeReply
 
 logger = logging.getLogger('dpnmq.console')
 
-@app.task()
+@app.task
 def create_registry_entry(correlation_id):
     """
     Creates an entry in the local registry when transfer
@@ -72,7 +74,7 @@ def create_registry_entry(correlation_id):
         logger.info("Registry entry successfully created for transaction with correlation_id: %s" % correlation_id)
         return registry
     else:
-        logger.info("Registry entry not created. The was not transferred by any node.")
+        logger.info("Registry entry not created. The bag was not transferred by any node.")
         return None
 
 @app.task
@@ -101,3 +103,35 @@ def reply_with_item_list(req):
 
     rsp = RegistryListDateRangeReply(headers, body)
     rsp.send(req.headers['reply_key'])
+
+@app.task
+def save_registries_from(node, req):
+    """
+    Saves registry entries from other nodes to be compared
+    with local registries later
+
+    :param node: String name of neighbor node
+    :param req: RegistryListDateRangeReply already validated
+
+    """
+
+    entry_list = req.body['reg_sync_list']
+    node_pk = Node.objects.get_or_create(name=node)[0].pk
+    
+    for entry_dict in entry_list:
+        entry_dict.update({'node': node_pk})
+        
+        node_entry = NodeEntryForm(data=entry_dict)
+        if node_entry.is_valid():
+            node_entry.save()
+
+    print("Entries for node %s has been saved." % node)
+
+@app.task
+def solve_registry_conflicts():
+    """
+    Reads registry entries of other nodes stored in local 
+    to check and solves conflicts with own node registry entries
+    """
+    
+    pass

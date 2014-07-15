@@ -31,6 +31,18 @@ TYPE_CHOICES = (
     (BRIGHTENING, 'Brightening')
 )
 
+# We need this overriding because RegistryItemCreate message dict
+# has attributes that doesn't match with RegistryEntryModel fields
+NAMES_OVERRIDE = {
+    'lastfixity_date'       : 'last_fixity_date',
+    'replicating_nodes'     : 'replicating_node_names',
+    'previous_version'      : 'previous_version_object_id',
+    'forward_version'       : 'forward_version_object_id',
+    'first_version'         : 'first_version_object_id',
+    'brightening_objects'   : 'brightening_object_id',
+    'rights_objects'        : 'rights_object_id'
+}
+
 class Node(models.Model):
     """
     Related model field to keep information about what is replicated where.
@@ -43,7 +55,10 @@ class Node(models.Model):
     def __str__(self):
         return '%s' % self.__unicode__()
 
-class RegistryEntry(models.Model):
+class BaseRegistry(models.Model):
+    """
+    Base Abstract modal for registry entries
+    """
 
     dpn_object_id = models.CharField(max_length=64, primary_key=True)
     local_id = models.TextField(max_length=100, blank=True)
@@ -63,16 +78,21 @@ class RegistryEntry(models.Model):
                                          related_name='next_entry')
     forward_version = models.ForeignKey("self", null=True, blank=True,
                                         related_name='previous_entry')
-    first_version = models.ForeignKey("self", related_name='children', null=True)
+    first_version = models.ForeignKey("self", related_name='children', 
+                                    null=True, blank=True)
 
     # Many to Many Relationships.
-    replicating_nodes = models.ManyToManyField(Node, null=True)
-    brightening_objects = models.ManyToManyField("self", null=True)
-    rights_objects = models.ManyToManyField("self", null=True)
+    replicating_nodes = models.ManyToManyField(Node, null=True, blank=True)
+    brightening_objects = models.ManyToManyField("self", null=True, blank=True)
+    rights_objects = models.ManyToManyField("self", null=True, blank=True)
 
     # State
     state = models.CharField(max_length=1, choices=REGISTRY_STATE_CHOICES,
                              default=PENDING)
+
+    class Meta:
+        abstract = True
+        verbose_name_plural = "registry entries"
 
     def __unicode__(self):
         return '%s' % self.dpn_object_id
@@ -80,27 +100,19 @@ class RegistryEntry(models.Model):
     def __str__(self):
         return '%s' % self.__unicode__()
 
-    class Meta:
-        verbose_name_plural = "registry entries"
-
     def object_type_text(self):
         return self.get_object_type_display().lower()
+
+class RegistryEntry(BaseRegistry):
+    """
+    Django model to create Registry Entries from own node
+    """
 
     def to_message_dict(self):
 
         values_override = {
             'object_type': 'object_type_text'
-        }
-
-        names_override = {
-            'lastfixity_date'       : 'last_fixity_date',
-            'replicating_nodes'     : 'replicating_node_names',
-            'previous_version'      : 'previous_version_object_id',
-            'forward_version'       : 'forward_version_object_id',
-            'first_version'         : 'first_version_object_id',
-            'brightening_objects'   : 'brightening_object_id',
-            'rights_objects'        : 'rights_object_id'
-        }
+        }        
 
         relations = {
             'replicating_nodes': {'fields': ['name'], 'flat': True}
@@ -109,28 +121,28 @@ class RegistryEntry(models.Model):
         message_dict = ModelToDict(
                 instance=self,
                 exclude=['state'],
-                n_override=names_override, 
+                n_override=NAMES_OVERRIDE, 
                 v_override=values_override,
                 relations=relations
             ).as_dict()
 
         return serialize_dict_date(message_dict)
 
-class NodeEntry(RegistryEntry):
+
+class NodeEntry(BaseRegistry):
     """
     This represents registry entries from other nodes.  These may be sent as
     part of a registry sync operation when they need to be compared to determine
     the authoritative registry entry to use locally.
     """
-    node = models.ForeignKey(Node)
+    node = models.ForeignKey(Node, related_name='node_from')
 
+    class Meta:
+        verbose_name_plural = "node entries"
+        unique_together = ("node", "dpn_object_id")
+    
     def __unicode__(self):
         return '%s' % self.dpn_object_id
 
     def __str__(self):
         return '%s' % self.__unicode__()
-
-    class Meta:
-        verbose_name_plural = "node entries"
-	# This was being refactored to have the above as an abstract model so commenting this out for now.
-        # unique_together = ("node", "dpn_object_id")

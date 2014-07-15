@@ -182,7 +182,7 @@ def receive_verify_reply_workflow(req):
 
     else:
         # means message_att is nak
-        # NOTE: what to do in this case
+        # NOTE: what to do in this case?
         pass
 
     return action
