@@ -374,3 +374,31 @@ class RegistryEntryCreatedForm(_DPNBaseForm):
         if data.get("message_att") == "ack":
             data.pop("message_error")
         return data
+
+class RegistryDateRangeSyncForm(_DPNBaseForm):
+    """
+    Handles registry daterange sync request message body.
+    """
+    message_name = forms.ChoiceField(
+        choices=_format_choices(['registry-daterange-sync-request']))
+    begin_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT,])
+    end_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT,])
+
+    def __init__(self, data={}, *args, **kwargs):
+        date_range = data.pop("date_range", [])
+        data['begin_date'] = self._parse_date(date_range, 0)
+        data['end_date'] = self._parse_date(date_range, 1)
+        super(RegistryDateRangeSyncForm, self).__init__(data, *args, **kwargs)
+
+    def as_dpn_dict(self):
+        data = super(RegistryDateRangeSyncForm, self).as_dpn_dict()
+        data["date_range"] = [data.pop("begin_date"), data.pop("end_date")]
+        return data
+
+    def _parse_date(self, dates, idx):
+        try:
+            return dates[idx]
+        except IndexError: # for wierd lengths
+            return None
+        except TypeError: # for non lists
+            return None

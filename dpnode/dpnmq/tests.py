@@ -20,7 +20,7 @@ from dpnmq.forms import MsgHeaderForm, RepInitQueryForm
 from dpnmq.forms import RepAvailableReplyForm, RepLocationReplyForm
 from dpnmq.forms import RepLocationCancelForm, RepTransferReplyForm
 from dpnmq.forms import RegistryItemCreateForm, RepVerificationReplyForm
-from dpnmq.forms import RegistryEntryCreatedForm
+from dpnmq.forms import RegistryEntryCreatedForm, RegistryDateRangeSyncForm
 from dpnmq import messages
 
 # ##################################
@@ -366,6 +366,19 @@ class DPNBodyFormTest(TestCase):
         self._test_validation(frm, good_body_nak, bad_body_nak,
                               ['message_error'])
         self._test_dpn_data(frm, good_body_nak)
+
+    def test_registry_daterange_sync_form(self):
+        frm = RegistryDateRangeSyncForm
+        good_body = {
+            "message_name": "registry-daterange-sync-request",
+            "date_range": ["2013-09-22T18:06:55Z", "2013-09-22T18:08:55Z"]
+        }
+        bad_body = {
+            "message_name": [None, 234234],
+            "date_range": [["2013-09-22T18:06:55Z",], [], None, "2013-09-22T18:06:55Z", [None, 23423]]
+        }
+        self._test_validation(frm, good_body, bad_body)
+        self._test_dpn_data(frm, good_body)
 
 # ####################################################
 # tests for dpnmq/utils.py
