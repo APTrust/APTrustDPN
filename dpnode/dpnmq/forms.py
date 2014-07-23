@@ -9,13 +9,11 @@ import json, datetime
 from django import forms
 from django.db import models
 from django.db.models.query import QuerySet
-from django.core.exceptions import ValidationError
-from django.utils.translation import ugettext_lazy as _
 
 from dpnmq.utils import dpn_strftime
 from dpnode.settings import DPN_DATE_FORMAT, DPN_FIXITY_CHOICES, DPN_NODE_LIST
 from dpnode.settings import PROTOCOL_LIST
-from dpn_registry.models import RegistryEntry, TYPE_CHOICES
+from dpn_registry.models import RegistryEntry, TYPE_CHOICES, NodeEntry
 
 # NOTE Fundging this to create a valid list for multiple choice fields
 VALID_DPN_PROTOCOLS = PROTOCOL_LIST
@@ -183,7 +181,7 @@ class RepAvailableReplyForm(_DPNBaseForm):
                                  required=False)
 
     def clean(self):
-        cleaned_data = self.cleaned_data
+        cleaned_data = super(RepAvailableReplyForm, self).clean()
         att = cleaned_data.get("message_att")
         prtcl = cleaned_data.get("protocol")
         if att == "nak" and prtcl != "":
@@ -233,7 +231,7 @@ class RepTransferReplyForm(_DPNBaseForm):
     message_error = forms.CharField(required=False)
 
     def clean(self):
-        cleaned_data = self.cleaned_data
+        cleaned_data = super(RepTransferReplyForm, self).clean()
         att = cleaned_data.get("message_att")
         algo = cleaned_data.get("fixity_algorithm")
         value = cleaned_data.get("fixity_value")
@@ -265,6 +263,93 @@ class RepVerificationReplyForm(_DPNBaseForm):
         choices=_format_choices(['replication-verify-reply']))
     message_att = forms.ChoiceField(choices=_format_choices(ACKS + ['retry',]))
 
+class RegistryEntryCreatedForm(_DPNBaseForm):
+    """
+    Handles registry entry created reply message body.
+    """
+    message_name = forms.ChoiceField(
+        choices=_format_choices(['registry-entry-created']))
+    message_att = forms.ChoiceField(choices=_format_choices(ACKS))
+    message_error = forms.CharField(required=False)
+
+    def clean(self):
+        cleaned_data = super(RegistryEntryCreatedForm, self).clean()
+        att = cleaned_data.get("message_att")
+        err = cleaned_data.get("message_error")
+
+        if att == "ack":
+            if err != "":
+                raise forms.ValidationError("Error not valid for acks.")
+
+        return cleaned_data
+
+    def as_dpn_dict(self):
+        data = super(RegistryEntryCreatedForm, self).as_dpn_dict()
+        if data.get("message_att") == "ack":
+            data.pop("message_error")
+        return data
+
+class RegistryDateRangeSyncForm(_DPNBaseForm):
+    """
+    Handles registry daterange sync request message body.
+
+    https://wiki.duraspace.org/display/DPN/Registry+Synchronization+Message+0
+    """
+    message_name = forms.ChoiceField(
+        choices=_format_choices(['registry-daterange-sync-request']))
+    start_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT,])
+    end_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT,])
+
+    def __init__(self, data={}, *args, **kwargs):
+        date_range = data.pop("date_range", []) or [] # in case none passed explicity
+        # handle both normal data or dpn json data
+        if "start_date" not in data and len(date_range) == 2:
+            data['start_date'] = self._parse_date(date_range, 0)
+        if "end_date" not in data and len(date_range) == 2:
+            data['end_date'] = self._parse_date(date_range, 1)
+        super(RegistryDateRangeSyncForm, self).__init__(data, *args, **kwargs)
+
+    def as_dpn_dict(self):
+        data = super(RegistryDateRangeSyncForm, self).as_dpn_dict()
+        data["date_range"] = [data.pop("start_date"), data.pop("end_date")]
+        return data
+
+    def _parse_date(self, dates, idx):
+        try:
+            return dates[idx]
+        except IndexError: # for bad lengths
+            return None
+        except TypeError: # for non lists
+            return None
+
+
+class RegistryListDateRangeForm(RegistryDateRangeSyncForm):
+    """
+    Handles registry list daterange sync reply message body.
+
+    For now we're doing a very basic form since node entries are not entered
+    from the form.  If and when we switch to updating the database directly
+    from forms we should implement a nested inline modelformset for the
+    reg_sync_list
+
+    https://wiki.duraspace.org/display/DPN/Registry+Synchronization+Message+1
+    """
+    message_name = forms.ChoiceField(
+        choices=_format_choices(['registry-list-daterange-reply']))
+
+    def __init__(self, data={}, *args, **kwargs):
+        self.reg_sync_list = data.pop("reg_sync_list", None)
+        super(RegistryListDateRangeForm, self).__init__(data, *args, **kwargs)
+
+    def clean(self):
+        cleaned_data = super(RegistryDateRangeSyncForm, self).clean()
+        if not isinstance(self.reg_sync_list, list):
+            raise forms.ValidationError("reg_sync_list must be a list not %s"
+                                        % type(self.reg_sync_list).__name__)
+        cleaned_data["reg_sync_list"] = self.reg_sync_list
+        return cleaned_data
+
+# Forms dealing with Models
 
 class _RegistryEntryForm(forms.ModelForm):
     """
@@ -349,56 +434,14 @@ class RegistryItemCreateForm(_RegistryEntryForm):
     message_name = forms.ChoiceField(
         choices=_format_choices(['registry-item-create']))
 
-class RegistryEntryCreatedForm(_DPNBaseForm):
-    """
-    Handles registry entry created reply message body.
-    """
-    message_name = forms.ChoiceField(
-        choices=_format_choices(['registry-entry-created']))
-    message_att = forms.ChoiceField(choices=_format_choices(ACKS))
-    message_error = forms.CharField(required=False)
-
-    def clean(self):
-        cleaned_data = self.cleaned_data
-        att = cleaned_data.get("message_att")
-        err = cleaned_data.get("message_error")
-
-        if att == "ack":
-            if err != "":
-                raise forms.ValidationError("Error not valid for acks.")
-
-        return cleaned_data
-
-    def as_dpn_dict(self):
-        data = super(RegistryEntryCreatedForm, self).as_dpn_dict()
-        if data.get("message_att") == "ack":
-            data.pop("message_error")
-        return data
-
-class RegistryDateRangeSyncForm(_DPNBaseForm):
-    """
-    Handles registry daterange sync request message body.
-    """
-    message_name = forms.ChoiceField(
-        choices=_format_choices(['registry-daterange-sync-request']))
-    begin_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT,])
-    end_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT,])
-
-    def __init__(self, data={}, *args, **kwargs):
-        date_range = data.pop("date_range", [])
-        data['begin_date'] = self._parse_date(date_range, 0)
-        data['end_date'] = self._parse_date(date_range, 1)
-        super(RegistryDateRangeSyncForm, self).__init__(data, *args, **kwargs)
-
-    def as_dpn_dict(self):
-        data = super(RegistryDateRangeSyncForm, self).as_dpn_dict()
-        data["date_range"] = [data.pop("begin_date"), data.pop("end_date")]
-        return data
-
-    def _parse_date(self, dates, idx):
-        try:
-            return dates[idx]
-        except IndexError: # for wierd lengths
-            return None
-        except TypeError: # for non lists
-            return None
+#  NOTE return to this if and when we get to updating models directly from the
+#  forms.  We can use this for an nested inline formset on the registry list
+#  daterange syn reply message body with some work.
+#
+# class _NodeEntry(_RegistryEntryForm):
+#
+#     def __init__(self, data={}, *args, **kwargs):
+#
+#     class Meta:
+#         model = NodeEntry
+#         exclude = ['state',]

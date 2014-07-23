@@ -21,6 +21,7 @@ from dpnmq.forms import RepAvailableReplyForm, RepLocationReplyForm
 from dpnmq.forms import RepLocationCancelForm, RepTransferReplyForm
 from dpnmq.forms import RegistryItemCreateForm, RepVerificationReplyForm
 from dpnmq.forms import RegistryEntryCreatedForm, RegistryDateRangeSyncForm
+from dpnmq.forms import RegistryListDateRangeForm, RegistryEntryCreatedForm
 from dpnmq import messages
 
 # ##################################
@@ -114,12 +115,12 @@ class DPNBodyFormTest(TestCase):
             if isinstance(v, list):
                 actual = len(set(v).intersection(set(data[k])))
                 self.failUnlessEqual(actual, len(v),
-                                     "Expected %s and %s to comare." % (
-                                     v, data[k]))
+                                     "Expected %s and %s to compare."
+                                        % (v, data[k]))
             else:
                 self.assertTrue(data[k] == v,
-                                "Expected %r did not match %s for field %s" % (
-                                data[k], v, k))
+                                "Expected %r did not match %s for field %s"
+                                    % (data[k], v, k))
 
 
     def test_replication_init_query(self):
@@ -323,7 +324,7 @@ class DPNBodyFormTest(TestCase):
             "version_number": ["sdnfs", None, True],
             # "previous_version_object_id": [],
             # "forward_version_object_id": [],
-            "first_version_object_id": ["", None],
+            # "first_version_object_id": [],
             "fixity_algorithm": ["", None],
             "fixity_value": ["", None],
             "last_fixity_date": ["", None, "2013-01-05T09:49:28-800"],
@@ -379,6 +380,46 @@ class DPNBodyFormTest(TestCase):
         }
         self._test_validation(frm, good_body, bad_body)
         self._test_dpn_data(frm, good_body)
+
+    def test_registry_list_daterange_sync_form(self):
+        frm = RegistryListDateRangeForm
+        good_body = {
+          "message_name" : "registry-list-daterange-reply",
+          "date_range" : ["2013-09-22T18:06:55Z", "2013-09-22T18:08:55Z"],
+          "reg_sync_list" : [{
+              "replicating_node_names": ["tdr","sdr"],
+              "brightening_object_id": [],
+              "rights_object_id": [],
+              "dpn_object_id": "45dc38c3-6fc1-479a-98b4-855f3fe0304d",
+              "local_id": "/dpn/outgoing/a7b18eb0-005f-11e3-8ebb-f23c91aec05e.tar",
+              "first_node_name": "tdr",
+              "version_number": 1,
+              "previous_version_object_id": "null",
+              "forward_version_object_id": "",
+              "first_version_object_id": "45dc38c3-6fc1-479a-98b4-855f3fe0304d",
+              "fixity_algorithm": "sha256",
+              "fixity_value": "c2f83ba79735226d7bef7ab05218f20341597ed4c882fcda22ad09de53cc2475",
+              "last_fixity_date": "2013-09-20T15:56:35Z",
+              "creation_date": "2013-09-20T15:56:35Z",
+              "last_modified_date": "2013-09-20T15:56:35Z",
+              "bag_size": 9779200,
+              "object_type": "data"
+          },]
+        }
+        bad_body = {
+            "message_name" : ["registry-listed-daterange-reply", None, ""],
+            "date_range" : [["2013-09-22T18:06:55Z",], [], None, "2013-09-22T18:06:55Z", [None, 23423]],
+            "reg_sync_list" : ["", None]
+        }
+        self._test_validation(frm, good_body, bad_body)
+        # nested dict makes the standard self._test_dpn_data not function here.
+        tst_frm = frm(good_body.copy())
+        self.assertTrue(tst_frm.is_valid())
+        data = json.loads(tst_frm.as_dpn_json())
+        self.assertEqual(data['message_name'], good_body["message_name"])
+        for idx, dt in enumerate(data["date_range"]):
+            self.assertEqual(dt, good_body["date_range"][idx])
+        self.assertEqual(len(data['reg_sync_list']), len(good_body['reg_sync_list']))
 
 # ####################################################
 # tests for dpnmq/utils.py
@@ -553,3 +594,12 @@ class TestDPNMessageImplementations(TestCase):
             "sequence": messages.RegistryItemCreate.sequence
         }
         self._test_expected_defaults(msg, exp)
+
+    # def test_reg_entry_created(self):
+    #     msg = messages.RegistryEntryCreated()
+    #     exp = {
+    #         "message_name": messages.RegistryEntryCreated.directive,
+    #         "body_form": RegistryEntryCreatedForm,
+    #         "sequence": messages.RegistryEntryCreated.sequence
+    #     }
+    #     self._test_expected_defaults(msg, exp)

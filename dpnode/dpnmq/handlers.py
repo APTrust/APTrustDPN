@@ -5,7 +5,7 @@
             - Unknown
 """
 
-from datetime import datetime
+import logging
 
 from dpnmq.messages import DPNMessageError, ReplicationInitQuery
 from dpnmq.messages import ReplicationAvailableReply, ReplicationLocationReply
@@ -20,9 +20,11 @@ from dpn_workflows.handlers import receive_transfer_workflow, receive_verify_rep
 from dpn_workflows.tasks.inbound import delete_until_transferred
 from dpn_workflows.tasks.inbound import respond_to_replication_query, transfer_content
 from dpn_workflows.tasks.outbound import verify_fixity_and_reply
-from dpn_workflows.tasks.registry import reply_with_item_list
+from dpn_workflows.tasks.registry import reply_with_item_list, save_registries_from
 
-from dpnmq.utils import dpn_strftime
+from dpn_registry.forms import RegistryEntryForm
+
+logger = logging.getLogger('dpnmq.console')
 
 class TaskRouter:
     def __init__(self):
@@ -246,23 +248,36 @@ def registry_item_create_handler(msg, body):
     # Fake the reply
     headers = {
         'correlation_id': req.headers['correlation_id'],
-        'sequence': 1,
-        'date': dpn_strftime(datetime.now())
+        'sequence': 1
     }
-    ack = {
-        'message_att': 'ack',
+
+    body_options = {
+        'ack': {
+            'message_att': 'ack',
+        },
+        'nak': {
+            'message_att': 'nak',
+            'message_error': "Registry entry already exists."
+        }
     }
-    nak = {
-        'message_att': 'nak',
-        'message_error': "Ahm in yer DPN, nak'in yer messages.",
-    }
-    rsp = RegistryEntryCreated(headers, ack)
+    
+    # creating broadcasted registry entry
+    entry_form = RegistryEntryForm(data=req.body)
+    if entry_form.is_valid():
+        entry_form.save()
+        body = body_options['ack']
+    else:
+        body = body_options['nak']
+        logger.info("Registry entry with dpn_object_id %s already exists." % req.body['dpn_object_id'])
+
+    rsp = RegistryEntryCreated(headers, body)
     rsp.send(req.headers['reply_key'])
+
 
 @local_router.register('registry-entry-created')
 def registry_entry_created_handler(msg, body):
     """
-    Accepts a Registry Entry Creation reply and does nothing until more
+    Accepts a Registry Entry Creation reply and does nothoing until mre
     workflows are identified.
 
     :param msg: kombu.transport.base.Message instance
@@ -299,6 +314,7 @@ def registry_daterange_sync_request_handler(msg, body):
 
     reply_with_item_list.apply_async((req, ))
 
+
 @local_router.register('registry-list-daterange-reply')
 def registry_list_daterange_reply(msg, body):
     """
@@ -307,7 +323,6 @@ def registry_list_daterange_reply(msg, body):
     :param msg: kombu.transport.base.Message instance
     :param body: Decoded JSON of the message payload.
 
-    # TODO: this is for the next story :)
     """
 
     try:
@@ -318,3 +333,6 @@ def registry_list_daterange_reply(msg, body):
         msg.reject()
         raise DPNMessageError("Recieved bad message body: %s" 
             % err)
+
+    node = msg.headers['from']
+    save_registries_from(node, req)

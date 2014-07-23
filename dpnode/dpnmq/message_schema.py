@@ -244,7 +244,7 @@ class Use(object):
     def __init__(self, callable_, error=None):
         assert callable(callable_)
         self._callable = callable_
-        self._error = errors
+        self._error = error
 
     def __repr__(self):
         return '%s(%r)' % (self.__class__.__name__, self._callable)

@@ -39,8 +39,8 @@ class DPNConsumer(ConsumerMixin):
 
     def get_consumers(self, Consumer, chan):
         consumers = [
-            Consumer(queues=[self.bcast_queue, ], callbacks=[self.route_broadcast, ], auto_declare=False),
-            Consumer(queues=[self.direct_queue, ], callbacks=[self.route_local, ], auto_declare=False)
+            Consumer(queues=[self.bcast_queue, ], callbacks=[self.route_broadcast, ], auto_declare=True),
+            Consumer(queues=[self.direct_queue, ], callbacks=[self.route_local, ], auto_declare=True)
         ]
         return consumers
 

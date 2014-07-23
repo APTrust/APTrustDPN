@@ -15,7 +15,7 @@ from dpnode.settings import DPN_LOCAL_KEY, DPN_MSG_TTL
 
 from dpnmq import forms
 from .models import VALID_HEADERS, VALID_BODY, VALID_DIRECTIVES
-from .utils import dpn_strftime, is_string, str_expire_on
+from .utils import dpn_strftime, str_expire_on
 
 logger = logging.getLogger('dpnmq.console')
 
@@ -137,7 +137,7 @@ class DPNMessage(object):
                 self.body[key] = value
         except AttributeError as err:
             raise DPNMessageError(
-                "%s.set_body arguments must be a dictionary, recieved %s!"
+                "%s.set_body arguments must be a dictionary, received %s!"
                 % (self.__class__.__name__, err))
 
     def validate(self):
@@ -209,8 +209,12 @@ class RegistryEntryCreated(DPNMessage):
 class RegistryDateRangeSync(DPNMessage):
 
     directive = 'registry-daterange-sync-request'
+    body_form = forms.RegistryDateRangeSyncForm
+    sequence = 0
 
 
 class RegistryListDateRangeReply(DPNMessage):
 
     directive = 'registry-list-daterange-reply'
+    body_form = forms.RegistryListDateRangeForm
+    sequence = 1
