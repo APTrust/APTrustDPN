@@ -14,7 +14,6 @@ from dpnode.settings import DPN_TTL, DPN_BROKER_URL, DPN_NODE_NAME, DPN_EXCHANGE
 from dpnode.settings import DPN_LOCAL_KEY, DPN_MSG_TTL
 
 from dpnmq import forms
-from .models import VALID_HEADERS, VALID_BODY, VALID_DIRECTIVES
 from .utils import dpn_strftime, str_expire_on
 
 logger = logging.getLogger('dpnmq.console')
