@@ -1,8 +1,8 @@
 """
-    First the doctor told me the good news: I was going to have a disease
-    named after me.
+    'Fairy tales are more than true: not because they tell us that dragons
+    exist, but because they tell us that dragons can be beaten.'
 
-            - Steve Martin
+    ― Neil Gaiman
 """
 import pprint
 import json
@@ -11,18 +11,14 @@ from datetime import datetime
 from django.test import TestCase
 
 from dpnode.settings import DPN_DEFAULT_XFER_PROTOCOL, DPN_NODE_LIST
-from dpnode.settings import DPN_NODE_NAME, DPN_LOCAL_KEY
 from dpn_registry.models import RegistryEntry, Node
-from dpnmq.utils import dpn_strftime, str_expire_on, dpn_strptime, is_string
-from dpnmq.utils import expire_on, human_to_bytes, json_loads
-from dpnmq.utils import serialize_dict_date
+from dpnmq.utils import dpn_strftime, str_expire_on, dpn_strptime
 from dpnmq.forms import MsgHeaderForm, RepInitQueryForm
 from dpnmq.forms import RepAvailableReplyForm, RepLocationReplyForm
 from dpnmq.forms import RepLocationCancelForm, RepTransferReplyForm
 from dpnmq.forms import RegistryItemCreateForm, RepVerificationReplyForm
 from dpnmq.forms import RegistryEntryCreatedForm, RegistryDateRangeSyncForm
 from dpnmq.forms import RegistryListDateRangeForm, RegistryEntryCreatedForm
-from dpnmq import messages
 
 
 # ##################################
@@ -496,186 +492,3 @@ class RegistryListDaterangeFormTestCase(DPNBodyFormTest):
             self.assertEqual(dt, good_body["date_range"][idx])
         self.assertEqual(len(data['reg_sync_list']),
                          len(good_body['reg_sync_list']))
-
-
-# ####################################################
-# tests for dpnmq/utils.py
-
-class TestDPNUtils(TestCase):
-    def setUp(self):
-        self.timestring = "2014-01-01T01:00:00Z"
-        self.datetime = datetime(2014, 1, 1, 1, 0, 0)
-
-    def test_dpn_strftime(self):
-        self.failUnlessEqual(self.timestring, dpn_strftime(self.datetime))
-
-    def test_dpn_strptime(self):
-        self.failUnlessEqual(self.datetime, dpn_strptime(self.timestring))
-
-    def test_expire_on(self):
-        exp = datetime(2014, 1, 1, 1, 0, 10)
-        self.failUnlessEqual(exp, expire_on(self.datetime, 10))
-
-    def test_str_expire_on(self):
-        exp = "2014-01-01T01:00:10Z"
-        self.failUnlessEqual(exp, str_expire_on(self.datetime, 10))
-
-    def test_is_string(self):
-        tst = [None, True, 1, self.datetime]
-        for t in tst:
-            self.assertFalse(is_string(t))
-
-    def test_human_to_bytes(self):
-        # NOTE method for a throw away manage command.  Improve if actually used
-        # or remove if not needed.
-        self.assertTrue(True)
-
-
-# #####################################
-# tests for dpnmq/messages.py
-
-class TestDPNMessage(TestCase):
-    def test_init(self):
-        self.assertTrue(isinstance(messages.DPNMessage(), messages.DPNMessage))
-
-    def test_set_headers(self):
-        msg = messages.DPNMessage()
-        defaults = {
-            "from": DPN_NODE_NAME,
-            "reply_key": DPN_LOCAL_KEY,
-            "correlation_id": None,
-            "sequence": msg.sequence,
-            "date": None,
-            "ttl": None
-        }
-        for k, v in defaults.items():
-            err = "Expected a value of %s for %s but returned %s" % \
-                  (v, k, msg.headers[k])
-            self.assertTrue(v == msg.headers[k], err)
-
-        exp = {
-            "from": "ournode",
-            "reply_key": "testkey",
-            "correlation_id": "2342343",
-            "sequence": 5,
-            "date": "thisismydate",
-            "ttl": 100
-        }
-        msg.set_headers(**exp)
-        for k, v in msg.headers.items():
-            self.assertTrue(v == exp[k])
-
-    def test_validate_headers(self):
-        # NOTE Actual validation covered in forms.
-        # Only testing expected failure.
-        msg = messages.DPNMessage()
-        self.assertRaises(messages.DPNMessageError, msg.validate_headers)
-
-    def send(self):
-        # Unsure how to test postive send.  For now testing only if it throws an
-        # Error if it does not validate.
-        msg = messages.DPNMessage()
-        self.assertRaises(messages.DPNMessageError, msg.send, "broadcast")
-
-    def validate_body(self):
-        msg = messages.DPNMessage()
-        self.assertRaises(messages.DPNMessageError, msg.validate_body)
-
-    def set_body(self):
-        msg = messages.DPNMessage()
-        bad_args = [
-            "test",
-            True,
-            ["test", "list"],
-            5,
-            [("this", "wont"), ("pass", 0)]
-        ]
-        for arg in bad_args:
-            self.assertRaises(messages.DPNMessageError, msg.set_body, arg)
-
-        good_args = {
-            "test": True,
-            "arbitrary": 0,
-            "values": "now"
-        }
-        msg.set_body(good_args)
-        for k, v in good_args.items():
-            self.assertTrue(msg.body[k] == v)
-
-
-class TestDPNMessageImplementations(TestCase):
-    def _test_expected_defaults(self, msg, exp):
-        self.assertTrue(msg.body["message_name"], exp["message_name"])
-        self.assertTrue(msg.headers["sequence"] == exp["sequence"])
-        self.assertTrue(isinstance(msg.body_form(), exp["body_form"]))
-
-    def test_rep_init_query(self):
-        msg = messages.ReplicationInitQuery()
-        exp = {
-            "message_name": messages.ReplicationInitQuery.directive,
-            "body_form": RepInitQueryForm,
-            "sequence": messages.ReplicationInitQuery.sequence
-        }
-        self._test_expected_defaults(msg, exp)
-
-    def test_rep_avail_reply(self):
-        msg = messages.ReplicationAvailableReply()
-        exp = {
-            "message_name": messages.ReplicationAvailableReply.directive,
-            "body_form": RepAvailableReplyForm,
-            "sequence": messages.ReplicationAvailableReply.sequence
-        }
-        self._test_expected_defaults(msg, exp)
-
-    def test_rep_loc_reply(self):
-        msg = messages.ReplicationLocationReply()
-        exp = {
-            "message_name": messages.ReplicationLocationReply.directive,
-            "body_form": RepLocationReplyForm,
-            "sequence": messages.ReplicationLocationReply.sequence
-        }
-
-    def test_rep_loc_cancel(self):
-        msg = messages.ReplicationLocationCancel()
-        exp = {
-            "message_name": messages.ReplicationLocationCancel.directive,
-            "body_form": RepLocationCancelForm,
-            "sequence": messages.ReplicationLocationCancel.sequence
-        }
-        self._test_expected_defaults(msg, exp)
-
-    def test_rep_transfer_reply(self):
-        msg = messages.ReplicationTransferReply()
-        exp = {
-            "message_name": messages.ReplicationTransferReply.directive,
-            "body_form": RepTransferReplyForm,
-            "sequence": messages.ReplicationTransferReply.sequence
-        }
-        self._test_expected_defaults(msg, exp)
-
-    def test_rep_verification_reply(self):
-        msg = messages.ReplicationVerificationReply()
-        exp = {
-            "message_name": messages.ReplicationVerificationReply.directive,
-            "body_form": RepVerificationReplyForm,
-            "sequence": messages.ReplicationVerificationReply.sequence
-        }
-        self._test_expected_defaults(msg, exp)
-
-    def test_reg_item_create(self):
-        msg = messages.RegistryItemCreate()
-        exp = {
-            "message_name": messages.RegistryItemCreate.directive,
-            "body_form": RegistryItemCreateForm,
-            "sequence": messages.RegistryItemCreate.sequence
-        }
-        self._test_expected_defaults(msg, exp)
-
-        # def test_reg_entry_created(self):
-        # msg = messages.RegistryEntryCreated()
-        #     exp = {
-        #         "message_name": messages.RegistryEntryCreated.directive,
-        #         "body_form": RegistryEntryCreatedForm,
-        #         "sequence": messages.RegistryEntryCreated.sequence
-        #     }
-        #     self._test_expected_defaults(msg, exp)
