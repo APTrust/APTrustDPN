@@ -1,1 +1,1 @@
-from dpn_workflows.tests.outbound_task_tests import *
+from dpn_workflows.tests.tasks_outbound import *

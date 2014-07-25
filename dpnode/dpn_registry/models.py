@@ -73,13 +73,13 @@ class BaseRegistry(models.Model):
 
     object_type = models.CharField(max_length=1, choices=TYPE_CHOICES, default=DATA)
 
-    # Self referencing relationships.
-    previous_version = models.ForeignKey("self", null=True, blank=True,
-                                         related_name='next_entry')
-    forward_version = models.ForeignKey("self", null=True, blank=True,
-                                        related_name='previous_entry')
-    first_version = models.ForeignKey("self", related_name='children', 
-                                    null=True, blank=True)
+    # Note in the future we should build lose validation.  We don't want to
+    # make it a foreign key because we always want to record the registry entry
+    # but we should set state to suspect if any of these don't have a match
+    # in the registry.
+    previous_version = models.CharField(max_length=64, null=True, blank=True)
+    forward_version =  models.CharField(max_length=64, null=True, blank=True)
+    first_version = models.CharField(max_length=64, null=True, blank=True)
 
     # Many to Many Relationships.
     replicating_nodes = models.ManyToManyField(Node, null=True)

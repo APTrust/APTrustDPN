@@ -375,7 +375,7 @@ class _RegistryEntryForm(forms.ModelForm):
 
     # Fields that need to be converted to flat lists.
     flat_fields = [
-        'replication_node_names', 'rights_object_id', ''
+        'replication_node_names', 'rights_object_id',
     ]
 
     last_fixity_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT,])
@@ -386,7 +386,7 @@ class _RegistryEntryForm(forms.ModelForm):
     def __init__(self, data={}, *args, **kwargs):
         # Sanitize null field values.
         for fieldname in [name for name in self.default_null if name in data.keys()]:
-            if data[fieldname] == "null":
+            if data[fieldname] == "null" or data[fieldname] == "":
                 data[fieldname] = None
 
         # convert field names
@@ -404,7 +404,7 @@ class _RegistryEntryForm(forms.ModelForm):
         data = map_to_json(self.field_map, self.cleaned_data)
         # Convert None fields to 'null'
         for fieldname in self.default_null:
-            if data[fieldname] == None:
+            if data[fieldname] == None or data[fieldname] == "":
                 data[fieldname] = 'null'
         # Convert Datetime values to DPN string format.
         for k, v in data.items():

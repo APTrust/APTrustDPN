@@ -24,6 +24,7 @@ from dpnmq.forms import RegistryEntryCreatedForm, RegistryDateRangeSyncForm
 from dpnmq.forms import RegistryListDateRangeForm, RegistryEntryCreatedForm
 from dpnmq import messages
 
+
 # ##################################
 # tests for dpnmq/forms.py
 
@@ -116,15 +117,15 @@ class DPNBodyFormTest(TestCase):
                 actual = len(set(v).intersection(set(data[k])))
                 self.failUnlessEqual(actual, len(v),
                                      "Expected %s and %s to compare."
-                                        % (v, data[k]))
+                                     % (v, data[k]))
             else:
                 self.assertTrue(data[k] == v,
-                                "Expected %r did not match %s for field %s"
-                                    % (data[k], v, k))
+                                "Actual value %r did not match expected %s for field %s"
+                                % (data[k], v, k))
 
 
-    def test_replication_init_query(self):
-
+class RepInitQueryFormTestCase(DPNBodyFormTest):
+    def test_data(self):
         good_body = {
             "message_name": "replication-init-query",
             "replication_size": 4096,
@@ -141,7 +142,9 @@ class DPNBodyFormTest(TestCase):
         self._test_validation(frm, good_body, bad_body)
         self._test_dpn_data(frm, good_body)
 
-    def test_replication_init_reply(self):
+
+class RepAvailableReplyFormTestCase(DPNBodyFormTest):
+    def test_data(self):
         frm = RepAvailableReplyForm
         good_body_ack = {
             "message_name": "replication-available-reply",
@@ -167,7 +170,9 @@ class DPNBodyFormTest(TestCase):
         self._test_validation(frm, good_body_nak, bad_body_nak)
         self._test_dpn_data(frm, good_body_nak)
 
-    def test_replication_location_reply(self):
+
+class RepLocationReplyFormTestCase(DPNBodyFormTest):
+    def test_data(self):
         frm = RepLocationReplyForm
         good_body = {
             "message_name": "replication-location-reply",
@@ -182,7 +187,9 @@ class DPNBodyFormTest(TestCase):
         self._test_validation(frm, good_body, bad_body)
         self._test_dpn_data(frm, good_body)
 
-    def test_replication_location_cancel(self):
+
+class RepLocationCancelFormTestCase(DPNBodyFormTest):
+    def test_data(self):
         frm = RepLocationCancelForm
         good_body = {
             "message_name": "replication-location-cancel",
@@ -195,7 +202,9 @@ class DPNBodyFormTest(TestCase):
         self._test_validation(frm, good_body, bad_body)
         self._test_dpn_data(frm, good_body)
 
-    def test_replication_transfer_reply(self):
+
+class RepTransferReplyFormTestCase(DPNBodyFormTest):
+    def test_data(self):
         frm = RepTransferReplyForm
         good_body_ack = {
             "message_name": "replication-transfer-reply",
@@ -214,7 +223,6 @@ class DPNBodyFormTest(TestCase):
                               ["message_error"])
         self._test_dpn_data(frm, good_body_ack)
 
-        # TODO nak body
         good_body_nak = {
             "message_name": "replication-transfer-reply",
             "message_att": "nak",
@@ -229,7 +237,9 @@ class DPNBodyFormTest(TestCase):
                               ["message_error"])
         self._test_dpn_data(frm, good_body_nak)
 
-    def test_replication_verification_reply_form(self):
+
+class RepVerificationReplyFormTestCase(DPNBodyFormTest):
+    def test_data(self):
         frm = RepVerificationReplyForm
         good_body = {
             "message_name": "replication-verify-reply",
@@ -239,11 +249,12 @@ class DPNBodyFormTest(TestCase):
             "message_name": [None, "registry-item-create"],
             "message_att": [True, False, "again", "null", None, ""]
         }
+        self._test_validation(frm, good_body, bad_body)
+        self._test_dpn_data(frm, good_body)
 
-    def test_registry_entry_create_form(self):
-        frm = RegistryItemCreateForm
-        # Some related fixtures for the good_body values to work.
 
+class RegistryItemCreateFormTestCase(DPNBodyFormTest):
+    def setUp(self):
         registry_fixtures = [
             {  # Foward Version Object
                "dpn_object_id": "a395e773-668f-4a4d-876e-4a4039d86735",
@@ -291,7 +302,7 @@ class DPNBodyFormTest(TestCase):
             nd = Node(name=name)
             nd.save()
 
-        good_body = {
+        self.good_body = {
             "message_name": "registry-item-create",
             "dpn_object_id": "d47ac10b-58cc-4372-a567-0e02b2c3d479",
             "local_id": "test",
@@ -315,6 +326,11 @@ class DPNBodyFormTest(TestCase):
                                  obj["object_type"] == "R"],
             "object_type": "data"
         }
+
+    def test_data(self):
+        frm = RegistryItemCreateForm
+        # Some related fixtures for the good_body values to work.
+
         bad_body = {
             "message_name": ["registry-item-created", None],
             "dpn_object_id": ["", None],
@@ -335,11 +351,64 @@ class DPNBodyFormTest(TestCase):
             # "rights_object_id": [],
             "object_type": ["record", "", None, 324234]
         }
-        self._test_validation(frm, good_body, bad_body,
+        self._test_validation(frm, self.good_body, bad_body,
                               ['replicating_node_names'])
-        self._test_dpn_data(frm, good_body)
+        self._test_dpn_data(frm, self.good_body)
 
-    def test_registry_entry_created_form(self):
+    def test_save(self):
+        # pulled from actual node values sent to the broker
+        test_data = [
+            {"message_name": "registry-item-create",
+             "dpn_object_id": "dedff031-9946-4fff-a268-9fd9f8396f15",
+             "local_id": "jq927jp4517", "first_node_name": "sdr",
+             "replicating_node_names": ["aptrust", "chron", "tdr", "sdr"],
+             "version_number": 1, "previous_version_object_id": "null",
+             "forward_version_object_id": "null",
+             "first_version_object_id": "dedff031-9946-4fff-a268-9fd9f8396f15",
+             "fixity_algorithm": "sha256",
+             "fixity_value": "d03687de6db3a0639b1a7d14eba4c6713ac9c7852fed47f3b160765bb5757f27",
+             "last_fixity_date": "2014-07-22T21:40:37Z",
+             "creation_date": "2014-07-22T21:40:37Z",
+             "last_modified_date": "2014-07-22T21:40:37Z", "bag_size": 20480,
+             "brightening_object_id": [], "rights_object_id": [],
+             "object_type": "data"},
+            {"message_name": "registry-item-create",
+             "dpn_object_id": "f5a9c8b1-33c9-496f-b554-8118d4c7ebeb",
+             "local_id": "chron", "first_node_name": "chron",
+             "replicating_node_names": ["aptrust", "chron"],
+             "version_number": 1, "previous_version_object_id": "null",
+             "forward_version_object_id": "null",
+             "first_version_object_id": "f5a9c8b1-33c9-496f-b554-8118d4c7ebeb",
+             "fixity_algorithm": "sha256",
+             "fixity_value": "7b13a148573c90061a52cba9bdeca88656ed7099f312ad483d990fad8a1b1091",
+             "last_fixity_date": "2014-07-22T21:51:52Z",
+             "creation_date": "2014-07-22T21:51:52Z",
+             "last_modified_date": "2014-07-22T21:51:52Z", "bag_size": 573440,
+             "brightening_object_id": [], "rights_object_id": [],
+             "object_type": "data"},
+            {"dpn_object_id": "11f8d4d4-2230-4f04-b0d5-efd7732d0af7",
+             "local_id": "/dpn/outgoing/dpn-bag1.tar", "first_node_name": "tdr",
+             "version_number": 1, "previous_version_object_id": "",
+             "forward_version_object_id": "",
+             "first_version_object_id": "11f8d4d4-2230-4f04-b0d5-efd7732d0af7",
+             "fixity_algorithm": "sha256",
+             "fixity_value": "01cb4046e4a8a6ce887d4f20479d8cc53ae6b56c3b1a81dcb2198850dc2c741e",
+             "last_fixity_date": "2014-07-23T15:59:36Z",
+             "creation_date": "2014-07-23T15:59:36Z",
+             "last_modified_date": "2014-07-23T15:59:36Z", "bag_size": 2231808,
+             "object_type": "data",
+             "replicating_node_names": ["tdr", "aptrust"],
+             "brightening_object_id": [], "rights_object_id": [],
+             "message_name": "registry-item-create"}
+        ]
+        for data in test_data:
+            form = RegistryItemCreateForm(data)
+            self.assertTrue(form.is_valid(), form.errors)
+            form.save()
+            self.assertTrue(RegistryEntry.objects.get(dpn_object_id=data["dpn_object_id"]), "Object not found in registry!")
+
+class RegistryEntryCreatedFormTestCase(DPNBodyFormTest):
+    def test_data(self):
         frm = RegistryEntryCreatedForm
         good_body_ack = {
             "message_name": "registry-entry-created",
@@ -368,7 +437,9 @@ class DPNBodyFormTest(TestCase):
                               ['message_error'])
         self._test_dpn_data(frm, good_body_nak)
 
-    def test_registry_daterange_sync_form(self):
+
+class RegistryDaterangeSyncFormTestCase(DPNBodyFormTest):
+    def test_data(self):
         frm = RegistryDateRangeSyncForm
         good_body = {
             "message_name": "registry-daterange-sync-request",
@@ -376,40 +447,44 @@ class DPNBodyFormTest(TestCase):
         }
         bad_body = {
             "message_name": [None, 234234],
-            "date_range": [["2013-09-22T18:06:55Z",], [], None, "2013-09-22T18:06:55Z", [None, 23423]]
+            "date_range": [["2013-09-22T18:06:55Z", ], [], None,
+                           "2013-09-22T18:06:55Z", [None, 23423]]
         }
         self._test_validation(frm, good_body, bad_body)
         self._test_dpn_data(frm, good_body)
 
-    def test_registry_list_daterange_sync_form(self):
+
+class RegistryListDaterangeFormTestCase(DPNBodyFormTest):
+    def test_data(self):
         frm = RegistryListDateRangeForm
         good_body = {
-          "message_name" : "registry-list-daterange-reply",
-          "date_range" : ["2013-09-22T18:06:55Z", "2013-09-22T18:08:55Z"],
-          "reg_sync_list" : [{
-              "replicating_node_names": ["tdr","sdr"],
-              "brightening_object_id": [],
-              "rights_object_id": [],
-              "dpn_object_id": "45dc38c3-6fc1-479a-98b4-855f3fe0304d",
-              "local_id": "/dpn/outgoing/a7b18eb0-005f-11e3-8ebb-f23c91aec05e.tar",
-              "first_node_name": "tdr",
-              "version_number": 1,
-              "previous_version_object_id": "null",
-              "forward_version_object_id": "",
-              "first_version_object_id": "45dc38c3-6fc1-479a-98b4-855f3fe0304d",
-              "fixity_algorithm": "sha256",
-              "fixity_value": "c2f83ba79735226d7bef7ab05218f20341597ed4c882fcda22ad09de53cc2475",
-              "last_fixity_date": "2013-09-20T15:56:35Z",
-              "creation_date": "2013-09-20T15:56:35Z",
-              "last_modified_date": "2013-09-20T15:56:35Z",
-              "bag_size": 9779200,
-              "object_type": "data"
-          },]
+            "message_name": "registry-list-daterange-reply",
+            "date_range": ["2013-09-22T18:06:55Z", "2013-09-22T18:08:55Z"],
+            "reg_sync_list": [{
+                                  "replicating_node_names": ["tdr", "sdr"],
+                                  "brightening_object_id": [],
+                                  "rights_object_id": [],
+                                  "dpn_object_id": "45dc38c3-6fc1-479a-98b4-855f3fe0304d",
+                                  "local_id": "/dpn/outgoing/a7b18eb0-005f-11e3-8ebb-f23c91aec05e.tar",
+                                  "first_node_name": "tdr",
+                                  "version_number": 1,
+                                  "previous_version_object_id": "null",
+                                  "forward_version_object_id": "",
+                                  "first_version_object_id": "45dc38c3-6fc1-479a-98b4-855f3fe0304d",
+                                  "fixity_algorithm": "sha256",
+                                  "fixity_value": "c2f83ba79735226d7bef7ab05218f20341597ed4c882fcda22ad09de53cc2475",
+                                  "last_fixity_date": "2013-09-20T15:56:35Z",
+                                  "creation_date": "2013-09-20T15:56:35Z",
+                                  "last_modified_date": "2013-09-20T15:56:35Z",
+                                  "bag_size": 9779200,
+                                  "object_type": "data"
+                              }, ]
         }
         bad_body = {
-            "message_name" : ["registry-listed-daterange-reply", None, ""],
-            "date_range" : [["2013-09-22T18:06:55Z",], [], None, "2013-09-22T18:06:55Z", [None, 23423]],
-            "reg_sync_list" : ["", None]
+            "message_name": ["registry-listed-daterange-reply", None, ""],
+            "date_range": [["2013-09-22T18:06:55Z", ], [], None,
+                           "2013-09-22T18:06:55Z", [None, 23423]],
+            "reg_sync_list": ["", None]
         }
         self._test_validation(frm, good_body, bad_body)
         # nested dict makes the standard self._test_dpn_data not function here.
@@ -419,13 +494,14 @@ class DPNBodyFormTest(TestCase):
         self.assertEqual(data['message_name'], good_body["message_name"])
         for idx, dt in enumerate(data["date_range"]):
             self.assertEqual(dt, good_body["date_range"][idx])
-        self.assertEqual(len(data['reg_sync_list']), len(good_body['reg_sync_list']))
+        self.assertEqual(len(data['reg_sync_list']),
+                         len(good_body['reg_sync_list']))
+
 
 # ####################################################
 # tests for dpnmq/utils.py
 
 class TestDPNUtils(TestCase):
-
     def setUp(self):
         self.timestring = "2014-01-01T01:00:00Z"
         self.datetime = datetime(2014, 1, 1, 1, 0, 0)
@@ -454,11 +530,11 @@ class TestDPNUtils(TestCase):
         # or remove if not needed.
         self.assertTrue(True)
 
+
 # #####################################
 # tests for dpnmq/messages.py
 
 class TestDPNMessage(TestCase):
-
     def test_init(self):
         self.assertTrue(isinstance(messages.DPNMessage(), messages.DPNMessage))
 
@@ -526,8 +602,8 @@ class TestDPNMessage(TestCase):
         for k, v in good_args.items():
             self.assertTrue(msg.body[k] == v)
 
-class TestDPNMessageImplementations(TestCase):
 
+class TestDPNMessageImplementations(TestCase):
     def _test_expected_defaults(self, msg, exp):
         self.assertTrue(msg.body["message_name"], exp["message_name"])
         self.assertTrue(msg.headers["sequence"] == exp["sequence"])
@@ -595,11 +671,11 @@ class TestDPNMessageImplementations(TestCase):
         }
         self._test_expected_defaults(msg, exp)
 
-    # def test_reg_entry_created(self):
-    #     msg = messages.RegistryEntryCreated()
-    #     exp = {
-    #         "message_name": messages.RegistryEntryCreated.directive,
-    #         "body_form": RegistryEntryCreatedForm,
-    #         "sequence": messages.RegistryEntryCreated.sequence
-    #     }
-    #     self._test_expected_defaults(msg, exp)
+        # def test_reg_entry_created(self):
+        # msg = messages.RegistryEntryCreated()
+        #     exp = {
+        #         "message_name": messages.RegistryEntryCreated.directive,
+        #         "body_form": RegistryEntryCreatedForm,
+        #         "sequence": messages.RegistryEntryCreated.sequence
+        #     }
+        #     self._test_expected_defaults(msg, exp)
