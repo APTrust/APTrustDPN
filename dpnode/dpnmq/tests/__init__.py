@@ -5,4 +5,7 @@
             - Steve Martin
 """
 
-from dpnmq.tests import *
+from .consumer import *
+from .forms import *
+from .messages import *
+from .utils import *
