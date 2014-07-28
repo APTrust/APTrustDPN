@@ -24,7 +24,7 @@ OBJECT_TYPES = [(value.lower(), key) for (key, value) in TYPE_CHOICES]
 
 # Misc Form Functions
 
-def _remap_keys(map, data):
+def _remap_keys(map, data, remove):
     """
     This function takes a list tuples that contain a mapping of dictionary keys
     to rename from the current name to a new name.
@@ -35,16 +35,19 @@ def _remap_keys(map, data):
 
     :param map: List of Tuples meant to transform data dictionary keys from
                 current names to new names.
-    :param data: Dict of the data to tranform..
+    :param data: Dict of the data to tranform.
+    :param remove: Boolean indicates remapped key should be removed from data.
     :return: Dict of modified data.
     """
     field_map = dict(map)
     for current, new in field_map.items():
         if current in data.keys():
             data[new] = data[current]
+            if remove:
+                data.pop(current, None)
     return data
 
-def map_to_fields(map, data):
+def map_to_fields(map, data, remove=False):
     """
     This function takes a list of json to field mappings and modifies the data
     given to match the map.
@@ -56,9 +59,9 @@ def map_to_fields(map, data):
     :param data: Dict of the json data to map to fields.
     :return: Dict of modified data.
     """
-    return _remap_keys(map, data)
+    return _remap_keys(map, data, remove)
 
-def map_to_json(map, data):
+def map_to_json(map, data, remove=False):
     """
     This function takes a list of json to field mappings and modifies the data
     given to match the map.
@@ -70,7 +73,7 @@ def map_to_json(map, data):
     :param data: Dict of the field data to map to json data.
     """
     rev_field_map = [(field, json) for (json, field) in map]
-    return _remap_keys(rev_field_map, data)
+    return _remap_keys(rev_field_map, data, remove)
 
 def none_to_null(value):
     """
@@ -390,7 +393,7 @@ class _RegistryEntryForm(forms.ModelForm):
                 data[fieldname] = None
 
         # convert field names
-        data = map_to_fields(self.field_map, data)
+        data = map_to_fields(self.field_map, data, remove=True)
 
         # Sanitize object_type
         types = dict(OBJECT_TYPES)
