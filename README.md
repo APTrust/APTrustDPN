@@ -41,6 +41,12 @@ To setup using pip just:
 1.  Activate the appropriate Virtualenv if using that setup.
 2.  From the project root execute `pip install -r requirements`
 
+### Dependencies for testing
+
+Some additional dependencies are required for unit tests to run.  (mock
+libraries and such).  If running tests be sure to also pip install from
+requirements_dev.txt in addition to the normal requirements.
+
 ## Use
 
 More to come.
