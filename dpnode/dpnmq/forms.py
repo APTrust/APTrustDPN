@@ -41,7 +41,7 @@ def _remap_keys(map, data):
     field_map = dict(map)
     for current, new in field_map.items():
         if current in data.keys():
-            data[new] = data.pop(current)
+            data[new] = data[current]
     return data
 
 def map_to_fields(map, data):
@@ -301,7 +301,7 @@ class RegistryDateRangeSyncForm(_DPNBaseForm):
     end_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT,])
 
     def __init__(self, data={}, *args, **kwargs):
-        date_range = data.pop("date_range", []) or [] # in case none passed explicity
+        date_range = data.get("date_range", []) or [] # in case none passed explicity
         # handle both normal data or dpn json data
         if "start_date" not in data and len(date_range) == 2:
             data['start_date'] = self._parse_date(date_range, 0)
@@ -338,7 +338,7 @@ class RegistryListDateRangeForm(RegistryDateRangeSyncForm):
         choices=_format_choices(['registry-list-daterange-reply']))
 
     def __init__(self, data={}, *args, **kwargs):
-        self.reg_sync_list = data.pop("reg_sync_list", None)
+        self.reg_sync_list = data.get("reg_sync_list", None)
         super(RegistryListDateRangeForm, self).__init__(data, *args, **kwargs)
 
     def clean(self):

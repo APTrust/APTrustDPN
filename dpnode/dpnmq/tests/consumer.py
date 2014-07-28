@@ -73,15 +73,26 @@ class DPNConsumerTestCase(TestCase):
         self.assertTrue(bst_good == 0, "Expected 0 but returned %d" % bst_good)
         self.assertTrue(lcl_good == 1, "Expected 1 but returned %d" % lcl_good)
 
-        # Good message should got to broadcast router.
+    def test_route_broadcast(self):
+                # bad messages should go nowhere.
+        self.csmr.route_local(None, self.bad_msg)
+        self.assertTrue(len(self.csmr.broadcast_router.msgs) == 0)
+        self.assertTrue(len(self.csmr.local_router.msgs) == 0)
+
+        # Expired msgs should go nowhere.
+        self.csmr.route_local(None, self.expired_msg)
+        bst_xpr = len(self.csmr.broadcast_router.msgs)
+        lcl_xpr = len(self.csmr.local_router.msgs)
+        self.assertTrue(0 == bst_xpr,
+                        "Expected 0 msgs in router but found %d" % bst_xpr)
+        self.assertTrue( lcl_xpr == 0)
+
+        # Good message should go to broadcast router.
         self.csmr.route_broadcast(None, self.good_msg)
         bst_good = len(self.csmr.broadcast_router.msgs)
         lcl_good = len(self.csmr.local_router.msgs)
         self.assertTrue(bst_good == 1, "Expected 1 but returned %d" % bst_good)
-        # Local will still be one due to mock setup.
-        self.assertTrue(lcl_good == 1, "Expected 1 but returned %d" % lcl_good)
+        self.assertTrue(lcl_good == 0, "Expected 0 but returned %d" % lcl_good)
 
-    def test_route_broadcast(self):
-        pass
 
 
