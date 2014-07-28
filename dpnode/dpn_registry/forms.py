@@ -105,7 +105,7 @@ class RegistryEntryForm(BaseEntryForm, forms.ModelForm):
 class NodeEntryForm(BaseEntryForm, forms.ModelForm):
     lastfixity_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT])
     creation_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT])
-    last_modified_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT])    
+    last_modified_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT])
         
     class Meta:
         model = NodeEntry

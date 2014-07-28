@@ -60,7 +60,6 @@ class BaseRegistry(models.Model):
     Base Abstract modal for registry entries
     """
 
-    dpn_object_id = models.CharField(max_length=64, primary_key=True)
     local_id = models.TextField(max_length=100, blank=True)
     first_node_name = models.CharField(max_length=20)
     version_number = models.PositiveIntegerField()
@@ -103,16 +102,11 @@ class BaseRegistry(models.Model):
     def object_type_text(self):
         return self.get_object_type_display().lower()
 
-class RegistryEntry(BaseRegistry):
-    """
-    Django model to create Registry Entries from own node
-    """
-
     def to_message_dict(self):
 
         values_override = {
             'object_type': 'object_type_text'
-        }        
+        }
 
         relations = {
             'replicating_nodes': {'fields': ['name'], 'flat': True}
@@ -120,13 +114,19 @@ class RegistryEntry(BaseRegistry):
 
         message_dict = ModelToDict(
                 instance=self,
-                exclude=['state'],
+                exclude=['state', 'node', 'id'],
                 n_override=NAMES_OVERRIDE, 
                 v_override=values_override,
                 relations=relations
             ).as_dict()
 
         return serialize_dict_date(message_dict)
+
+class RegistryEntry(BaseRegistry):
+    """
+    Django model to create Registry Entries from own node
+    """
+    dpn_object_id = models.CharField(max_length=64, primary_key=True)
 
 
 class NodeEntry(BaseRegistry):
@@ -135,6 +135,7 @@ class NodeEntry(BaseRegistry):
     part of a registry sync operation when they need to be compared to determine
     the authoritative registry entry to use locally.
     """
+    dpn_object_id = models.CharField(max_length=64)
     node = models.ForeignKey(Node, related_name='node_from')
 
     class Meta:
