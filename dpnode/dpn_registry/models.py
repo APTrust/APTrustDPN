@@ -102,6 +102,7 @@ class BaseRegistry(models.Model):
     def object_type_text(self):
         return self.get_object_type_display().lower()
 
+    # TODO: refactor this to -> to_dpn_msg
     def to_message_dict(self):
 
         values_override = {

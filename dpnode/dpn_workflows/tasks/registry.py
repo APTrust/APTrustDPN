@@ -11,6 +11,7 @@ import os
 import logging
 
 from datetime import datetime
+from itertools import groupby
 
 from dpnode.celery import app
 from dpnode.settings import DPN_BAGS_FILE_EXT, DPN_BAGS_DIR
@@ -19,8 +20,8 @@ from dpnode.settings import DPN_NODE_NAME, DPN_FIXITY_CHOICES
 from dpn_workflows.models import IngestAction, COMPLETE, SUCCESS
 from dpn_workflows.utils import generate_fixity
 
-from dpn_registry.forms import NodeEntryForm
-from dpn_registry.models import RegistryEntry, Node
+from dpn_registry.forms import NodeEntryForm, RegistryEntryForm
+from dpn_registry.models import RegistryEntry, Node, NodeEntry
 
 from dpnmq.utils import dpn_strptime
 from dpnmq.messages import RegistryListDateRangeReply
@@ -134,4 +135,57 @@ def solve_registry_conflicts():
     to check and solves conflicts with own node registry entries
     """
     
-    pass
+    local_entries = RegistryEntry.objects.all()
+    
+    # get entries group by dpn_object_id and check if the entries are equal
+    entries_query = NodeEntry.objects.all().order_by('dpn_object_id')
+    grouped_entries = groupby(entries_query, lambda e: e.dpn_object_id)
+
+    def _first_node_entry(entries, node_name):
+        for entry in entries:
+            if entry.node.name == node_name:
+                return entry
+        return None
+
+    for dpn_obj_id, entries in grouped_entries:
+        entries_list = list(entries)
+        first_node_name = entries_list[0].first_node_name
+        first_node_entry = _first_node_entry(entries_list, first_node_name)
+        
+        # if I'm the first node of the entry, do nothing
+        if first_node_name == DPN_NODE_NAME:
+            # NOTE: should we verify if entry exist in local registry?
+            continue # do nothing
+
+        if not first_node_entry:
+            logger.info("First node has not responded. Skipping entry with dpn_object_id %s" % dpn_obj_id)
+            continue
+        else:
+            entry_one_data = first_node_entry.to_message_dict()
+
+        try:
+            local_entry = local_entries.get(dpn_object_id=dpn_obj_id)
+            if local_entry.to_message_dict() != entry_one_data:
+                # if entries are not equal, update our local with the first
+                # node entry, because first node entry is always the right one
+                entry_form = RegistryEntryForm(instance=local_entry, data=entry_one_data)
+                if entry_form.is_valid():
+                    entry_form.save()
+                else:
+                    # NOTE: should we mark it as flagged?
+                    logger.info("Unable to update entry. Data -> %s is not valid. Error message -> %s" 
+                                % (entry_one_data, entry_form.errors))
+            # else? do nothing, just continue
+            continue
+
+        except RegistryEntry.DoesNotExist as err:
+            # local entry does not exists in our local registry, so registering it
+            local_entry = RegistryEntryForm(data=entry_one_data)
+            if local_entry.is_valid:
+                local_entry.save()
+            else:
+                logger.info("Unable to save entry. Data -> %s is not valid. Error message -> %s" 
+                            % (entry_one_data, local_entry.errors))
+
+    # remove all entries in temporal table
+    entries_query.delete()

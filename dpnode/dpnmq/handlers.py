@@ -270,7 +270,7 @@ def registry_item_create_handler(msg, body):
     entry_form = RegistryEntryForm(**form_params)
     if entry_form.is_valid():
         try:
-            entry = entry_form.save()
+            entry_form.save()
             body = ack
         except Exception as err:
             nak['message_error'] = "Error trying to save entry: %s" % err
