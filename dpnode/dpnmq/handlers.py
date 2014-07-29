@@ -22,6 +22,7 @@ from dpn_workflows.tasks.inbound import respond_to_replication_query, transfer_c
 from dpn_workflows.tasks.outbound import verify_fixity_and_reply
 from dpn_workflows.tasks.registry import reply_with_item_list, save_registries_from
 
+from dpn_registry.models import RegistryEntry
 from dpn_registry.forms import RegistryEntryForm
 
 logger = logging.getLogger('dpnmq.console')
@@ -245,30 +246,36 @@ def registry_item_create_handler(msg, body):
         raise DPNMessageError("Recieved bad message body: %s"
             % err)
 
-    # Fake the reply
     headers = {
         'correlation_id': req.headers['correlation_id'],
         'sequence': 1
     }
 
-    body_options = {
-        'ack': {
-            'message_att': 'ack',
-        },
-        'nak': {
-            'message_att': 'nak',
-            'message_error': "Registry entry already exists."
-        }
+    ack = {
+        'message_att': 'ack'
     }
-    
-    # creating broadcasted registry entry
-    entry_form = RegistryEntryForm(data=req.body)
+
+    nak = {
+        'message_att': 'nak',
+        'message_error': "Registry entry is not valid."
+    }
+
+    # check if entry already exists
+    form_params = dict(data=req.body)
+    try:
+        form_params['instance'] = RegistryEntry.objects.get(dpn_object_id=req.body['dpn_object_id'])
+    except:
+        pass
+
+    entry_form = RegistryEntryForm(**form_params)
     if entry_form.is_valid():
-        entry_form.save()
-        body = body_options['ack']
-    else:
-        body = body_options['nak']
-        logger.info("Registry entry with dpn_object_id %s already exists." % req.body['dpn_object_id'])
+        try:
+            entry = entry_form.save()
+            body = ack
+        except Exception as err:
+            nak['message_error'] = "Error trying to save entry: %s" % err
+            body = nak
+            logger.info(nak['message_error'])
 
     rsp = RegistryEntryCreated(headers, body)
     rsp.send(req.headers['reply_key'])
