@@ -128,7 +128,7 @@ class DPNMessage(object):
 
         frm = self.body_form(self.body.copy())
         if not frm.is_valid():
-            raise DPNMessageError("Invalid Body %s" % frm.body)
+            raise DPNMessageError("Invalid Body: %s" % frm.errors)
 
     def set_body(self, **kwargs):
         try:

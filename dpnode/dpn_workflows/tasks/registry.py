@@ -60,7 +60,7 @@ def create_registry_entry(correlation_id):
             version_number=1, 
             fixity_algorithm=DPN_FIXITY_CHOICES[0],
             fixity_value=fixity_value,
-            lastfixity_date=now,
+            last_fixity_date=now,
             creation_date=now, # TODO: creation date of bag or ?
             last_modified_date=now, # same here, which modification date? from bag meta data?
             bag_size=os.path.getsize(local_bag_path)
