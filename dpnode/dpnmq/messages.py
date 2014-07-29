@@ -65,7 +65,7 @@ class DPNMessage(object):
           self.headers["ttl"] = str_expire_on(now, self._get_ttl())
 
     def validate_headers(self):
-        frm = self.header_form(self.headers)
+        frm = self.header_form(self.headers.copy())
         if not frm.is_valid():
             raise DPNMessageError("Invalid message header %s" % frm.errors)
 
@@ -126,7 +126,7 @@ class DPNMessage(object):
 
         self._set_message_name()
 
-        frm = self.body_form(self.body)
+        frm = self.body_form(self.body.copy())
         if not frm.is_valid():
             raise DPNMessageError("Invalid Body %s" % frm.body)
 
