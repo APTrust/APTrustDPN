@@ -9,3 +9,4 @@ from .consumer import *
 from .forms import *
 from .messages import *
 from .utils import *
+from .handlers import *
