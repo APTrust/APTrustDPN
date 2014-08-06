@@ -21,6 +21,13 @@ STATE_CHOICES = (
     (FAILED, 'Failed'),
     (CANCELLED, 'Cancelled')
 )
+# New states choices for the Workflow table
+WORKFLOW_STATE_CHOICES = (
+    (PENDING, 'Pending'),
+    (SUCCESS, 'Success'),
+    (FAILED, 'Failed'),
+    (CANCELLED, 'Canceled'),
+)
 
 # PROTOCOL INFORMATION
 HTTPS = 'H'
@@ -47,6 +54,36 @@ STEP_CHOICES = (
     (VERIFY, 'TRANSFER VERIFICATION'),
     (CANCELLED, 'OPERATION CANCELED'),
     (COMPLETE, 'TRANSACTION COMPLETE')
+)
+
+# WORKFLOW STEP INFORMATION
+INIT_QUERY = 'IQ'
+AVAILABLE_REPLY = 'AR'
+TRANSFER_REQUEST = 'TQ'
+TRANSFER_REPLY = 'TR'
+TRANSFER_STATUS = 'TS'
+TRANSFER_CANCEL = 'TC'
+LOCATION_REPLY = 'LR'
+LOCATION_CANCEL = 'LC'
+VERIFY_REPLY = 'VR'
+WORKFLOW_STEP_CHOICES = (
+    (INIT_QUERY,'init-query'),
+    (AVAILABLE_REPLY,'available-reply'),
+    (TRANSFER_REQUEST,'transfer-request'),
+    (TRANSFER_REPLY,'transfer-reply'),
+    (TRANSFER_STATUS,'transfer-status'),
+    (TRANSFER_CANCEL,'transfer-cancel'),
+    (LOCATION_REPLY,'location-reply'),
+    (LOCATION_CANCEL,'location-cancel'),
+    (VERIFY_REPLY,'verify-reply')
+)
+
+# ACTION INFORMATION
+REPLICATION = 'P'
+RECOVERY = 'C'
+ACTION_CHOICES = (
+    (REPLICATION, 'Replication'),
+    (RECOVERY, 'Recovery')
 )
 
 """
@@ -77,6 +114,7 @@ fxty_help = "Fixity value for the file being copied."
 note_help = "Additional details."
 obid_help = "UUID of the DPN object."
 lbid_help = "Local bag ID"
+acti_help = "Corresponding action in the workflow"
 
 class IngestAction(models.Model):
     """
@@ -164,6 +202,27 @@ class ReceiveFileAction(BaseCopyAction):
 # NodeInfo Help Text
 nnm_help = "Full name of the node."
 slg_help = "Common slug used for node throughout federation."
+
+class Workflow(models.Model):
+    """
+    Tracks the workflow steps and states for the actions of our node.Currently it is used only by the Recovery workflow
+    """
+    
+    correlation_id = models.CharField(max_length=100, help_text=cid_help)
+    dpn_object_id = models.CharField(max_length=100, help_text=obid_help)
+    action = models.CharField(max_length=1, choices=ACTION_CHOICES, help_text=acti_help)
+    node = models.CharField(max_length=25, help_text=node_help)
+    
+    # Workflow Tracking
+    step = models.CharField(max_length=2, choices=WORKFLOW_STEP_CHOICES, help_text=step_help)
+    state = models.CharField(max_length=10, choices=WORKFLOW_STATE_CHOICES, help_text=stat_help)
+    note = models.TextField(blank=True, null=True, help_text=note_help)
+    
+    # Node reply_key
+    reply_key = models.CharField(max_length=75, blank=True)
+    
+    class Meta:
+        unique_together = (('correlation_id', 'dpn_object_id'),)
 
 class NodeInfo(models.Model):
     """
