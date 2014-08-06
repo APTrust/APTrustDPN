@@ -38,6 +38,7 @@ class TaskRouter:
             # use it as decorator
             def decorated(func):
                 self._registry[key] = func
+                return func # or else direct calls to method return None
             return decorated
 
     def unregister(self, key):
@@ -71,14 +72,14 @@ local_router.register('default', default_handler)
 
 @broadcast_router.register('info')
 def info_handler(msg, body):
-    print("DELIVERY INFO: %r" % msg.delivery_info)
-    print("DELIVERY TAG: %r" % msg.delivery_tag)
-    print("CONTENT TYPE: %r" % msg.content_type)
-    print("HEADERS INFO: %r" % msg.headers)
-    print("PROPERTIES INFO %r" % msg.properties)
-    print("BODY INFO: %r" % msg.payload)
-    print("PAYLOAD: %r" % msg.payload)
-    print("-------------------------------")
+    logger.info("DELIVERY INFO: %r" % msg.delivery_info)
+    logger.info("DELIVERY TAG: %r" % msg.delivery_tag)
+    logger.info("CONTENT TYPE: %r" % msg.content_type)
+    logger.info("HEADERS INFO: %r" % msg.headers)
+    logger.info("PROPERTIES INFO %r" % msg.properties)
+    logger.info("BODY INFO: %r" % msg.payload)
+    logger.info("PAYLOAD: %r" % msg.payload)
+    logger.info("-------------------------------")
 
 @broadcast_router.register('replication-init-query')
 def replication_init_query_handler(msg, body):
@@ -96,7 +97,7 @@ def replication_init_query_handler(msg, body):
         msg.ack()
     except TypeError as err:
         msg.reject()
-        raise DPNMessageError("Recieved bad message body: %s"
+        raise DPNMessageError("Received bad message body: %s"
             % err)
 
     # Request seems correct, check if node is available to replicate bag
@@ -142,7 +143,7 @@ def replication_location_cancel_handler(msg, body):
         msg.ack()
     except TypeError as err:
         msg.reject()
-        raise DPNMessageError("Recieved bad message body: %s" 
+        raise DPNMessageError("Received bad message body: %s"
             % err)
     
     correlation_id = msg.headers['correlation_id']
@@ -168,7 +169,7 @@ def replication_location_reply_handler(msg, body):
         msg.ack()
     except TypeError as err:
         msg.reject()
-        raise DPNMessageError("Recieved bad message body: %s" 
+        raise DPNMessageError("Received bad message body: %s"
             % err)
 
     # now we are ready to transfer the bag
@@ -220,7 +221,7 @@ def replication_verify_reply_handler(msg, body):
         msg.ack()
     except TypeError as err:
         msg.reject()
-        raise DPNMessageError("Recieved bad message body: %s" 
+        raise DPNMessageError("Received bad message body: %s"
             % err)
 
     receive_verify_reply_workflow(req)
@@ -296,7 +297,7 @@ def registry_entry_created_handler(msg, body):
         msg.ack()
     except TypeError as err:
         msg.ack()
-        raise DPNMessageError("Recieved bad message body: %s"
+        raise DPNMessageError("Received bad message body: %s"
             % err)
     # TODO: Figure out where this goes from here?
 
@@ -316,7 +317,7 @@ def registry_daterange_sync_request_handler(msg, body):
         msg.ack()
     except TypeError as err:
         msg.reject()
-        raise DPNMessageError("Recieved bad message body: %s" 
+        raise DPNMessageError("Received bad message body: %s"
             % err)
 
     reply_with_item_list.apply_async((req, ))
@@ -338,7 +339,7 @@ def registry_list_daterange_reply(msg, body):
         msg.ack()
     except TypeError as err:
         msg.reject()
-        raise DPNMessageError("Recieved bad message body: %s" 
+        raise DPNMessageError("Received bad message body: %s"
             % err)
 
     node = msg.headers['from']

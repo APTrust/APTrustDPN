@@ -4,14 +4,19 @@
      ~Author Unknown
 '''
 
+import json
+from datetime import datetime
+
 from django.test import TestCase
 
 from kombu.message import Message
 from kombu.exceptions import MessageStateError
 from kombu.tests.case import Mock
 
-from dpnmq.handlers import TaskRouter
+from dpnmq.utils import dpn_strftime, str_expire_on
+from dpnmq import handlers
 from dpnmq.messages import DPNMessageError
+from dpn_workflows.handlers import DPNWorkflowError
 
 def _msg():
     return Message(Mock(), "{}")
@@ -19,7 +24,7 @@ def _msg():
 class TaskRouterTestCase(TestCase):
 
     def setUp(self):
-        self.router = TaskRouter()
+        self.router = handlers.TaskRouter()
         self.dispatched = False
 
     def test_register(self):
@@ -70,4 +75,55 @@ class TaskRouterTestCase(TestCase):
         self.assertTrue(self.dispatched)
 
 
+class HandlerTestCase(TestCase):
 
+    def setUp(self):
+        self.good_headers =  {
+            'from': 'testfrom',
+            'reply_key': 'testkey',
+            'correlation_id': 'testid',
+            'sequence': 10,
+            'date': dpn_strftime(datetime.now()),
+            'ttl': str_expire_on(datetime.now(), 566),
+        }
+
+    # NOTE on testing strategy here.  These handlers wrap other methods which
+    # are themselves tested for success.  I'm just testing that each handler
+    # hands off a task as expected, which will often raise an error since
+    # a required database entry or service is not available.  That error is
+    # unique so I'm testing for that here rather than forcing a success that is
+    # already tested in another part of the code.
+
+    def _test_basic_handling(self, func):
+        # it should throw a DPNMessage Error for invalid messages.
+        self.assertRaises(DPNMessageError, func, _msg(), None)
+        msg = Message(Mock(), "{}", headers=self.good_headers.copy())
+        self.assertRaises(DPNMessageError, func, msg, "{}")
+
+    def test_info_handler(self):
+        pass # this will never fail, but putting it in for coverage.
+
+    def test_replication_int_query_handler(self):
+        self._test_basic_handling(handlers.replication_init_query_handler)
+        body = {
+            "message_name": "replication-init-query",
+            "replication_size": 4096,
+            "protocol": ["https", "rsync"],
+            "dpn_object_id": "some-uuid-that-actually-looks-like-a-uuid"
+        }
+        msg = Message(Mock(), body, headers=self.good_headers.copy())
+        # It should produce an OSError when a success tries to queue to Celery
+        self.assertRaises(OSError, handlers.replication_init_query_handler,
+                          msg, body)
+
+    def test_replication_available_reply_handler(self):
+        self._test_basic_handling(handlers.replication_available_reply_handler)
+        body = {
+            "message_name": "replication-available-reply",
+            "message_att": "ack",
+            "protocol": "rsync",
+        }
+        msg = Message(Mock(), body, headers=self.good_headers.copy())
+        # It should throw a workflow error if because no matching ingest
+        self.assertRaises(DPNWorkflowError, handlers.replication_available_reply_handler,
+                          msg, body)
