@@ -13,34 +13,6 @@ from .models import DATA, RIGHTS, BRIGHTENING, NAMES_OVERRIDE
 class DPNDataError(Exception):
     pass
 
-class TestRegistryEntryForm(forms.ModelForm):
-    lastfixity_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT])
-    creation_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT])
-    last_modified_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT])
-
-    class Meta:
-        model = RegistryEntry
-        # Best practice as of Django 1.6 will be to use this.
-        # fields = '__all__'
-        exclude = [
-            'replicating_nodes',
-            'brightening_objects',
-            'rights_objects',
-            'previous_version',
-            'first_version',
-            'previous_version',
-            'forward_version',
-            'state',
-            'object_type'
-            ]
-
-
-OBJECT_TYPE_CHOICES = {
-    'data': DATA,
-    'rights': RIGHTS,
-    'brightening': BRIGHTENING
-}
-
 class BaseEntryForm(object):
 
     def __init__(self, *args, **kwargs):

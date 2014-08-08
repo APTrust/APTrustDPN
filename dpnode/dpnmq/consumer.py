@@ -19,7 +19,9 @@ import logging
 logger = logging.getLogger('dpnmq.console')
 
 class DPNConsumer(ConsumerMixin):
-    def __init__(self, conn, exchng, bcast_queue, bcast_rtkey, local_queue, local_rtkey, ignore_own=True):
+    def __init__(self, conn, exchng, bcast_queue, bcast_rtkey, local_queue,
+                 local_rtkey, ignore_own=True, local_rtr=local_router,
+                 broadcast_rtr=broadcast_router):
         """A basic consumer that listens on DPN broadcast and local queues.
 
         :param conn:  Connection object to amqp server.
@@ -28,19 +30,26 @@ class DPNConsumer(ConsumerMixin):
         :param bcast_rtkey:  String of broadcast routing key to use for message.
         :param local_queue:  String of the local queue name.
         :param local_rtkey:  String of the local routing key to use
-        :param ignore_own:  Boolean weather to reply to your own messages.  Usually only test to False for testing.
+        :param ignore_own:  Boolean weather to reply to your own messages.
+                            Usually only test to False for testing.
 
         """
         self.connection = conn
         self.xchng = Exchange(exchng, 'topic', durable=True)
-        self.bcast_queue = Queue(bcast_queue, exchange=self.xchng, routing_key=bcast_rtkey)
-        self.direct_queue = Queue(local_queue, exchange=self.xchng, routing_key=local_rtkey)
+        self.bcast_queue = Queue(bcast_queue, exchange=self.xchng,
+                                 routing_key=bcast_rtkey)
+        self.direct_queue = Queue(local_queue, exchange=self.xchng,
+                                  routing_key=local_rtkey)
         self.ignore_own = ignore_own
+        self.local_router = local_rtr
+        self.broadcast_router = broadcast_rtr
 
     def get_consumers(self, Consumer, chan):
         consumers = [
-            Consumer(queues=[self.bcast_queue, ], callbacks=[self.route_broadcast, ], auto_declare=False),
-            Consumer(queues=[self.direct_queue, ], callbacks=[self.route_local, ], auto_declare=False)
+            Consumer(queues=[self.bcast_queue, ],
+                     callbacks=[self.route_broadcast, ], auto_declare=True),
+            Consumer(queues=[self.direct_queue, ],
+                     callbacks=[self.route_local, ], auto_declare=True)
         ]
         return consumers
 
@@ -71,21 +80,39 @@ class DPNConsumer(ConsumerMixin):
         router.dispatch(message_name, msg, decoded_body)
 
     def route_local(self, body, msg):
+        """
+        Callback to route messages through the appropriate dispatcher.
+        Kombu callbacks required the signature provided as per the docs at
+        https://kombu.readthedocs.org/en/latest/userguide/consumers.html
+
+        :param body: decoded message body
+        :param msg: kombu message instance to be routed.
+        :return:
+        """
         if self._skip(msg):
             msg.ack()
             return None
         try:
-            self._route_message(local_router, msg)
+            self._route_message(self.local_router, msg)
             logger.info("LOCAL MSG %s" % self._get_logentry(msg))
         except DPNMessageError as err:
             logger.error("DPN Message Error: %s" % err)
 
     def route_broadcast(self, body, msg):
+        """
+        Callback to route messages through the appropriate dispatcher.
+        Kombu callbacks required the signature provided as per the docs at
+        https://kombu.readthedocs.org/en/latest/userguide/consumers.html
+
+        :param body: decoded message body
+        :param msg: kombu message instance to be routed.
+        :return:
+        """
         if self._skip(msg):
             msg.ack()
             return None
         try:
-            self._route_message(broadcast_router, msg)
+            self._route_message(self.broadcast_router, msg)
             logger.info("BROADCAST MSG %s" % self._get_logentry(msg))
         except DPNMessageError as err:
             logger.error("DPN Message Error: %s" % err)
@@ -97,13 +124,16 @@ class DPNConsumer(ConsumerMixin):
         :return: None
         """
         # No validation at this point so form log whatever fields you can find.
-        data = json_loads(msg.body)
-        data.update(msg.headers)
-        fields = ['message_name', 'from', 'correlation_id', 'sequence']
-        parts = ["%s: %s" % (field, data[field]) for field in fields if field in data]
-        if not parts:
-            return "Could Not Find Values in %s" % data
-        return "RECIEVED %s" % (", ".join(parts),)
+        try:
+            data = json_loads(msg.body)
+            data.update(msg.headers)
+            fields = ['message_name', 'from', 'correlation_id', 'sequence']
+            parts = ["%s: %s" % (field, data[field]) for field in fields if field in data]
+            if not parts:
+                return "Could Not Find Values in %s" % data
+            return "RECIEVED %s" % (", ".join(parts),)
+        except ValueError:
+            return "Could not decode msg body %r" % msg.body
 
     def _skip(self, msg):
         """

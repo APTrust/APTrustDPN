@@ -22,8 +22,8 @@ from dpn_workflows.tasks.inbound import respond_to_replication_query, transfer_c
 from dpn_workflows.tasks.outbound import verify_fixity_and_reply
 from dpn_workflows.tasks.registry import reply_with_item_list, save_registries_from
 
-from dpn_registry.models import RegistryEntry
-from dpn_registry.forms import RegistryEntryForm
+from dpn_registry.models import RegistryEntry, Node
+from dpnmq.forms import RegistryItemCreateForm
 
 logger = logging.getLogger('dpnmq.console')
 
@@ -38,6 +38,7 @@ class TaskRouter:
             # use it as decorator
             def decorated(func):
                 self._registry[key] = func
+                return func # or else direct calls to method return None
             return decorated
 
     def unregister(self, key):
@@ -71,14 +72,14 @@ local_router.register('default', default_handler)
 
 @broadcast_router.register('info')
 def info_handler(msg, body):
-    print("DELIVERY INFO: %r" % msg.delivery_info)
-    print("DELIVERY TAG: %r" % msg.delivery_tag)
-    print("CONTENT TYPE: %r" % msg.content_type)
-    print("HEADERS INFO: %r" % msg.headers)
-    print("PROPERTIES INFO %r" % msg.properties)
-    print("BODY INFO: %r" % msg.payload)
-    print("PAYLOAD: %r" % msg.payload)
-    print("-------------------------------")
+    logger.info("DELIVERY INFO: %r" % msg.delivery_info)
+    logger.info("DELIVERY TAG: %r" % msg.delivery_tag)
+    logger.info("CONTENT TYPE: %r" % msg.content_type)
+    logger.info("HEADERS INFO: %r" % msg.headers)
+    logger.info("PROPERTIES INFO %r" % msg.properties)
+    logger.info("BODY INFO: %r" % msg.payload)
+    logger.info("PAYLOAD: %r" % msg.payload)
+    logger.info("-------------------------------")
 
 @broadcast_router.register('replication-init-query')
 def replication_init_query_handler(msg, body):
@@ -96,7 +97,7 @@ def replication_init_query_handler(msg, body):
         msg.ack()
     except TypeError as err:
         msg.reject()
-        raise DPNMessageError("Recieved bad message body: %s"
+        raise DPNMessageError("Received bad message body: %s"
             % err)
 
     # Request seems correct, check if node is available to replicate bag
@@ -142,7 +143,7 @@ def replication_location_cancel_handler(msg, body):
         msg.ack()
     except TypeError as err:
         msg.reject()
-        raise DPNMessageError("Recieved bad message body: %s" 
+        raise DPNMessageError("Received bad message body: %s"
             % err)
     
     correlation_id = msg.headers['correlation_id']
@@ -168,7 +169,7 @@ def replication_location_reply_handler(msg, body):
         msg.ack()
     except TypeError as err:
         msg.reject()
-        raise DPNMessageError("Recieved bad message body: %s" 
+        raise DPNMessageError("Received bad message body: %s"
             % err)
 
     # now we are ready to transfer the bag
@@ -220,7 +221,7 @@ def replication_verify_reply_handler(msg, body):
         msg.ack()
     except TypeError as err:
         msg.reject()
-        raise DPNMessageError("Recieved bad message body: %s" 
+        raise DPNMessageError("Received bad message body: %s"
             % err)
 
     receive_verify_reply_workflow(req)
@@ -238,6 +239,11 @@ def registry_item_create_handler(msg, body):
     :param body: Decoded JSON of the message payload.
     """
     try:
+        # pre-populate nodes or it will not validate.
+        # TODO re-examine this! seems hacky but I have to deliver in an hour.
+        # TODO likely  use message body form eventuall since that already validates
+        for name in body.get("replicating_node_names", None):
+            node, created = Node.objects.get_or_create(**{"name": name})
         req = RegistryItemCreate(msg.headers, body)
         req.validate()
         msg.ack()
@@ -263,11 +269,13 @@ def registry_item_create_handler(msg, body):
     # check if entry already exists
     form_params = dict(data=req.body)
     try:
-        form_params['instance'] = RegistryEntry.objects.get(dpn_object_id=req.body['dpn_object_id'])
+        form_params['instance'] = RegistryEntry.objects.get(
+            dpn_object_id=req.body['dpn_object_id'])
     except:
         pass
 
-    entry_form = RegistryEntryForm(**form_params)
+    entry_form = RegistryItemCreateForm(**form_params)
+
     if entry_form.is_valid():
         try:
             entry_form.save()
@@ -296,7 +304,7 @@ def registry_entry_created_handler(msg, body):
         msg.ack()
     except TypeError as err:
         msg.ack()
-        raise DPNMessageError("Recieved bad message body: %s"
+        raise DPNMessageError("Received bad message body: %s"
             % err)
     # TODO: Figure out where this goes from here?
 
@@ -316,7 +324,7 @@ def registry_daterange_sync_request_handler(msg, body):
         msg.ack()
     except TypeError as err:
         msg.reject()
-        raise DPNMessageError("Recieved bad message body: %s" 
+        raise DPNMessageError("Received bad message body: %s"
             % err)
 
     reply_with_item_list.apply_async((req, ))
@@ -338,7 +346,7 @@ def registry_list_daterange_reply(msg, body):
         msg.ack()
     except TypeError as err:
         msg.reject()
-        raise DPNMessageError("Recieved bad message body: %s" 
+        raise DPNMessageError("Received bad message body: %s"
             % err)
 
     node = msg.headers['from']

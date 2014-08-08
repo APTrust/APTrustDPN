@@ -13,7 +13,7 @@ from kombu import Connection
 from dpnode.settings import DPN_TTL, DPN_BROKER_URL, DPN_NODE_NAME, DPN_EXCHANGE
 from dpnode.settings import DPN_LOCAL_KEY, DPN_MSG_TTL
 
-from .models import VALID_HEADERS, VALID_BODY, VALID_DIRECTIVES
+from dpnmq import forms
 from .utils import dpn_strftime, str_expire_on
 
 logger = logging.getLogger('dpnmq.console')
@@ -25,6 +25,9 @@ class DPNMessageError(Exception):
 class DPNMessage(object):
 
     directive = None
+    body_form = None
+    header_form = forms.MsgHeaderForm
+    sequence = 1000 # Default to a bad sequence.
 
     def __init__(self, headers_dict=None, body_dict=None):
         """
@@ -33,7 +36,9 @@ class DPNMessage(object):
         self.set_headers()
         if headers_dict:
             self.set_headers(**headers_dict)
-        self.body = {}
+        self.body = {
+            "message_name": self.directive,
+        }
         if body_dict:
             self.set_body(**body_dict)
 
@@ -43,8 +48,8 @@ class DPNMessage(object):
         self.headers = { 
             'from': kwargs.get('from', DPN_NODE_NAME),
             'reply_key': reply_key,
-            'correlation_id': "%s" % correlation_id,
-            'sequence': sequence,
+            'correlation_id': correlation_id,
+            'sequence': sequence or self.sequence,
             'date': date,
             'ttl': ttl,
         }
@@ -60,7 +65,9 @@ class DPNMessage(object):
           self.headers["ttl"] = str_expire_on(now, self._get_ttl())
 
     def validate_headers(self):
-        VALID_HEADERS.validate(self.headers)
+        frm = self.header_form(self.headers.copy())
+        if not frm.is_valid():
+            raise DPNMessageError("Invalid message header %s" % frm.errors)
 
     def send(self, rt_key):
         """
@@ -114,12 +121,14 @@ class DPNMessage(object):
                 % (message_name, self.directive))
 
     def validate_body(self):
+        if not self.body_form:
+            raise DPNMessageError("No validation set for message body.")
+
         self._set_message_name()
 
-        if self.directive in VALID_DIRECTIVES:
-            VALID_DIRECTIVES[self.directive].validate(self.body)
-        else:
-            VALID_BODY.validate(self.body)
+        frm = self.body_form(self.body.copy())
+        if not frm.is_valid():
+            raise DPNMessageError("Invalid Body: %s" % frm.errors)
 
     def set_body(self, **kwargs):
         try:
@@ -127,7 +136,7 @@ class DPNMessage(object):
                 self.body[key] = value
         except AttributeError as err:
             raise DPNMessageError(
-                "%s.set_body arguments must be a dictionary, recieved %s!"
+                "%s.set_body arguments must be a dictionary, received %s!"
                 % (self.__class__.__name__, err))
 
     def validate(self):
@@ -138,41 +147,51 @@ class DPNMessage(object):
 class ReplicationInitQuery(DPNMessage):
 
     directive = 'replication-init-query'
-
+    body_form = forms.RepInitQueryForm
+    sequence = 0
 
 class ReplicationAvailableReply(DPNMessage):
     
     directive = "replication-available-reply"
-        
+    body_form = forms.RepAvailableReplyForm
+    sequence = 1
 
 class ReplicationLocationReply(DPNMessage):
     
     directive = 'replication-location-reply'
-
+    body_form = forms.RepLocationReplyForm
+    sequence = 2
 
 class ReplicationLocationCancel(DPNMessage):
     
     directive = 'replication-location-cancel'
-    
+    body_form = forms.RepLocationCancelForm
+    sequence = 3
 
 class ReplicationTransferReply(DPNMessage):
     
     directive = 'replication-transfer-reply'
-
+    body_form = forms.RepTransferReplyForm
+    sequence = 4
 
 class ReplicationVerificationReply(DPNMessage):
     
     directive = 'replication-verify-reply'
-
+    body_form = forms.RepVerificationReplyForm
+    sequence = 5
 
 class RegistryItemCreate(DPNMessage):
 
     directive = 'registry-item-create'
+    body_form = forms.RegistryItemCreateForm
+    sequence = 0
 
 
 class RegistryEntryCreated(DPNMessage):
 
     directive = 'registry-entry-created'
+    body_form = forms.RegistryEntryCreatedForm
+    sequence = 1
 
     def set_body(self, message_name=None, message_att='nak',
                  message_error="No reason given."):
@@ -189,8 +208,12 @@ class RegistryEntryCreated(DPNMessage):
 class RegistryDateRangeSync(DPNMessage):
 
     directive = 'registry-daterange-sync-request'
+    body_form = forms.RegistryDateRangeSyncForm
+    sequence = 0
 
 
 class RegistryListDateRangeReply(DPNMessage):
 
     directive = 'registry-list-daterange-reply'
+    body_form = forms.RegistryListDateRangeForm
+    sequence = 1
