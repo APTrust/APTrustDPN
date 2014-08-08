@@ -22,8 +22,8 @@ from dpn_workflows.tasks.inbound import respond_to_replication_query, transfer_c
 from dpn_workflows.tasks.outbound import verify_fixity_and_reply
 from dpn_workflows.tasks.registry import reply_with_item_list, save_registries_from
 
-from dpn_registry.models import RegistryEntry
-from dpn_registry.forms import RegistryEntryForm
+from dpn_registry.models import RegistryEntry, Node
+from dpnmq.forms import RegistryItemCreateForm
 
 logger = logging.getLogger('dpnmq.console')
 
@@ -239,6 +239,11 @@ def registry_item_create_handler(msg, body):
     :param body: Decoded JSON of the message payload.
     """
     try:
+        # pre-populate nodes or it will not validate.
+        # TODO re-examine this! seems hacky but I have to deliver in an hour.
+        # TODO likely  use message body form eventuall since that already validates
+        for name in body.get("replicating_node_names", None):
+            node, created = Node.objects.get_or_create(**{"name": name})
         req = RegistryItemCreate(msg.headers, body)
         req.validate()
         msg.ack()
@@ -264,11 +269,13 @@ def registry_item_create_handler(msg, body):
     # check if entry already exists
     form_params = dict(data=req.body)
     try:
-        form_params['instance'] = RegistryEntry.objects.get(dpn_object_id=req.body['dpn_object_id'])
+        form_params['instance'] = RegistryEntry.objects.get(
+            dpn_object_id=req.body['dpn_object_id'])
     except:
         pass
 
-    entry_form = RegistryEntryForm(**form_params)
+    entry_form = RegistryItemCreateForm(**form_params)
+
     if entry_form.is_valid():
         try:
             entry = entry_form.save()
