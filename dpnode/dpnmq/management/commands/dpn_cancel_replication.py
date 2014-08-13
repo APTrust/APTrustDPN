@@ -8,8 +8,8 @@ class Command(BaseCommand):
     
     def handle(self, *args, **options):
         headers = {
-        	'correlation_id': args[0],
-        	'sequence': 3
+            'correlation_id': args[0],
+            'sequence': 3
         }
         body = {
             'message_name': 'replication-location-cancel',

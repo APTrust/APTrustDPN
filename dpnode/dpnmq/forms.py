@@ -325,7 +325,6 @@ class RegistryDateRangeSyncForm(_DPNBaseForm):
         except TypeError: # for non lists
             return None
 
-
 class RegistryListDateRangeForm(RegistryDateRangeSyncForm):
     """
     Handles registry list daterange sync reply message body.
@@ -351,6 +350,21 @@ class RegistryListDateRangeForm(RegistryDateRangeSyncForm):
                                         % type(self.reg_sync_list).__name__)
         cleaned_data["reg_sync_list"] = self.reg_sync_list
         return cleaned_data
+
+
+# Recovery Content Forms
+# ----------------------
+class RecoveryInitQueryForm(_DPNBaseForm):
+    """
+    Handles DPN Recovery Init Query Message Body
+    https://wiki.duraspace.org/display/DPN/Content+Recovery+Message+0
+    """
+    message_name = forms.ChoiceField(
+        choices=_format_choices(['recovery-init-query']))
+    protocol = forms.MultipleChoiceField(
+        choices=_format_choices(VALID_DPN_PROTOCOLS))
+    dpn_object_id = forms.CharField(min_length=1)
+
 
 # Forms dealing with Models
 

@@ -51,3 +51,7 @@ sitemedia/*
 .DS_Store
 dpnode/dpn_bags_dir/*.*
 .venv
+
+# Other DB related files
+data/workflow_table.sql
+data/test_entries.json

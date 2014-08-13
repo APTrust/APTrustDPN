@@ -171,3 +171,7 @@ def delete_until_transferred(self, action):
     action.save()
 
     return action
+
+@app.task
+def choose_node_and_recover(correlation_id):
+    pass

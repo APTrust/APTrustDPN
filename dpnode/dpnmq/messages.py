@@ -128,7 +128,7 @@ class DPNMessage(object):
 
         frm = self.body_form(self.body.copy())
         if not frm.is_valid():
-            raise DPNMessageError("Invalid Body: %s" % frm.errors)
+            raise DPNMessageError("Invalid Body: %s" % dict(frm.errors))
 
     def set_body(self, **kwargs):
         try:
@@ -217,3 +217,11 @@ class RegistryListDateRangeReply(DPNMessage):
     directive = 'registry-list-daterange-reply'
     body_form = forms.RegistryListDateRangeForm
     sequence = 1
+
+
+# Recovery Content Messages
+# -------------------------
+class RecoveryInitQuery(DPNMessage):
+    directive = 'recovery-init-query'
+    body_form = forms.RecoveryInitQueryForm
+    sequence = 0

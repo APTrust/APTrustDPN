@@ -63,12 +63,10 @@ class DPNConsumer(ConsumerMixin):
 
         if not self._is_alive(msg):
             msg.ack()
-            # log error message notifying message TTL has expired
-            logger.error(
-                "Message time to live has expired. Message headers details %s | body details %s" % 
+            raise DPNMessageError(
+                "Message TTL has expired. Message headers details %s | body details %s" % 
                 (msg.headers, msg.body)
             )
-            return None
 
         decoded_body = json_loads(msg.body)
 
