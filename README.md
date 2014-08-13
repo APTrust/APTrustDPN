@@ -39,7 +39,9 @@ Dependencies for this project are listed in the pip requirements file
 To setup using pip just:
 
 1.  Activate the appropriate Virtualenv if using that setup.
-2.  From the project root execute `pip install -r requirements`
+2.  From the project root execute `pip install -r requirements.txt`
+
+To run unittests you will also need to `pip install -r requirements_dev.txt`
 
 ### Dependencies for testing
 
