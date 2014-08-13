@@ -98,4 +98,4 @@ class NodeEntryForm(BaseEntryForm, forms.ModelForm):
         model = NodeEntry
         exclude = [
             'state'
-        ]    
+        ]
