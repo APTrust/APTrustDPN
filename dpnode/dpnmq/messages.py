@@ -10,8 +10,9 @@ from datetime import datetime
 
 from kombu import Connection
 
-from dpnode.settings import DPN_TTL, DPN_BROKER_URL, DPN_NODE_NAME, DPN_EXCHANGE
+from dpnode.settings import DPN_TTL, DPN_NODE_NAME, DPN_EXCHANGE
 from dpnode.settings import DPN_LOCAL_KEY, DPN_MSG_TTL
+from django.conf import settings
 
 from dpnmq import forms
 from .utils import dpn_strftime, str_expire_on
@@ -79,13 +80,16 @@ class DPNMessage(object):
         self._set_date() # Set date just before it's sent.
         self.validate()
         # TODO change this to a connection pool
-        with Connection(DPN_BROKER_URL) as conn:
-            with conn.Producer(serializer='json') as producer:
-                producer.publish(self.body, headers=self.headers, 
-                            exchange=DPN_EXCHANGE, routing_key=rt_key)
-          
-            conn.close()
-        self._log_send_msg(rt_key)
+        try: # importing from settings to allow for testsuite overrides
+            with Connection(settings.DPN_BROKER_URL) as conn:
+                with conn.Producer(serializer='json') as producer:
+                    producer.publish(self.body, headers=self.headers,
+                                exchange=DPN_EXCHANGE, routing_key=rt_key)
+
+                conn.close()
+            self._log_send_msg(rt_key)
+        except OSError:
+            print("Unable to connect to %s" % settings.DPN_BROKER_URL)
 
     def _log_send_msg(self, rt_key):
         """
