@@ -38,7 +38,7 @@ from dpnmq.utils import str_expire_on, dpn_strftime
 
 logger = logging.getLogger('dpnmq.console')
 
-@app.task()
+@app.task
 def initiate_ingest(dpn_object_id, size):
     """
     Initiates an ingest operation by minting the correlation ID
@@ -85,7 +85,7 @@ def initiate_ingest(dpn_object_id, size):
 
     return action.correlation_id
 
-@app.task()
+@app.task
 def choose_and_send_location(correlation_id):
     """
     Chooses the appropiates nodes to replicate with and 
@@ -156,7 +156,7 @@ def choose_and_send_location(correlation_id):
 
 # transfer has finished, that means you boy are ready to notify 
 # first node the bag has been already replicated
-@app.task()
+@app.task
 def send_transfer_status(req, action, success=True, err=''):
     """
     Sends ReplicationTransferReply to original node 
@@ -192,7 +192,7 @@ def send_transfer_status(req, action, success=True, err=''):
     msg.send(req.headers['reply_key'])
 
 
-@app.task()
+@app.task
 def broadcast_item_creation(entry=None):
     """
     Sends a RegistryEntryCreation message to the DPN broadcast queue
@@ -210,11 +210,10 @@ def broadcast_item_creation(entry=None):
     }
 
     body = entry.to_message_dict()
-
     reg = RegistryItemCreate(headers, body)
     reg.send(DPN_BROADCAST_KEY)
 
-@app.task()
+@app.task
 def verify_fixity_and_reply(req):
     """
     Generates fixity value for local bag and compare it 

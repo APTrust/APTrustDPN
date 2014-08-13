@@ -451,6 +451,15 @@ class RegistryItemCreateForm(_RegistryEntryForm):
     message_name = forms.ChoiceField(
         choices=_format_choices(['registry-item-create']))
 
+    def __init__(self, data={}, *args, **kwargs):
+        # adding this to prevent an error about entry with this 
+        # dpn_object_id already exists
+        try:
+            kwargs['instance'] = RegistryEntry.objects.get(dpn_object_id=data['dpn_object_id'])
+        except:
+            pass
+        super(RegistryItemCreateForm, self).__init__(data, *args, **kwargs)
+
 class NodeEntryForm(_RegistryEntryForm):
 
     class Meta:

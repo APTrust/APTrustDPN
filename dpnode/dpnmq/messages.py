@@ -190,7 +190,6 @@ class RegistryItemCreate(DPNMessage):
     body_form = forms.RegistryItemCreateForm
     sequence = 0
 
-
 class RegistryEntryCreated(DPNMessage):
 
     directive = 'registry-entry-created'
@@ -208,13 +207,11 @@ class RegistryEntryCreated(DPNMessage):
         else:
             raise DPNMessageError("Attribute must be ack or nak!")
 
-
 class RegistryDateRangeSync(DPNMessage):
 
     directive = 'registry-daterange-sync-request'
     body_form = forms.RegistryDateRangeSyncForm
     sequence = 0
-
 
 class RegistryListDateRangeReply(DPNMessage):
 
