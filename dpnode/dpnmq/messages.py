@@ -89,7 +89,7 @@ class DPNMessage(object):
                 conn.close()
             self._log_send_msg(rt_key)
         except OSError:
-            print("Unable to connect to %s" % settings.DPN_BROKER_URL)
+            logger.error("Error sending message, Unable to connect to %s" % settings.DPN_BROKER_URL)
 
     def _log_send_msg(self, rt_key):
         """
