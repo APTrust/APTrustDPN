@@ -5,16 +5,26 @@ Forms used for data updates and as a wrapper to validate or process data as
 from django import forms
 
 from dpnode.settings import DPN_DATE_FORMAT, DPN_NODE_LIST
-
 from .models import RegistryEntry, NodeEntry, Node
-from .models import DATA, RIGHTS, BRIGHTENING, NAMES_OVERRIDE
+from .models import NAMES_OVERRIDE, TYPE_CHOICES
 
+def _lookup_object_code(obj_type):
+    """
+    Returns the object code to from the model.TYPE_CHOICES
+
+    :param obj_type: string of the object type
+    :return: string code for the object type.
+    """
+    try:
+        return {v.lower(): k for k, v in dict(TYPE_CHOICES).items()}[obj_type]
+    except KeyError:
+        return None
 
 class DPNDataError(Exception):
     pass
 
-class BaseEntryForm(object):
 
+class BaseEntryForm(object):
     def __init__(self, *args, **kwargs):
         # we need to override some dict keys because doesn't match with 
         # model fields
@@ -26,7 +36,7 @@ class BaseEntryForm(object):
             data = self.replace_null_strings(data)
             data = self.node_names_to_pk(data)
             data = self.parse_object_type(data)
-            
+
             kwargs['data'] = data
 
         super(BaseEntryForm, self).__init__(*args, **kwargs)
@@ -50,18 +60,22 @@ class BaseEntryForm(object):
 
     def node_names_to_pk(self, data):
         node_pks = []
-        if 'replicating_nodes' in data:            
+        if 'replicating_nodes' in data:
             for node_name in data['replicating_nodes']:
                 if not node_name in DPN_NODE_LIST:
-                    raise DPNDataError("%s is not a valid node name." % node_name)
-                node_pks.append(Node.objects.get_or_create(name=node_name)[0].pk)
+                    raise DPNDataError(
+                        "%s is not a valid node name." % node_name)
+                node_pks.append(
+                    Node.objects.get_or_create(name=node_name)[0].pk)
             data['replicating_nodes'] = node_pks
         return data
 
     def parse_object_type(self, data):
         object_type = data['object_type']
-        data['object_type'] = OBJECT_TYPE_CHOICES[object_type]
+        data['object_type'] = _lookup_object_code(object_type)
+
         return data
+
 
 class RegistryEntryForm(BaseEntryForm, forms.ModelForm):
     lastfixity_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT])
@@ -74,13 +88,14 @@ class RegistryEntryForm(BaseEntryForm, forms.ModelForm):
             'state'
         ]
 
+
 class NodeEntryForm(BaseEntryForm, forms.ModelForm):
     lastfixity_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT])
     creation_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT])
     last_modified_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT])
-        
+
     class Meta:
         model = NodeEntry
         exclude = [
             'state'
-        ]    
+        ]

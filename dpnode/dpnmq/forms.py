@@ -451,14 +451,8 @@ class RegistryItemCreateForm(_RegistryEntryForm):
     message_name = forms.ChoiceField(
         choices=_format_choices(['registry-item-create']))
 
-#  NOTE return to this if and when we get to updating models directly from the
-#  forms.  We can use this for an nested inline formset on the registry list
-#  daterange syn reply message body with some work.
-#
-# class _NodeEntry(_RegistryEntryForm):
-#
-#     def __init__(self, data={}, *args, **kwargs):
-#
-#     class Meta:
-#         model = NodeEntry
-#         exclude = ['state',]
+class NodeEntryForm(_RegistryEntryForm):
+
+    class Meta:
+        model = NodeEntry
+        exclude = ['state',]

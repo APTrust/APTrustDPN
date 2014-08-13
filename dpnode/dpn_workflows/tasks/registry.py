@@ -20,11 +20,12 @@ from dpnode.settings import DPN_NODE_NAME, DPN_FIXITY_CHOICES
 from dpn_workflows.models import IngestAction, COMPLETE, SUCCESS
 from dpn_workflows.utils import generate_fixity
 
-from dpn_registry.forms import NodeEntryForm, RegistryEntryForm
+from dpn_registry.forms import RegistryEntryForm
 from dpn_registry.models import RegistryEntry, Node, NodeEntry
 
 from dpnmq.utils import dpn_strptime
 from dpnmq.messages import RegistryListDateRangeReply
+from dpnmq.forms import NodeEntryForm
 
 logger = logging.getLogger('dpnmq.console')
 
@@ -117,16 +118,21 @@ def save_registries_from(node, req):
     """
 
     entry_list = req.body['reg_sync_list']
-    node_pk = Node.objects.get_or_create(name=node)[0].pk
+    node, created = Node.objects.get_or_create(name=node)
     
     for entry_dict in entry_list:
-        entry_dict.update({'node': node_pk})
+        entry_dict.update({'node': node.pk})
+
+        # NOTE prepopulating now but this should be moved to validating node
+        # profiles once DPN approves that in the spec.
+        for name in entry_dict["replicating_node_names"]:
+            Node.objects.get_or_create(**{"name": name})
         
         node_entry = NodeEntryForm(data=entry_dict)
         if node_entry.is_valid():
             node_entry.save()
-
-    print("Entries for node %s has been saved." % node)
+        else:
+            print("Unable to create node registry entry: %s" % node_entry.errors)
 
 @app.task
 def solve_registry_conflicts():
