@@ -12,6 +12,7 @@ from kombu.tests.case import Mock
 
 from dpnmq.utils import dpn_strftime, str_expire_on
 from dpnmq import handlers
+from dpnmq.tests import fixtures
 from dpnmq.messages import DPNMessageError
 from dpn_workflows.handlers import DPNWorkflowError
 from dpn_registry.models import RegistryEntry, NodeEntry
@@ -72,23 +73,6 @@ class TaskRouterTestCase(TestCase):
         self.assertTrue(self.dispatched)
 
 
-def _make_headers():
-    """
-    Convenience method for producing new headers to use for handler tests.
-
-    :return: dict of header values.
-    """
-    headers = {
-        'from': 'testfrom',
-        'reply_key': 'testkey',
-        'correlation_id': 'testid',
-        'sequence': 10,
-        'date': dpn_strftime(datetime.now()),
-        'ttl': str_expire_on(datetime.now(), 566),
-    }
-    return headers
-
-
 # NOTE on testing strategy here.  These handlers wrap other methods which
 # are themselves tested for success.  I'm just testing that each handler
 # hands off a task as expected, which will often raise an error since
@@ -105,7 +89,7 @@ class BasicHandlerTestCase(TestCase):
     def _test_basic_handling(self, func):
         # it should throw a DPNMessage Error for invalid messages.
         self.assertRaises(DPNMessageError, func, _msg(), None)
-        msg = Message(Mock(), "{}", headers=_make_headers())
+        msg = Message(Mock(), "{}", headers=fixtures.make_headers())
         self.assertRaises(DPNMessageError, func, msg, "{}")
 
 
@@ -118,173 +102,42 @@ class InfoHandlerTestCase(TestCase):
 class ReplicationInitQueryHandlerTestCase(BasicHandlerTestCase):
     def test_handler(self):
         self._test_basic_handling(handlers.replication_init_query_handler)
-        body = {
-            "message_name": "replication-init-query",
-            "replication_size": 4096,
-            "protocol": ["https", "rsync"],
-            "dpn_object_id": "some-uuid-that-actually-looks-like-a-uuid"
-        }
-        msg = Message(Mock(), body, headers=_make_headers())
-        # It should produce an OSError when a success tries to queue to Celery
-        # self.assertRaises(OSError, handlers.replication_init_query_handler,
-        # msg, body)
+        msg = Message(Mock(), fixtures.REP_INIT_QUERY.copy(), headers=fixtures.make_headers())
+
 
 
 class ReplicationAvailableReplyHandlerTestCase(BasicHandlerTestCase):
     def test_replication_available_reply_handler(self):
         self._test_basic_handling(handlers.replication_available_reply_handler)
-        body = {
-            "message_name": "replication-available-reply",
-            "message_att": "ack",
-            "protocol": "rsync",
-        }
-        msg = Message(Mock(), body, headers=_make_headers())
+        msg = Message(Mock(), fixtures.REP_AVAILABLE_REPLY_ACK.copy(), headers=fixtures.make_headers())
         # It should throw a workflow error if because no matching ingest
         self.assertRaises(DPNWorkflowError,
                           handlers.replication_available_reply_handler,
-                          msg, body)
+                          msg, fixtures.REP_AVAILABLE_REPLY_ACK)
 
 
 class RegistryEntryCreatedHandlerTestCase(BasicHandlerTestCase):
     def test_registry_entry_created_handler(self):
         self._test_basic_handling(handlers.registry_entry_created_handler)
         # these are actual entries sent from other nodes during test.
-        sample_entries = {
-            "SDR": {"message_name": "registry-item-create",
-                    "dpn_object_id": "dedff031-9946-4fff-a268-9fd9f8396f15",
-                    "local_id": "jq927jp4517",
-                    "first_node_name": "sdr",
-                    "replicating_node_names": ["aptrust", "chron", "tdr",
-                                               "sdr"],
-                    "version_number": 1,
-                    "previous_version_object_id": "null",
-                    "forward_version_object_id": "null",
-                    "first_version_object_id": "dedff031-9946-4fff-a268-9fd9f8396f15",
-                    "fixity_algorithm": "sha256",
-                    "fixity_value": "d03687de6db3a0639b1a7d14eba4c6713ac9c7852fed47f3b160765bb5757f27",
-                    "last_fixity_date": "2014-07-22T21:40:37Z",
-                    "creation_date": "2014-07-22T21:40:37Z",
-                    "last_modified_date": "2014-07-22T21:40:37Z",
-                    "bag_size": 20480,
-                    "brightening_object_id": [],
-                    "rights_object_id": [],
-                    "object_type": "data"},
-
-            "Chron": {"message_name": "registry-item-create",
-                      "dpn_object_id": "f5a9c8b1-33c9-496f-b554-8118d4c7ebeb",
-                      "local_id": "chron",
-                      "first_node_name": "chron",
-                      "replicating_node_names": ["aptrust", "chron"],
-                      "version_number": 1,
-                      "previous_version_object_id": "null",
-                      "forward_version_object_id": "null",
-                      "first_version_object_id": "f5a9c8b1-33c9-496f-b554-8118d4c7ebeb",
-                      "fixity_algorithm": "sha256",
-                      "fixity_value": "7b13a148573c90061a52cba9bdeca88656ed7099f312ad483d990fad8a1b1091",
-                      "last_fixity_date": "2014-07-22T21:51:52Z",
-                      "creation_date": "2014-07-22T21:51:52Z",
-                      "last_modified_date": "2014-07-22T21:51:52Z",
-                      "bag_size": 573440,
-                      "brightening_object_id": [],
-                      "rights_object_id": [],
-                      "object_type": "data"},
-
-            "TDR": {"dpn_object_id": "11f8d4d4-2230-4f04-b0d5-efd7732d0af7",
-                    "local_id": "/dpn/outgoing/dpn-bag1.tar",
-                    "first_node_name": "tdr", "version_number": 1,
-                    "previous_version_object_id": "",
-                    "forward_version_object_id": "",
-                    "first_version_object_id": "11f8d4d4-2230-4f04-b0d5-efd7732d0af7",
-                    "fixity_algorithm": "sha256",
-                    "fixity_value": "01cb4046e4a8a6ce887d4f20479d8cc53ae6b56c3b1a81dcb2198850dc2c741e",
-                    "last_fixity_date": "2014-07-23T15:59:36Z",
-                    "creation_date": "2014-07-23T15:59:36Z",
-                    "last_modified_date": "2014-07-23T15:59:36Z",
-                    "bag_size": 2231808,
-                    "object_type": "data",
-                    "replicating_node_names": ["tdr", "aptrust"],
-                    "brightening_object_id": [],
-                    "rights_object_id": [],
-                    "message_name": "registry-item-create"},
-        }
-        for node, entry in sample_entries.items():
-            msg = Message(Mock(), entry, headers=_make_headers())
+        for entry in fixtures.REGISTRY_ITEM_CREATE.copy():
+            msg = Message(Mock(), entry, headers=fixtures.make_headers())
             handlers.registry_item_create_handler(msg, entry)
 
         registry_entries = RegistryEntry.objects.all()
-        self.assertEqual(3, registry_entries.count(),
+        exp = len(fixtures.REGISTRY_ITEM_CREATE)
+        self.assertEqual(exp, registry_entries.count(),
                          "Expect %d registry entries created but returned %d" % (
-                             3, registry_entries.count()))
+                             exp, registry_entries.count()))
 
 
 class RegistryListDaterangeReplyHanderTestCase(TestCase):
     def test_handle(self):
-        reg_sync_list = [
-            {"message_name": "registry-item-create",
-             "dpn_object_id": "dedff031-9946-4fff-a268-9fd9f8396f15",
-             "local_id": "jq927jp4517",
-             "first_node_name": "sdr",
-             "replicating_node_names": ["aptrust", "chron", "tdr",
-                                        "sdr"],
-             "version_number": 1,
-             "previous_version_object_id": "null",
-             "forward_version_object_id": "null",
-             "first_version_object_id": "dedff031-9946-4fff-a268-9fd9f8396f15",
-             "fixity_algorithm": "sha256",
-             "fixity_value": "d03687de6db3a0639b1a7d14eba4c6713ac9c7852fed47f3b160765bb5757f27",
-             "last_fixity_date": "2014-07-22T21:40:37Z",
-             "creation_date": "2014-07-22T21:40:37Z",
-             "last_modified_date": "2014-07-22T21:40:37Z",
-             "bag_size": 20480,
-             "brightening_object_id": [],
-             "rights_object_id": [],
-             "object_type": "data"},
-
-            {"message_name": "registry-item-create",
-             "dpn_object_id": "f5a9c8b1-33c9-496f-b554-8118d4c7ebeb",
-             "local_id": "chron",
-             "first_node_name": "chron",
-             "replicating_node_names": ["aptrust", "chron"],
-             "version_number": 1,
-             "previous_version_object_id": "null",
-             "forward_version_object_id": "null",
-             "first_version_object_id": "f5a9c8b1-33c9-496f-b554-8118d4c7ebeb",
-             "fixity_algorithm": "sha256",
-             "fixity_value": "7b13a148573c90061a52cba9bdeca88656ed7099f312ad483d990fad8a1b1091",
-             "last_fixity_date": "2014-07-22T21:51:52Z",
-             "creation_date": "2014-07-22T21:51:52Z",
-             "last_modified_date": "2014-07-22T21:51:52Z",
-             "bag_size": 573440,
-             "brightening_object_id": [],
-             "rights_object_id": [],
-             "object_type": "data"},
-
-            {"dpn_object_id": "11f8d4d4-2230-4f04-b0d5-efd7732d0af7",
-             "local_id": "/dpn/outgoing/dpn-bag1.tar",
-             "first_node_name": "tdr", "version_number": 1,
-             "previous_version_object_id": "",
-             "forward_version_object_id": "",
-             "first_version_object_id": "11f8d4d4-2230-4f04-b0d5-efd7732d0af7",
-             "fixity_algorithm": "sha256",
-             "fixity_value": "01cb4046e4a8a6ce887d4f20479d8cc53ae6b56c3b1a81dcb2198850dc2c741e",
-             "last_fixity_date": "2014-07-23T15:59:36Z",
-             "creation_date": "2014-07-23T15:59:36Z",
-             "last_modified_date": "2014-07-23T15:59:36Z",
-             "bag_size": 2231808,
-             "object_type": "data",
-             "replicating_node_names": ["tdr", "aptrust"],
-             "brightening_object_id": [],
-             "rights_object_id": [],
-             "message_name": "registry-item-create"},
-        ]
-        tst_data = {
-            "message_name": "registry-list-daterange-reply",
-            "date_range": ["2013-09-22T18:06:55Z", "2013-09-22T18:08:55Z"],
-            "reg_sync_list": reg_sync_list,
-        }
-        msg = Message(Mock(), tst_data, headers=_make_headers())
+        tst_data = fixtures.REGISTRY_LIST_DATERANGE.copy()
+        msg = Message(Mock(), tst_data, headers=fixtures.make_headers())
         handlers.registry_list_daterange_reply(msg, tst_data)
         entries = NodeEntry.objects.all()
-        self.assertEqual(3, entries.count(),
-                         "Expected 3 node entries but returned %d" %
-                         entries.count())
+        exp = len(fixtures.REG_SYNC_LIST)
+        self.assertEqual(exp, entries.count(),
+                         "Expected %d node entries but returned %d" %
+                         (exp, entries.count()))

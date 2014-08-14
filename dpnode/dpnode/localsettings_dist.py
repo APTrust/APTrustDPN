@@ -7,6 +7,7 @@ TEMPLATE_DEBUG = DEBUG
 
 # CELERY WORKER CONFIG
 BROKER_URL = 'amqp://guest:guest@localhost:5672/'
+# CELERYD_CONCURRENCY = 8 # set # of max concurrent workers or defaults to cpus
 
 ADMINS = (
 # ('Your Name', 'your_email@example.com'),
