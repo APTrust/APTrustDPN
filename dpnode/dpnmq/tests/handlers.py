@@ -4,13 +4,10 @@
      ~Author Unknown
 '''
 
-from datetime import datetime
-
 from django.test import TestCase
 from kombu.message import Message
 from kombu.tests.case import Mock
 
-from dpnmq.utils import dpn_strftime, str_expire_on
 from dpnmq import handlers
 from dpnmq.tests import fixtures
 from dpnmq.messages import DPNMessageError
@@ -94,26 +91,75 @@ class BasicHandlerTestCase(TestCase):
 
 
 class InfoHandlerTestCase(TestCase):
+
     def test_handler(self):
         self.assertTrue(
             True)  # this will never fail, but putting it in for coverage.
 
 
 class ReplicationInitQueryHandlerTestCase(BasicHandlerTestCase):
-    def test_handler(self):
+
+    def test_replication_init_query_handler(self):
         self._test_basic_handling(handlers.replication_init_query_handler)
-        msg = Message(Mock(), fixtures.REP_INIT_QUERY.copy(), headers=fixtures.make_headers())
+        msg = Message(Mock(), fixtures.REP_INIT_QUERY.copy(),
+                      headers=fixtures.make_headers())
+        try:
+            handlers.replication_init_query_handler(msg,
+                                                    fixtures.REP_INIT_QUERY.copy())
+        except Exception as err:
+            self.fail(
+                "Unexpected exception handing a replication init query: %s" % err)
 
-
-
+# NOTE below I'm testing for DPNWorkflowErrors to ensure that each method is
+# forwarding to the correct task function, which throws that error because
+# the appropriate workflow step is not entered to validate that action.
+#  Positive cases are tested in the individual tasks unittests.
 class ReplicationAvailableReplyHandlerTestCase(BasicHandlerTestCase):
+
     def test_replication_available_reply_handler(self):
         self._test_basic_handling(handlers.replication_available_reply_handler)
-        msg = Message(Mock(), fixtures.REP_AVAILABLE_REPLY_ACK.copy(), headers=fixtures.make_headers())
+        msg = Message(Mock(), fixtures.REP_AVAILABLE_REPLY_ACK.copy(),
+                      headers=fixtures.make_headers())
         # It should throw a workflow error if because no matching ingest
         self.assertRaises(DPNWorkflowError,
                           handlers.replication_available_reply_handler,
                           msg, fixtures.REP_AVAILABLE_REPLY_ACK)
+
+class ReplicationLocationCancelHandlerTestCase(BasicHandlerTestCase):
+
+    def test_replication_location_cancel_handler(self):
+        self._test_basic_handling(handlers.replication_location_cancel_handler)
+        msg = Message(Mock(), fixtures.REP_LOCATION_CANCEL.copy(),
+                      headers=fixtures.make_headers())
+        # Needed workflow does not exist previous.  Positive case tested
+        # in task
+        self.assertRaises(DPNWorkflowError,
+            handlers.replication_location_cancel_handler,
+                msg,
+                fixtures.REP_LOCATION_CANCEL.copy()
+            )
+
+class ReplicationLocationReplyHandlerTestCase(BasicHandlerTestCase):
+
+    def test_replication_location_reply_handler(self):
+        self._test_basic_handling(handlers.replication_location_reply_handler)
+        msg = Message(Mock(), fixtures.REP_LOCATION_REPLY.copy(),
+                      headers=fixtures.make_headers())
+        self.assertRaises(DPNWorkflowError,
+            handlers.replication_location_reply_handler,
+            msg, fixtures.REP_LOCATION_REPLY.copy()
+        )
+
+class ReplicationTransferReplyHandlerTestCase(BasicHandlerTestCase):
+
+    def test_replication_transfer_reply_handler(self):
+        self._test_basic_handling(handlers.replication_transfer_reply_handler)
+        msg = Message(Mock(), fixtures.REP_TRANSFER_REPLY_ACK.copy(),
+                      headers=fixtures.make_headers())
+        self.assertRaises(DPNWorkflowError,
+                          handlers.replication_transfer_reply_handler,
+                          msg, fixtures.REP_TRANSFER_REPLY_ACK.copy()
+        )
 
 
 class RegistryEntryCreatedHandlerTestCase(BasicHandlerTestCase):
@@ -129,7 +175,6 @@ class RegistryEntryCreatedHandlerTestCase(BasicHandlerTestCase):
         self.assertEqual(exp, registry_entries.count(),
                          "Expect %d registry entries created but returned %d" % (
                              exp, registry_entries.count()))
-
 
 class RegistryListDaterangeReplyHanderTestCase(TestCase):
     def test_handle(self):

@@ -130,6 +130,11 @@ REP_LOCATION_REPLY = {
     "location": "https://dpn.duracloud.org/staging/package-x.zip"
 }
 
+REP_LOCATION_CANCEL = {
+  "message_name": "replication-location-cancel",
+  "message_att" : "nak"
+}
+
 REP_TRANSFER_REPLY_ACK = {
     "message_name": "replication-transfer-reply",
     "message_att": "ack",

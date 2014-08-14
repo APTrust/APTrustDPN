@@ -238,7 +238,7 @@ def verify_fixity_and_reply(req):
             node=req.headers['from'],
             chosen_to_transfer=True
         )
-    except SendFileAction.DoesNotExists as err:
+    except SendFileAction.DoesNotExist as err:
         logger.error("SendFileAction not found for correlation_id: %s. Exc msg: %s" % (correlation_id, err))
         raise DPNWorkflowError(err)
 
