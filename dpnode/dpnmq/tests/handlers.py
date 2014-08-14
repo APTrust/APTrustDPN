@@ -85,9 +85,9 @@ class BasicHandlerTestCase(TestCase):
 
     def _test_basic_handling(self, func):
         # it should throw a DPNMessage Error for invalid messages.
-        self.assertRaises(DPNMessageError, func, _msg(), None)
+        self.assertRaises(DPNMessageError, func, _msg(), {})
         msg = Message(Mock(), "{}", headers=fixtures.make_headers())
-        self.assertRaises(DPNMessageError, func, msg, "{}")
+        self.assertRaises(DPNMessageError, func, msg, {})
 
 
 class InfoHandlerTestCase(TestCase):
@@ -161,8 +161,29 @@ class ReplicationTransferReplyHandlerTestCase(BasicHandlerTestCase):
                           msg, fixtures.REP_TRANSFER_REPLY_ACK.copy()
         )
 
+class ReplicationVerifyReplyHandlerTestCase(BasicHandlerTestCase):
+
+    def test_replication_verify_reply_handler(self):
+        self._test_basic_handling(handlers.replication_verify_reply_handler)
+        msg = Message(Mock(), fixtures.REP_VERIFICATION_REPLY.copy(),
+                           headers=fixtures.make_headers())
+        self.assertRaises(DPNWorkflowError,
+                          handlers.replication_verify_reply_handler,
+                          msg, fixtures.REP_VERIFICATION_REPLY.copy()
+        )
+
+class RegistryItemCreateHandlerTestCase(BasicHandlerTestCase):
+
+    def test_registry_item_create_handler(self):
+        self._test_basic_handling(handlers.registry_item_create_handler)
+        body = fixtures.REGISTRY_ITEM_CREATE[0].copy()
+        msg = Message(Mock(), body, headers=fixtures.make_headers())
+        handlers.registry_item_create_handler(msg, body)
+        entries = RegistryEntry.objects.all()
+        self.assertEqual(1, entries.count())
 
 class RegistryEntryCreatedHandlerTestCase(BasicHandlerTestCase):
+
     def test_registry_entry_created_handler(self):
         self._test_basic_handling(handlers.registry_entry_created_handler)
         # these are actual entries sent from other nodes during test.
