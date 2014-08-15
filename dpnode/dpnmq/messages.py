@@ -226,3 +226,9 @@ class RecoveryInitQuery(DPNMessage):
     directive = 'recovery-init-query'
     body_form = forms.RecoveryInitQueryForm
     sequence = 0
+    
+class RecoveryAvailableReply(DPNMessage):
+    
+    directive = 'recovery-available-reply'
+    body_form = forms.RecoveryAvailableReplyForm
+    sequence = 1
