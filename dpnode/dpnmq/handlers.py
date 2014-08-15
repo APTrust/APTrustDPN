@@ -227,7 +227,7 @@ def replication_verify_reply_handler(msg, body):
             % err)
 
     receive_verify_reply_workflow(req)
-    print("Transferring process successful. End of the process.")
+    logger.info("Transferring process successful. End of the process.")
 
 
 # Registry Message Handlers
@@ -245,7 +245,7 @@ def registry_item_create_handler(msg, body):
         # TODO re-examine this! seems hacky but I have to deliver in an hour.
         # TODO likely  use message body form eventuall since that already validates
         for name in body.get("replicating_node_names", None):
-            node, created = Node.objects.get_or_create(**{"name": name})
+            Node.objects.get_or_create(**{"name": name})
         req = RegistryItemCreate(msg.headers, body)
         req.validate()
         msg.ack()

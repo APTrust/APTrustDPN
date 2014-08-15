@@ -5,6 +5,7 @@
 from django.test import TestCase
 
 from dpnode.settings import DPN_NODE_NAME, DPN_LOCAL_KEY
+from dpnmq.tests import fixtures
 from dpnmq.forms import RepInitQueryForm
 from dpnmq.forms import RepAvailableReplyForm, RepLocationReplyForm
 from dpnmq.forms import RepLocationCancelForm, RepTransferReplyForm
@@ -33,14 +34,7 @@ class TestDPNMessage(TestCase):
                   (v, k, msg.headers[k])
             self.assertTrue(v == msg.headers[k], err)
 
-        exp = {
-            "from": "ournode",
-            "reply_key": "testkey",
-            "correlation_id": "2342343",
-            "sequence": 5,
-            "date": "thisismydate",
-            "ttl": 100
-        }
+        exp = fixtures.make_headers()
         msg.set_headers(**exp)
         for k, v in msg.headers.items():
             self.assertTrue(v == exp[k])
@@ -52,7 +46,7 @@ class TestDPNMessage(TestCase):
         self.assertRaises(messages.DPNMessageError, msg.validate_headers)
 
     def send(self):
-        # Unsure how to test postive send.  For now testing only if it throws an
+        # Unsure how to test positive send.  For now testing only if it throws an
         # Error if it does not validate.
         msg = messages.DPNMessage()
         self.assertRaises(messages.DPNMessageError, msg.send, "broadcast")
