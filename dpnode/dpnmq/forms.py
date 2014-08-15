@@ -365,7 +365,50 @@ class RecoveryInitQueryForm(_DPNBaseForm):
         choices=_format_choices(VALID_DPN_PROTOCOLS))
     dpn_object_id = forms.CharField(min_length=1)
 
+class RecoveryAvailableReplyForm(_DPNBaseForm):
+    """
+    Hangles DPN Recovery Available Reply Message Body
+    https://wiki.duraspace.org/display/DPN/Content+Recovery+Message+1
+    """
+    message_name = forms.ChoiceField(
+        choices=_format_choices(['recovery-available-reply']))
+    available_at = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT,],
+                                       required=False)
+    message_att = forms.ChoiceField(choices=_format_choices(ACKS))
+    protocol = forms.ChoiceField(choices=_format_choices(VALID_DPN_PROTOCOLS),
+                                 required=False)
+    cost = forms.IntegerField(min_value=0, required=False)
 
+    def clean(self):
+        cleaned_data = super(RecoveryAvailableReplyForm, self).clean()
+        att = cleaned_data.get("message_att")
+        prtcl = cleaned_data.get("protocol")
+        avai = cleaned_data.get("available_at")
+        cos = cleaned_data.get("cost")
+        if att == "nak": 
+            if prtcl != "":
+                raise forms.ValidationError("Protocol is invalid for a nak.")
+            if avai is not None:
+                raise forms.ValidationError("Available_at is invalid for a nak.")
+            if cos is not None:
+                raise forms.ValidationError("Cost is invalid for a nak.")
+        if att == "ack": 
+            if prtcl == "":
+                raise forms.ValidationError("Protocol is required in an ack.")
+            if avai is None:
+                raise forms.ValidationError("Available_at is required for a ack.")
+            if cos is None:
+                raise forms.ValidationError("Cost is required for a ack.")
+        return cleaned_data
+
+    def as_dpn_dict(self):
+        data = super(RecoveryAvailableReplyForm, self).as_dpn_dict()
+        if data.get("message_att") == 'nak':
+            data.pop("protocol")
+            data.pop("available_at")
+            data.pop("cost")
+        return data
+    
 # Forms dealing with Models
 
 class _RegistryEntryForm(forms.ModelForm):

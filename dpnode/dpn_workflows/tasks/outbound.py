@@ -19,8 +19,9 @@ from dpnode.celery import app
 from dpn_workflows.models import STARTED, SUCCESS, FAILED
 from dpn_workflows.models import COMPLETE, TRANSFER, VERIFY
 from dpn_workflows.models import IngestAction, SendFileAction
+from dpn_workflows.models import Workflow, AVAILABLE_REPLY, RECOVERY
 
-from dpn_workflows.utils import generate_fixity, choose_nodes
+from dpn_workflows.utils import generate_fixity, choose_nodes, protocol_str2db
 from dpn_workflows.utils import store_sequence, validate_sequence
 
 from dpn_workflows.handlers import DPNWorkflowError
@@ -29,12 +30,16 @@ from dpn_workflows.tasks.registry import create_registry_entry
 from dpnode.settings import DPN_TTL, DPN_MSG_TTL, DPN_BAGS_DIR
 from dpnode.settings import DPN_XFER_OPTIONS, DPN_BROADCAST_KEY, DPN_NODE_NAME
 from dpnode.settings import DPN_BASE_LOCATION, DPN_BAGS_FILE_EXT, DPN_NUM_XFERS
+from dpnode.settings import DPN_REPLICATION_ROOT
 
 from dpnmq.messages import ReplicationVerificationReply
 from dpnmq.messages import RegistryItemCreate, ReplicationTransferReply
 from dpnmq.messages import ReplicationInitQuery, ReplicationLocationReply
+from dpnmq.messages import RecoveryAvailableReply
 
 from dpnmq.utils import str_expire_on, dpn_strftime
+
+from dpn_registry.models import Node, RegistryEntry
 
 logger = logging.getLogger('dpnmq.console')
 
@@ -274,3 +279,86 @@ def verify_fixity_and_reply(req):
 
     rsp = ReplicationVerificationReply(headers, body)
     rsp.send(req.headers['reply_key'])
+
+# Recovery Workflow Tasks
+@app.task()
+def respond_to_recovery_query(init_request):
+    """
+    Verifies if current node is a first node and the bag is in 
+    the node and sends a RecoveryAvailableReply.
+
+    :param init_request: RecoveryInitQuery already validated
+    """
+    
+    correlation_id = init_request.headers['correlation_id']
+    node_from = init_request.headers['from'] 
+    dpn_object_id = init_request.body['dpn_object_id']
+    reply_key = init_request.headers['reply_key']
+    note = None
+    
+    # Prep Reply
+    headers = {
+        'correlation_id': correlation_id,
+        'date': dpn_strftime(datetime.now()),
+        'ttl': str_expire_on(datetime.now()),
+        'sequence': 1
+    }
+    body = {
+        'message_att': 'nak'
+    }
+    
+    sequence_info = store_sequence(
+       correlation_id, 
+       node_from, 
+       headers['sequence']
+    )
+    validate_sequence(sequence_info)
+    
+    # Verifies that the sender node is either a First or a Replication Node
+    node = Node.objects.get(name=node_from) 
+    entry = RegistryEntry.objects.get(dpn_object_id=dpn_object_id)
+    
+    if node.name == entry.first_node_name or node in entry.replicating_nodes.all():
+        supported_protocols = [val for val in init_request.body['protocol']
+                               if val in DPN_XFER_OPTIONS]
+
+        if supported_protocols:
+            # Verifies that the content is available
+            basefile = "%s.tar" % dpn_object_id
+            local_bagfile = os.path.join(DPN_REPLICATION_ROOT, basefile)
+            
+            if os.path.isfile(local_bagfile):
+                body = {
+                    "available_at": dpn_strftime(datetime.now()),
+                    "message_att": "ack",
+                    "protocol": supported_protocols[0],
+                    "cost": 0
+                }
+            else:
+                note = "The content is not available"
+        else:
+            note = "The protocol is not supported"
+    else:
+        note = "Current node is not listed either as first node or replicating node."
+    
+    # If working with just one server, the action has been stored in the database
+    action, _ = Workflow.objects.get_or_create(
+        correlation_id=correlation_id, 
+        dpn_object_id=dpn_object_id,
+        node=node_from,
+        action=RECOVERY,
+    )
+        
+    action.step = AVAILABLE_REPLY
+    action.reply_key = reply_key
+    action.note = note
+    action.state = SUCCESS if body["message_att"] == "ack" else FAILED
+    
+    # Sends the reply
+    rsp = RecoveryAvailableReply(headers, body)
+    rsp.send(reply_key)
+    
+    # Save the action in DB
+    action.save()
+    
+    
