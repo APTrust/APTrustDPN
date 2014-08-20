@@ -58,7 +58,7 @@ class Command(BaseCommand):
             ttl = DPN_MSG_TTL.get('recovery-init-query', DPN_TTL)
             delay = ttl*2
             choose_node_and_recover.apply_async(
-                (correlation_id, ),
+                (correlation_id, dpn_obj_id, action),
                 countdown=delay
             )
 

@@ -9,6 +9,7 @@
 
 import os
 import time
+import random
 import logging
 
 from uuid import uuid4
@@ -16,12 +17,12 @@ from datetime import datetime
 
 from dpnode.celery import app
 
-from dpn_workflows.models import STARTED, SUCCESS, FAILED
+from dpn_workflows.models import STARTED, SUCCESS, FAILED, CANCELLED
 from dpn_workflows.models import COMPLETE, TRANSFER, VERIFY
-from dpn_workflows.models import IngestAction, SendFileAction
-from dpn_workflows.models import Workflow, AVAILABLE_REPLY, RECOVERY
+from dpn_workflows.models import IngestAction, SendFileAction, Workflow
+from dpn_workflows.models import AVAILABLE_REPLY, RECOVERY, TRANSFER_REQUEST
 
-from dpn_workflows.utils import generate_fixity, choose_nodes, protocol_str2db
+from dpn_workflows.utils import generate_fixity, choose_nodes
 from dpn_workflows.utils import store_sequence, validate_sequence
 
 from dpn_workflows.handlers import DPNWorkflowError
@@ -30,12 +31,12 @@ from dpn_workflows.tasks.registry import create_registry_entry
 from dpnode.settings import DPN_TTL, DPN_MSG_TTL, DPN_BAGS_DIR
 from dpnode.settings import DPN_XFER_OPTIONS, DPN_BROADCAST_KEY, DPN_NODE_NAME
 from dpnode.settings import DPN_BASE_LOCATION, DPN_BAGS_FILE_EXT, DPN_NUM_XFERS
-from dpnode.settings import DPN_REPLICATION_ROOT
+from dpnode.settings import DPN_REPLICATION_ROOT, DPN_DEFAULT_XFER_PROTOCOL
 
 from dpnmq.messages import ReplicationVerificationReply
 from dpnmq.messages import RegistryItemCreate, ReplicationTransferReply
 from dpnmq.messages import ReplicationInitQuery, ReplicationLocationReply
-from dpnmq.messages import RecoveryAvailableReply
+from dpnmq.messages import RecoveryAvailableReply, RecoveryTransferRequest
 
 from dpnmq.utils import str_expire_on, dpn_strftime
 
@@ -192,7 +193,6 @@ def send_transfer_status(req, action, success=True, err=''):
             'message_error': str(err)
         }
     
-    
     msg = ReplicationTransferReply(headers, body)
     msg.send(req.headers['reply_key'])
 
@@ -217,6 +217,7 @@ def broadcast_item_creation(entry=None):
     body = entry.to_message_dict()
     reg = RegistryItemCreate(headers, body)
     reg.send(DPN_BROADCAST_KEY)
+
 
 @app.task
 def verify_fixity_and_reply(req):
@@ -280,8 +281,9 @@ def verify_fixity_and_reply(req):
     rsp = ReplicationVerificationReply(headers, body)
     rsp.send(req.headers['reply_key'])
 
+
 # Recovery Workflow Tasks
-@app.task()
+@app.task
 def respond_to_recovery_query(init_request):
     """
     Verifies if current node is a first node and the bag is in 
@@ -346,7 +348,7 @@ def respond_to_recovery_query(init_request):
         correlation_id=correlation_id, 
         dpn_object_id=dpn_object_id,
         node=node_from,
-        action=RECOVERY,
+        action=RECOVERY
     )
         
     action.step = AVAILABLE_REPLY
@@ -361,4 +363,51 @@ def respond_to_recovery_query(init_request):
     # Save the action in DB
     action.save()
     
-    
+
+@app.task
+def choose_node_and_recover(correlation_id, dpn_obj_id, action):
+    """
+    Choose a node to replicate with and sends a Recovery Transfer Request
+    to that node.
+
+    :param correlation_id: String of correlation_id of transaction
+    :param dpn_obj_id: String with dpn_object_id to be recovered
+    :param action: Workflow instance to be updated with right step and state
+    """
+
+    available_actions = Workflow.objects.filter(
+        correlation_id=correlation_id,
+        dpn_object_id=dpn_obj_id
+    ).exclude(node=DPN_NODE_NAME)
+
+    # update step in own node workflow action
+    action.step = TRANSFER_REQUEST
+
+    if available_actions.count() > 0:
+        # choose a node randomly 
+        selected = random.choice(available_actions)
+
+        # update workflow action to all nodes but selected node
+        for node_action in available_actions.exclude(pk=selected.pk):
+            node_action.state = CANCELLED
+            node_action.note = "Node %s was chosen to recover" % selected.node
+            node_action.save()
+
+        # sending Recovery Transfer Request to selected node
+        headers = dict(correlation_id=correlation_id)
+        body = {
+            "protocol": DPN_DEFAULT_XFER_PROTOCOL,
+            "message_att": "ack"
+        }
+
+        request = RecoveryTransferRequest(headers, body)
+        request.send(selected.reply_key)
+
+        # update own node action
+        action.state = SUCCESS
+    else:
+        action.state = FAILED
+        action.note = "There is no nodes to recover from"
+
+    # save own node workflow action
+    action.save()

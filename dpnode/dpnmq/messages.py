@@ -223,6 +223,7 @@ class RegistryListDateRangeReply(DPNMessage):
 # Recovery Content Messages
 # -------------------------
 class RecoveryInitQuery(DPNMessage):
+    
     directive = 'recovery-init-query'
     body_form = forms.RecoveryInitQueryForm
     sequence = 0
@@ -232,3 +233,9 @@ class RecoveryAvailableReply(DPNMessage):
     directive = 'recovery-available-reply'
     body_form = forms.RecoveryAvailableReplyForm
     sequence = 1
+
+class RecoveryTransferRequest(DPNMessage):
+    
+    directive = 'recovery-transfer-request'
+    body_form = forms.RecoveryTransferRequestForm
+    sequence = 2

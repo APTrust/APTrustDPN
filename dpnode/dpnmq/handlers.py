@@ -13,11 +13,11 @@ from dpnmq.messages import ReplicationLocationCancel, ReplicationTransferReply
 from dpnmq.messages import ReplicationVerificationReply, RegistryItemCreate
 from dpnmq.messages import RegistryEntryCreated, RegistryDateRangeSync
 from dpnmq.messages import RegistryListDateRangeReply
-from dpnmq.messages import RecoveryInitQuery
-from dpnmq.messages import RecoveryAvailableReply
+from dpnmq.messages import RecoveryInitQuery, RecoveryAvailableReply
 
 from dpn_workflows.handlers import send_available_workflow, receive_cancel_workflow
 from dpn_workflows.handlers import receive_transfer_workflow, receive_verify_reply_workflow
+from dpn_workflows.handlers import rcv_available_recovery_workflow
 
 from dpn_workflows.tasks.inbound import delete_until_transferred
 from dpn_workflows.tasks.inbound import respond_to_replication_query, transfer_content
@@ -25,7 +25,7 @@ from dpn_workflows.tasks.outbound import verify_fixity_and_reply, respond_to_rec
 from dpn_workflows.tasks.registry import reply_with_item_list, save_registries_from
 
 from dpn_registry.models import RegistryEntry, Node
-from dpnmq.forms import RegistryItemCreateForm
+from .forms import RegistryItemCreateForm
 
 logger = logging.getLogger('dpnmq.console')
 
@@ -354,8 +354,8 @@ def registry_list_daterange_reply(msg, body):
     node = msg.headers['from']
     save_registries_from(node, req)
 
-# Recovery workflow handlers
 
+# Recovery workflow handlers
 @broadcast_router.register('recovery-init-query')
 def recovery_init_query_handler(msg, body):
     """
@@ -377,4 +377,30 @@ def recovery_init_query_handler(msg, body):
 
     # Request seems correct, check if node is available to replicate bag
     respond_to_recovery_query.apply_async((req,))
-    
+
+
+@local_router.register('recovery-available-reply')
+def recovery_available_reply_handler(msg, body):
+    """
+    Accepts a Recovery Available Reply and produces a Recovery
+    Transfer Request
+
+    :param msg: kombu.transport.base.Message instance
+    :param body: Decoded JSON of the message payload.
+    """
+
+    try:
+        req = RecoveryAvailableReply(msg.headers, body)
+        req.validate()
+        msg.ack()
+    except TypeError as err:
+        msg.reject()
+        raise DPNMessageError("Received bad message body: %s"
+            % err)
+
+    rcv_available_recovery_workflow(
+        node=req.headers['from'],
+        protocol=req.body['protocol'],
+        correlation_id=req.headers['correlation_id'],
+        reply_key=req.headers['reply_key']
+    )

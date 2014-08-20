@@ -222,7 +222,7 @@ class Workflow(models.Model):
     reply_key = models.CharField(max_length=75, blank=True)
     
     class Meta:
-        unique_together = (('correlation_id', 'dpn_object_id'),)
+        unique_together = [('correlation_id', 'dpn_object_id', 'node')]
 
 class NodeInfo(models.Model):
     """

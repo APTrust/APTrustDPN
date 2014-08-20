@@ -11,8 +11,7 @@ from django.db import models
 from django.db.models.query import QuerySet
 
 from dpnmq.utils import dpn_strftime
-from dpnode.settings import DPN_DATE_FORMAT, DPN_FIXITY_CHOICES, DPN_NODE_LIST
-from dpnode.settings import PROTOCOL_LIST
+from dpnode.settings import DPN_DATE_FORMAT, DPN_FIXITY_CHOICES, PROTOCOL_LIST
 from dpn_registry.models import RegistryEntry, TYPE_CHOICES, NodeEntry
 
 # NOTE Fundging this to create a valid list for multiple choice fields
@@ -408,6 +407,17 @@ class RecoveryAvailableReplyForm(_DPNBaseForm):
             data.pop("available_at")
             data.pop("cost")
         return data
+
+class RecoveryTransferRequestForm(_DPNBaseForm):
+    """
+    Handles DPN Recovery Transfer Request Message Body
+    https://wiki.duraspace.org/display/DPN/Content+Recovery+Message+2
+    """
+    message_name = forms.ChoiceField(
+        choices=_format_choices(['recovery-transfer-request']))
+    protocol = forms.ChoiceField(
+        choices=_format_choices(VALID_DPN_PROTOCOLS))
+    message_att = forms.ChoiceField(choices=_format_choices(ACKS[:1]))
     
 # Forms dealing with Models
 

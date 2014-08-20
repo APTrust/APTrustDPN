@@ -8,12 +8,14 @@
 
 # Handles various workflow steps as defined by the DPN MQ control flow messages
 
-from .models import AVAILABLE, TRANSFER
+from .models import AVAILABLE, TRANSFER, AVAILABLE_REPLY
 from .models import SUCCESS, FAILED, CANCELLED, COMPLETE
 from .models import ReceiveFileAction, SendFileAction, IngestAction
+from .models import Workflow
 
 from .utils import protocol_str2db
 
+from dpnode.settings import DPN_NODE_NAME
 
 class DPNWorkflowError(Exception):
     pass
@@ -184,5 +186,50 @@ def receive_verify_reply_workflow(req):
         # means message_att is nak
         # NOTE: what to do in this case?
         pass
+
+    return action
+
+def rcv_available_recovery_workflow(node, protocol, correlation_id, reply_key):
+    """
+    Initiates or restarts a RecieveFileAction.
+
+    Raises a Validation Error if unable to save model!
+    Raises DPNWorkflowError if invalid workflow transition!
+
+    :param node:  String of node name.
+    :param protocol:  String of protocol to use for transfer.
+    :param correlation_id:  String of correlation id for transaction.
+    :return:  Workflow object
+    """
+
+    try:
+        node_action = Workflow.objects.get(
+            correlation_id=correlation_id,
+            node=DPN_NODE_NAME
+        )
+    except Workflow.DoesNotExist:
+        raise DPNWorkflowError("The dpn_object_id that you provided does not exists.")
+
+    action, _ = Workflow.objects.get_or_create(
+        node=node,
+        correlation_id=correlation_id,
+        dpn_object_id=node_action.dpn_object_id
+    )
+
+    # if the action was cancelled, you had your chance buddy!
+    if action.state == CANCELLED:
+        raise DPNWorkflowError("Trying to restart cancelled transaction.")
+
+    if action.step == COMPLETE:
+        raise DPNWorkflowError("Trying to restart a completed transaction.")
+
+    action.protocol = protocol
+    action.reply_key = reply_key
+
+    action.step = AVAILABLE_REPLY
+    action.state = SUCCESS
+
+    action.clean_fields()
+    action.save()
 
     return action
