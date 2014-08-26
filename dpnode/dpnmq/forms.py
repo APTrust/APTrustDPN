@@ -419,6 +419,17 @@ class RecoveryTransferRequestForm(_DPNBaseForm):
         choices=_format_choices(VALID_DPN_PROTOCOLS))
     message_att = forms.ChoiceField(choices=_format_choices(ACKS[:1]))
     
+class RecoveryTransferReplyForm(_DPNBaseForm):
+    """
+    Handles DPN Recovery Transfer Reply Message Body
+    https://wiki.duraspace.org/display/DPN/Content+Recovery+Message+3
+    """
+    message_name = forms.ChoiceField(
+        choices=_format_choices(['recovery-transfer-reply']))
+    protocol = forms.ChoiceField(
+        choices=_format_choices(VALID_DPN_PROTOCOLS))
+    location = forms.CharField(min_length=1)
+    
 # Forms dealing with Models
 
 class _RegistryEntryForm(forms.ModelForm):

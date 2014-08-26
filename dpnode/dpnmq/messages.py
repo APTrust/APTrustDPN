@@ -239,3 +239,9 @@ class RecoveryTransferRequest(DPNMessage):
     directive = 'recovery-transfer-request'
     body_form = forms.RecoveryTransferRequestForm
     sequence = 2
+
+class RecoveryTransferReply(DPNMessage):
+    
+    directive = 'recovery-transfer-reply'
+    body_form = forms.RecoveryTransferReplyForm
+    sequence = 3

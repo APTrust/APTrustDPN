@@ -14,7 +14,7 @@ from datetime import datetime
 from itertools import groupby
 
 from dpnode.celery import app
-from dpnode.settings import DPN_BAGS_FILE_EXT, DPN_BAGS_DIR
+from dpnode.settings import DPN_BAGS_FILE_EXT, DPN_INGEST_DIR_OUT
 from dpnode.settings import DPN_NODE_NAME, DPN_FIXITY_CHOICES
 
 from dpn_workflows.models import IngestAction, COMPLETE, SUCCESS
@@ -52,7 +52,7 @@ def create_registry_entry(correlation_id):
     )
     
     if replicating_nodes.count() > 0:        
-        local_bag_path = os.path.join(DPN_BAGS_DIR, "%s.%s" % (ingest.object_id, DPN_BAGS_FILE_EXT))
+        local_bag_path = os.path.join(DPN_INGEST_DIR_OUT, "%s.%s" % (ingest.object_id, DPN_BAGS_FILE_EXT))
         fixity_value = generate_fixity(local_bag_path)
         now = datetime.now()
 

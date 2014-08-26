@@ -24,4 +24,4 @@ urlpatterns = patterns('',
 )
 
 if settings.DEBUG:
-    urlpatterns += static('outbound/', document_root=settings.DPN_BAGS_DIR)
+    urlpatterns += static('outbound/', document_root=settings.DPN_INGEST_DIR_OUT)

@@ -11,6 +11,7 @@ import os
 import time
 import random
 import logging
+import shutil
 
 from uuid import uuid4
 from datetime import datetime
@@ -21,6 +22,7 @@ from dpn_workflows.models import STARTED, SUCCESS, FAILED, CANCELLED
 from dpn_workflows.models import COMPLETE, TRANSFER, VERIFY
 from dpn_workflows.models import IngestAction, SendFileAction, Workflow
 from dpn_workflows.models import AVAILABLE_REPLY, RECOVERY, TRANSFER_REQUEST
+from dpn_workflows.models import TRANSFER_REPLY
 
 from dpn_workflows.utils import generate_fixity, choose_nodes
 from dpn_workflows.utils import store_sequence, validate_sequence
@@ -28,21 +30,26 @@ from dpn_workflows.utils import store_sequence, validate_sequence
 from dpn_workflows.handlers import DPNWorkflowError
 from dpn_workflows.tasks.registry import create_registry_entry
 
-from dpnode.settings import DPN_TTL, DPN_MSG_TTL, DPN_BAGS_DIR
+from dpnode.settings import DPN_TTL, DPN_MSG_TTL, DPN_INGEST_DIR_OUT
 from dpnode.settings import DPN_XFER_OPTIONS, DPN_BROADCAST_KEY, DPN_NODE_NAME
 from dpnode.settings import DPN_BASE_LOCATION, DPN_BAGS_FILE_EXT, DPN_NUM_XFERS
 from dpnode.settings import DPN_REPLICATION_ROOT, DPN_DEFAULT_XFER_PROTOCOL
+from dpnode.settings import DPN_RECOVER_LOCATION, DPN_RECOVERY_DIR_OUT
 
 from dpnmq.messages import ReplicationVerificationReply
 from dpnmq.messages import RegistryItemCreate, ReplicationTransferReply
 from dpnmq.messages import ReplicationInitQuery, ReplicationLocationReply
 from dpnmq.messages import RecoveryAvailableReply, RecoveryTransferRequest
+from dpnmq.messages import RecoveryTransferReply
 
 from dpnmq.utils import str_expire_on, dpn_strftime
 
 from dpn_registry.models import Node, RegistryEntry
 
 logger = logging.getLogger('dpnmq.console')
+
+class DPNOutboundError(Exception):
+    pass
 
 @app.task
 def initiate_ingest(dpn_object_id, size):
@@ -248,7 +255,7 @@ def verify_fixity_and_reply(req):
         logger.error("SendFileAction not found for correlation_id: %s. Exc msg: %s" % (correlation_id, err))
         raise DPNWorkflowError(err)
 
-    local_bag_path = os.path.join(DPN_BAGS_DIR, os.path.basename(action.location))
+    local_bag_path = os.path.join(DPN_INGEST_DIR_OUT, os.path.basename(action.location))
     local_fixity = generate_fixity(local_bag_path)
 
     if local_fixity == req.body['fixity_value']:
@@ -326,7 +333,7 @@ def respond_to_recovery_query(init_request):
 
         if supported_protocols:
             # Verifies that the content is available
-            basefile = "%s.tar" % dpn_object_id
+            basefile = "{0}.{1}".format(dpn_object_id, DPN_BAGS_FILE_EXT)
             local_bagfile = os.path.join(DPN_REPLICATION_ROOT, basefile)
             
             if os.path.isfile(local_bagfile):
@@ -363,7 +370,101 @@ def respond_to_recovery_query(init_request):
     # Save the action in DB
     action.save()
     
+@app.task
+def respond_to_recovery_transfer(transfer_request):
+    """
+    Moves the requested bag from the receive storage to the outgoing 
+    storage and sends a RecoveryTransferReply.
 
+    :param init_request: RecoveryTransferRequest already validated
+    """
+    correlation_id = transfer_request.headers['correlation_id']
+    node_from = transfer_request.headers['from'] 
+    protocol = transfer_request.body['protocol']
+    reply_key = transfer_request.headers['reply_key']
+    sequence = 3    
+    note = None
+    
+    # Prep Reply
+    headers = {
+        'correlation_id': correlation_id,
+        'date': dpn_strftime(datetime.now()),
+        'ttl': str_expire_on(datetime.now()),
+        'sequence': sequence
+    }
+    
+    sequence_info = store_sequence(
+       correlation_id, 
+       node_from, 
+       sequence
+    )
+    validate_sequence(sequence_info)
+    
+    # Get the AVAILABLE_REPLY that should be in the Workflow table from previous request
+    try:
+        action = Workflow.objects.get(
+            correlation_id=correlation_id, 
+            node=node_from,
+            action=RECOVERY,
+            step = TRANSFER_REQUEST
+        )
+        action.step = TRANSFER_REPLY
+    except Exception as e:
+        raise DPNOutboundError("There is no 'available-reply' action with correlation_id:'{0}' and node:'{1}'".format(
+                                   correlation_id,
+                                   node_from))
+    
+    dpn_object_id = action.dpn_object_id
+    bag_name = "{0}.{1}".format(dpn_object_id, DPN_BAGS_FILE_EXT)
+    replicated_bag = os.path.join(DPN_REPLICATION_ROOT, bag_name)
+    
+    if protocol in DPN_XFER_OPTIONS:
+        
+        # Verifies that the content is available
+        if os.path.isfile(replicated_bag):
+            recover_location = DPN_RECOVER_LOCATION[protocol]
+            
+            try:
+                
+                # Copy the bag from the receiving storage to the outgoing storage
+                shutil.copy2(replicated_bag, DPN_RECOVERY_DIR_OUT)
+                
+                # Fill the message's body
+                body = {
+                    "protocol": protocol,
+                    "location": '{0}{1}.{2}'.format(
+                                    recover_location, 
+                                    dpn_object_id, 
+                                    DPN_BAGS_FILE_EXT
+                                )
+                }
+                
+                # Sends the reply
+                rsp = RecoveryTransferReply(headers, body)
+                rsp.send(reply_key)
+                
+            except Exception as e:
+                action.note = e
+                action.state = FAILED
+                action.save()
+                raise DPNOutboundError(e)
+        else:
+            note = "The content is not available"
+    else:
+        note = "The protocol is not supported"
+        
+    # Raise error if content not available or protocol not supported
+    if note:
+        action.note = note
+        action.state = FAILED
+        action.save()
+        raise DPNOutboundError(note)
+    else:
+        action.state = SUCCESS
+
+    # Save the action in DB
+    action.save()
+    
 @app.task
 def choose_node_and_recover(correlation_id, dpn_obj_id, action):
     """
@@ -378,7 +479,7 @@ def choose_node_and_recover(correlation_id, dpn_obj_id, action):
     available_actions = Workflow.objects.filter(
         correlation_id=correlation_id,
         dpn_object_id=dpn_obj_id
-    ).exclude(node=DPN_NODE_NAME)
+    )#.exclude(node=DPN_NODE_NAME)
 
     # update step in own node workflow action
     action.step = TRANSFER_REQUEST

@@ -8,7 +8,7 @@ from django.core.management.base import BaseCommand
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
 
-from dpnode.settings import DPN_BAGS_DIR, DPN_BAGS_FILE_EXT
+from dpnode.settings import DPN_INGEST_DIR_OUT, DPN_BAGS_FILE_EXT
 from dpnode.settings import DPN_MAX_SIZE, DPN_TTL, DPN_MSG_TTL
 
 from dpn_workflows.tasks.outbound import initiate_ingest, choose_and_send_location
@@ -22,7 +22,7 @@ class Command(BaseCommand):
         pattern = ['*.%s' % DPN_BAGS_FILE_EXT]
         event_handler = DPNFileEventHandler(patterns=pattern)
         observer = Observer()
-        observer.schedule(event_handler, DPN_BAGS_DIR, recursive=False)
+        observer.schedule(event_handler, DPN_INGEST_DIR_OUT, recursive=False)
         observer.start()
         print("Watching for new bags...")
         try:
