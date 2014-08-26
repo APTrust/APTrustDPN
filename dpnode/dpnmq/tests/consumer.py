@@ -64,7 +64,7 @@ class DPNConsumerTestCase(TestCase):
         lcl_xpr = len(self.csmr.local_router.msgs)
         self.assertTrue(0 == bst_xpr,
                         "Expected 0 msgs in router but found %d" % bst_xpr)
-        self.assertTrue( lcl_xpr == 0)
+        self.assertTrue(lcl_xpr == 0)
 
         # Good message should go to local router.
         self.csmr.route_local(None, self.good_msg)
@@ -85,7 +85,7 @@ class DPNConsumerTestCase(TestCase):
         lcl_xpr = len(self.csmr.local_router.msgs)
         self.assertTrue(0 == bst_xpr,
                         "Expected 0 msgs in router but found %d" % bst_xpr)
-        self.assertTrue( lcl_xpr == 0)
+        self.assertTrue(lcl_xpr == 0)
 
         # Good message should go to broadcast router.
         self.csmr.route_broadcast(None, self.good_msg)

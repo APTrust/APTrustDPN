@@ -10,6 +10,7 @@ from dpnmq.forms import RepInitQueryForm
 from dpnmq.forms import RepAvailableReplyForm, RepLocationReplyForm
 from dpnmq.forms import RepLocationCancelForm, RepTransferReplyForm
 from dpnmq.forms import RegistryItemCreateForm, RepVerificationReplyForm
+from dpnmq.forms import RegistryEntryCreatedForm
 from dpnmq import messages
 
 # #####################################
@@ -45,17 +46,17 @@ class TestDPNMessage(TestCase):
         msg = messages.DPNMessage()
         self.assertRaises(messages.DPNMessageError, msg.validate_headers)
 
-    def send(self):
+    def test_send(self):
         # Unsure how to test positive send.  For now testing only if it throws an
         # Error if it does not validate.
         msg = messages.DPNMessage()
         self.assertRaises(messages.DPNMessageError, msg.send, "broadcast")
 
-    def validate_body(self):
+    def test_validate_body(self):
         msg = messages.DPNMessage()
         self.assertRaises(messages.DPNMessageError, msg.validate_body)
 
-    def set_body(self):
+    def test_set_body(self):
         msg = messages.DPNMessage()
         bad_args = [
             "test",
@@ -65,14 +66,14 @@ class TestDPNMessage(TestCase):
             [("this", "wont"), ("pass", 0)]
         ]
         for arg in bad_args:
-            self.assertRaises(messages.DPNMessageError, msg.set_body, arg)
+            self.assertRaises(TypeError, msg.set_body, arg)
 
         good_args = {
             "test": True,
             "arbitrary": 0,
             "values": "now"
         }
-        msg.set_body(good_args)
+        msg.set_body(**good_args)
         for k, v in good_args.items():
             self.assertTrue(msg.body[k] == v)
 
@@ -108,6 +109,7 @@ class TestDPNMessageImplementations(TestCase):
             "body_form": RepLocationReplyForm,
             "sequence": messages.ReplicationLocationReply.sequence
         }
+        self._test_expected_defaults(msg, exp)
 
     def test_rep_loc_cancel(self):
         msg = messages.ReplicationLocationCancel()
@@ -145,11 +147,11 @@ class TestDPNMessageImplementations(TestCase):
         }
         self._test_expected_defaults(msg, exp)
 
-        # def test_reg_entry_created(self):
-        # msg = messages.RegistryEntryCreated()
-        #     exp = {
-        #         "message_name": messages.RegistryEntryCreated.directive,
-        #         "body_form": RegistryEntryCreatedForm,
-        #         "sequence": messages.RegistryEntryCreated.sequence
-        #     }
-        #     self._test_expected_defaults(msg, exp)
+    def test_reg_entry_created(self):
+        msg = messages.RegistryEntryCreated()
+        exp = {
+            "message_name": messages.RegistryEntryCreated.directive,
+            "body_form": RegistryEntryCreatedForm,
+            "sequence": messages.RegistryEntryCreated.sequence
+        }
+        self._test_expected_defaults(msg, exp)
