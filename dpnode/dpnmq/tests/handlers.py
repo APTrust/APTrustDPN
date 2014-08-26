@@ -207,3 +207,5 @@ class RegistryListDaterangeReplyHanderTestCase(TestCase):
         self.assertEqual(exp, entries.count(),
                          "Expected %d node entries but returned %d" %
                          (exp, entries.count()))
+
+# TODO check for new handler tests.
