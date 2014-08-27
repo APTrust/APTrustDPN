@@ -50,6 +50,7 @@ sitemedia/*
 # Other Files
 .DS_Store
 dpnode/dpn_bags_dir/*.*
+dpnode/dpn_recovery_dir_out/*.*
 .venv
 
 # Other DB related files
