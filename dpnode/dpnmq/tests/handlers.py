@@ -10,9 +10,8 @@ from kombu.tests.case import Mock
 
 from dpnmq import handlers
 from dpnmq.tests import fixtures
-from dpnmq.messages import DPNMessageError
-from dpn_workflows.handlers import DPNWorkflowError
 from dpn_registry.models import RegistryEntry, NodeEntry
+from dpnode.exceptions import DPNMessageError, DPNWorkflowError
 
 
 def _msg():

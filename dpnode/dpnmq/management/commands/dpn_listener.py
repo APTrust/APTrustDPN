@@ -1,18 +1,14 @@
 import logging
 
 from optparse import make_option
-
 from django.core.management.base import BaseCommand
-
 from kombu import Connection
 
+from dpnmq.consumer import DPNConsumer
+from dpnode.exceptions import DPNMessageError, DPNWorkflowError
 from dpnode.settings import DPN_EXCHANGE, DPN_BROKER_URL
 from dpnode.settings import DPN_BROADCAST_QUEUE, DPN_BROADCAST_KEY
 from dpnode.settings import DPN_LOCAL_QUEUE, DPN_LOCAL_KEY
-from dpnmq.consumer import DPNConsumer
-
-from dpnmq.messages import DPNMessageError
-from dpn_workflows.handlers import DPNWorkflowError
 
 logger = logging.getLogger('dpnmq.console')
 

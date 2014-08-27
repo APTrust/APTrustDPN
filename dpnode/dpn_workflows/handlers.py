@@ -16,9 +16,7 @@ from .models import Workflow
 from .utils import protocol_str2db
 
 from dpnode.settings import DPN_NODE_NAME
-
-class DPNWorkflowError(Exception):
-    pass
+from dpnode.exceptions import DPNWorkflowError
 
 def receive_available_workflow(node=None, protocol=None, id=None):
     """

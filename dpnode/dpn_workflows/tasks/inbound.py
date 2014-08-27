@@ -23,9 +23,9 @@ from dpn_workflows.models import SUCCESS, FAILED, CANCELLED
 from dpn_workflows.models import COMPLETE
 from dpn_workflows.models import TRANSFER, VERIFY
 
-from dpn_workflows.handlers import DPNWorkflowError
 from dpn_workflows.tasks.outbound import send_transfer_status
 
+from dpnode.exceptions import DPNWorkflowError
 from dpnode.settings import DPN_XFER_OPTIONS, DPN_MAX_SIZE
 from dpnode.settings import DPN_REPLICATION_ROOT, DPN_DEFAULT_XFER_PROTOCOL
 

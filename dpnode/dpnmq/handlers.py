@@ -7,14 +7,7 @@
 
 import logging
 
-from dpnmq.messages import DPNMessageError, ReplicationInitQuery
-from dpnmq.messages import ReplicationAvailableReply, ReplicationLocationReply
-from dpnmq.messages import ReplicationLocationCancel, ReplicationTransferReply
-from dpnmq.messages import ReplicationVerificationReply, RegistryItemCreate
-from dpnmq.messages import RegistryEntryCreated, RegistryDateRangeSync
-from dpnmq.messages import RegistryListDateRangeReply
-from dpnmq.messages import RecoveryInitQuery, RecoveryAvailableReply
-from dpnmq.messages import RecoveryTransferRequest
+from dpnode.exceptions import DPNMessageError
 
 from dpn_workflows.handlers import send_available_workflow, receive_cancel_workflow
 from dpn_workflows.handlers import receive_transfer_workflow, receive_verify_reply_workflow
@@ -27,6 +20,8 @@ from dpn_workflows.tasks.outbound import respond_to_recovery_transfer
 from dpn_workflows.tasks.registry import reply_with_item_list, save_registries_from
 
 from dpn_registry.models import RegistryEntry, Node
+
+from . import messages
 from .forms import RegistryItemCreateForm
 
 logger = logging.getLogger('dpnmq.console')
@@ -96,7 +91,7 @@ def replication_init_query_handler(msg, body):
     """
 
     try:
-        req = ReplicationInitQuery(msg.headers, body)
+        req = messages.ReplicationInitQuery(msg.headers, body)
         req.validate()
         msg.ack()
     except TypeError as err:
@@ -117,7 +112,7 @@ def replication_available_reply_handler(msg, body):
     :param body: Decoded JSON of the message payload.
     """
     try:
-        req = ReplicationAvailableReply(msg.headers, body)
+        req = messages.ReplicationAvailableReply(msg.headers, body)
         req.validate()
         msg.ack()
     except TypeError as err:
@@ -142,7 +137,7 @@ def replication_location_cancel_handler(msg, body):
     :param body: Decoded JSON of the message payload.
     """
     try:
-        req = ReplicationLocationCancel(msg.headers, body)
+        req = messages.ReplicationLocationCancel(msg.headers, body)
         req.validate()
         msg.ack()
     except TypeError as err:
@@ -168,7 +163,7 @@ def replication_location_reply_handler(msg, body):
     :param body: Decoded JSON of the message payload.
     """
     try:
-        req = ReplicationLocationReply(msg.headers, body)
+        req = messages.ReplicationLocationReply(msg.headers, body)
         req.validate()
         msg.ack()
     except TypeError as err:
@@ -199,7 +194,7 @@ def replication_transfer_reply_handler(msg, body):
     :param body: Decoded JSON of the message payload.
     """
     try:
-        req = ReplicationTransferReply(msg.headers, body)
+        req = messages.ReplicationTransferReply(msg.headers, body)
         req.validate()
         msg.ack()
     except TypeError as err:
@@ -220,7 +215,7 @@ def replication_verify_reply_handler(msg, body):
     :param body: Decoded JSON of the message payload.
     """
     try:
-        req = ReplicationVerificationReply(msg.headers, body)
+        req = messages.ReplicationVerificationReply(msg.headers, body)
         req.validate()
         msg.ack()
     except TypeError as err:
@@ -248,7 +243,7 @@ def registry_item_create_handler(msg, body):
         # TODO likely  use message body form eventuall since that already validates
         for name in body.get("replicating_node_names", None):
             Node.objects.get_or_create(**{"name": name})
-        req = RegistryItemCreate(msg.headers, body)
+        req = messages.RegistryItemCreate(msg.headers, body)
         req.validate()
         msg.ack()
     except TypeError as err:
@@ -289,7 +284,7 @@ def registry_item_create_handler(msg, body):
             body = nak
             logger.info(nak['message_error'])
 
-    rsp = RegistryEntryCreated(headers, body)
+    rsp = messages.RegistryEntryCreated(headers, body)
     rsp.send(req.headers['reply_key'])
 
 
@@ -303,7 +298,7 @@ def registry_entry_created_handler(msg, body):
     :param body: Decoded JSON of the message payload.
     """
     try:
-        req = RegistryEntryCreated(msg.headers, body)
+        req = messages.RegistryEntryCreated(msg.headers, body)
         req.validate()
         msg.ack()
     except TypeError as err:
@@ -323,7 +318,7 @@ def registry_daterange_sync_request_handler(msg, body):
     :param body: Decoded JSON of the message payload.
     """
     try:
-        req = RegistryDateRangeSync(msg.headers, body)
+        req = messages.RegistryDateRangeSync(msg.headers, body)
         req.validate()
         msg.ack()
     except TypeError as err:
@@ -345,7 +340,7 @@ def registry_list_daterange_reply(msg, body):
     """
 
     try:
-        req = RegistryListDateRangeReply(msg.headers, body)
+        req = messages.RegistryListDateRangeReply(msg.headers, body)
         req.validate()
         msg.ack()
     except TypeError as err:
@@ -369,7 +364,7 @@ def recovery_init_query_handler(msg, body):
     """
 
     try:
-        req = RecoveryInitQuery(msg.headers, body)
+        req = messages.RecoveryInitQuery(msg.headers, body)
         req.validate()
         msg.ack()
     except TypeError as err:
@@ -392,7 +387,7 @@ def recovery_available_reply_handler(msg, body):
     """
 
     try:
-        req = RecoveryAvailableReply(msg.headers, body)
+        req = messages.RecoveryAvailableReply(msg.headers, body)
         req.validate()
         msg.ack()
     except TypeError as err:
@@ -418,7 +413,7 @@ def recovery_transfer_request_handler(msg, body):
     """
 
     try:
-        req = RecoveryTransferRequest(msg.headers, body)
+        req = messages.RecoveryTransferRequest(msg.headers, body)
         req.validate()
         msg.ack()
     except TypeError as err:

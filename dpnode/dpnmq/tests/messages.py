@@ -5,6 +5,7 @@
 from django.test import TestCase
 
 from dpnode.settings import DPN_NODE_NAME, DPN_LOCAL_KEY
+from dpnode.exceptions import DPNMessageError
 from dpnmq.tests import fixtures
 from dpnmq.forms import RepInitQueryForm
 from dpnmq.forms import RepAvailableReplyForm, RepLocationReplyForm
@@ -44,17 +45,17 @@ class TestDPNMessage(TestCase):
         # NOTE Actual validation covered in forms.
         # Only testing expected failure.
         msg = messages.DPNMessage()
-        self.assertRaises(messages.DPNMessageError, msg.validate_headers)
+        self.assertRaises(DPNMessageError, msg.validate_headers)
 
     def test_send(self):
         # Unsure how to test positive send.  For now testing only if it throws an
         # Error if it does not validate.
         msg = messages.DPNMessage()
-        self.assertRaises(messages.DPNMessageError, msg.send, "broadcast")
+        self.assertRaises(DPNMessageError, msg.send, "broadcast")
 
     def test_validate_body(self):
         msg = messages.DPNMessage()
-        self.assertRaises(messages.DPNMessageError, msg.validate_body)
+        self.assertRaises(DPNMessageError, msg.validate_body)
 
     def test_set_body(self):
         msg = messages.DPNMessage()

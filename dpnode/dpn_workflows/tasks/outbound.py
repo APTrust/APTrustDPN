@@ -27,9 +27,9 @@ from dpn_workflows.models import TRANSFER_REPLY
 from dpn_workflows.utils import generate_fixity, choose_nodes
 from dpn_workflows.utils import store_sequence, validate_sequence
 
-from dpn_workflows.handlers import DPNWorkflowError
 from dpn_workflows.tasks.registry import create_registry_entry
 
+from dpnode.exceptions import DPNOutboundError, DPNWorkflowError
 from dpnode.settings import DPN_TTL, DPN_MSG_TTL, DPN_INGEST_DIR_OUT
 from dpnode.settings import DPN_XFER_OPTIONS, DPN_BROADCAST_KEY, DPN_NODE_NAME
 from dpnode.settings import DPN_BASE_LOCATION, DPN_BAGS_FILE_EXT, DPN_NUM_XFERS
@@ -47,9 +47,6 @@ from dpnmq.utils import str_expire_on, dpn_strftime
 from dpn_registry.models import Node, RegistryEntry
 
 logger = logging.getLogger('dpnmq.console')
-
-class DPNOutboundError(Exception):
-    pass
 
 @app.task
 def initiate_ingest(dpn_object_id, size):
