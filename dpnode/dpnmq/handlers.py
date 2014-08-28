@@ -13,8 +13,8 @@ from dpn_workflows.handlers import send_available_workflow, receive_cancel_workf
 from dpn_workflows.handlers import receive_transfer_workflow, receive_verify_reply_workflow
 from dpn_workflows.handlers import rcv_available_recovery_workflow
 
-from dpn_workflows.tasks.inbound import delete_until_transferred
 from dpn_workflows.tasks.inbound import respond_to_replication_query, transfer_content
+from dpn_workflows.tasks.inbound import delete_until_transferred, recover_and_check_integrity
 from dpn_workflows.tasks.outbound import verify_fixity_and_reply, respond_to_recovery_query
 from dpn_workflows.tasks.outbound import respond_to_recovery_transfer
 from dpn_workflows.tasks.registry import reply_with_item_list, save_registries_from
@@ -423,3 +423,25 @@ def recovery_transfer_request_handler(msg, body):
 
     # Request seems correct, send response with location to start the transfer
     respond_to_recovery_transfer.apply_async((req,))
+
+@local_router.registry('recovery-transfer-reply')
+def recovery_transfer_reply(msg, body):
+    """
+    Accepts a Recovery Transfer Reply and produces a Recovery
+    Transfer Reply
+
+    :param msg: kombu.transport.base.Message instance
+    :param body: Decoded JSON of the message payload.
+    """
+
+    try:
+        req = messages.RecoveryTransferReply(msg.headers, body)
+        req.validate()
+        msg.ack()
+    except TypeError as err:
+        msg.reject()
+        raise DPNMessageError("Received bad message body: %s"
+            % err)
+
+    # Recover the bag and check integrity of the bag with fixity value
+    recover_and_check_integrity.apply_async((req,))

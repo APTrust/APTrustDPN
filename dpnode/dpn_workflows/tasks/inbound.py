@@ -14,27 +14,29 @@ from django.core.exceptions import ValidationError
 
 from dpnode.celery import app
 
-from dpn_workflows.handlers import receive_available_workflow
-from dpn_workflows.utils import available_storage, store_sequence
-from dpn_workflows.utils import download_bag, validate_sequence
-from dpn_workflows.utils import generate_fixity, protocol_str2db, remove_bag
+from ..handlers import receive_available_workflow
+from ..utils import available_storage, store_sequence
+from ..utils import validate_sequence, protocol_str2db
+from ..utils import remove_bag, download_bag, generate_fixity
 
-from dpn_workflows.models import SUCCESS, FAILED, CANCELLED
-from dpn_workflows.models import COMPLETE
-from dpn_workflows.models import TRANSFER, VERIFY
+from ..models import SUCCESS, FAILED, CANCELLED
+from ..models import COMPLETE, TRANSFER, VERIFY
+from ..models import TRANSFER_STATUS
+from ..tasks.outbound import send_transfer_status
 
-from dpn_workflows.tasks.outbound import send_transfer_status
-
-from dpnode.exceptions import DPNWorkflowError
+from dpnode.exceptions import DPNWorkflowError, DPNWorkflowError
 from dpnode.settings import DPN_XFER_OPTIONS, DPN_MAX_SIZE
 from dpnode.settings import DPN_REPLICATION_ROOT, DPN_DEFAULT_XFER_PROTOCOL
 
 from dpnmq.messages import ReplicationAvailableReply
 from dpnmq.utils import str_expire_on, dpn_strftime
 
+from dpn_registry.models import RegistryEntry
+
 logger = logging.getLogger('dpnmq.console')
 
 __author__ = 'swt8w'
+ALGORITHM = 'sha256'
 
 # TODO: move this to outbound.py
 @app.task()
@@ -75,7 +77,7 @@ def respond_to_replication_query(init_request):
 
         try:
             protocol = protocol_str2db(supported_protocols[0])
-            action = receive_available_workflow(
+            receive_available_workflow(
                 node=init_request.headers["from"],
                 protocol=protocol,
                 id=init_request.headers["correlation_id"]
@@ -110,15 +112,13 @@ def transfer_content(req, action):
 
     protocol = req.body['protocol']
     location = req.body['location']
-
-    algorithm = 'sha256'
     
     print("Transferring the bag...")
     try:
         filename = download_bag(node, location, protocol)
 
         print("Download complete. Now calculating fixity value")
-        fixity_value = generate_fixity(filename, algorithm)
+        fixity_value = generate_fixity(filename, ALGORITHM)
 
         # store the fixity value in DB
         action.fixity_value = fixity_value
@@ -127,10 +127,10 @@ def transfer_content(req, action):
         action.save()
 
         # call the task responsible to send the transferring status
-        task = send_transfer_status.apply_async((req, action))
+        send_transfer_status.apply_async((req, action))
 
         print('%s has been transferred successfully. Correlation_id: %s' % (filename, correlation_id))
-        print('Bag fixity value is: %s. Used algorithm: %s' % (fixity_value, algorithm))
+        print('Bag fixity value is: %s. Used algorithm: %s' % (fixity_value, ALGORITHM))
 
     except OSError as err:
         action.step = TRANSFER
@@ -171,3 +171,61 @@ def delete_until_transferred(self, action):
     action.save()
 
     return action
+
+@app.task
+def recover_and_check_integrity(req):
+    """
+    Recovers a bag to the replication directory of the 
+    current node with the given protocol in RecoveryTransferReply
+    
+    :param req: RecoveryTransferReply already validated
+    """
+
+    correlation_id = req.headers['correlation_id']
+    node_from = req.headers['from']
+
+    # check if workflow record exist in local registry
+    try:
+        action = Workflow.objects.get(
+            correlation_id=correlation_id,
+            node=node_from
+        )
+    except Workflow.DoesNotExist as err:
+        raise DPNWorkflowError("Workflow object with correlation_id %s was not found." % correlation_id)
+
+    # check if registry entry exist in local registry
+    try:
+        registry_entry = RegistryEntry.objects.get(dpn_object_id=action.dpn_object_id)
+    except DPNWorkflowError as err:
+        raise DPNWorkflowError("Registry entry with dpn_object_id %s was not found." % dpn_object_id)
+
+    # set step as transfering
+    action.step = TRANSFER_STATUS
+
+    try:
+        print("Recovering the bag...")
+        filename = download_bag(node_from, req.body['location'], req.body['protocol'])
+
+        print("Download complete. Now calculating fixity value")
+        fixity_value = generate_fixity(filename, ALGORITHM)
+
+        # check if fixity value match with the stored in database
+        if fixity_value == registry_entry.fixity_value:
+            action.status = SUCCESS
+            print(
+                '%s bag recovered successfully. Correlation_id -> %s Fixity Value -> %s' % 
+                (filename, correlation_id, fixity_value)
+            )
+        else:
+            action.node = "Fixity values don't match. %s != %s" % (fixity_value, registry_entry.fixity_value)
+            action.state = FAILED
+
+    except OSError as err:
+        action.note = "%s protocol -> %s" % (err, protocol)
+        action.state = FAILED
+        print('ERROR, recover with correlation_id %s has failed.' % (correlation_id))
+    
+    # save action
+    action.save()
+
+    # TODO: send Recovery Transfer Status
