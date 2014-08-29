@@ -220,6 +220,17 @@ class Workflow(models.Model):
     
     # Node reply_key
     reply_key = models.CharField(max_length=75, blank=True)
+
+    def __unicode__(self):
+        return 'CORR_ID: %(corr_id)s DPN_OBJECT: %(obj_id)s NODE: %(node)s' % {
+            'corr_id': self.correlation_id, 
+            'obj_id': self.dpn_object_id, 
+            'node': self.node
+        }
+            
+
+    def __str__(self):
+        return '%s' % self.__unicode__()
     
     class Meta:
         unique_together = [('correlation_id', 'dpn_object_id', 'node')]
