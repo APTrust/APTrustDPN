@@ -60,12 +60,12 @@ class DPNConsumer(ConsumerMixin):
         :param router:  TaskRouter instance to dispatch this message.
         :param msg: kombu.transport.base.Message to decode and dispatch.
         """
-
-        if not self._is_alive(msg):
+        current_time = datetime.now()
+        if not self._is_alive(msg, current_time):
             msg.ack()
             raise DPNMessageError(
-                "Message TTL has expired. Message headers details %s | body details %s" % 
-                (msg.headers, msg.body)
+                "Message TTL has expired. Message headers details %s | body details %s. Current time: %s" % 
+                (msg.headers, msg.body, current_time)
             )
 
         decoded_body = json_loads(msg.body)
@@ -145,7 +145,7 @@ class DPNConsumer(ConsumerMixin):
             return True
         return False
 
-    def _is_alive(self, msg):
+    def _is_alive(self, msg, current_time):
         """
         Check if the message has date and ttl set and returns if still alive
 
@@ -154,7 +154,7 @@ class DPNConsumer(ConsumerMixin):
         """
         try:
             ttl = dpn_strptime(msg.headers['ttl'])
-            now = dpn_strptime(dpn_strftime(datetime.now()))
+            now = dpn_strptime(dpn_strftime(current_time))
 
             return ttl > now
 
