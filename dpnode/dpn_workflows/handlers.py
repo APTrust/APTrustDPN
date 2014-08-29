@@ -9,7 +9,7 @@
 # Handles various workflow steps as defined by the DPN MQ control flow messages
 
 from .models import AVAILABLE, TRANSFER, AVAILABLE_REPLY
-from .models import SUCCESS, FAILED, CANCELLED, COMPLETE
+from .models import SUCCESS, FAILED, CANCELLED, COMPLETE, RECOVERY
 from .models import ReceiveFileAction, SendFileAction, IngestAction
 from .models import Workflow
 
@@ -201,7 +201,7 @@ def rcv_available_recovery_workflow(node, protocol, correlation_id, reply_key):
     """
 
     try:
-        node_action = Workflow.objects.get(
+        recover_init_action = Workflow.objects.get(
             correlation_id=correlation_id,
             node=DPN_NODE_NAME
         )
@@ -211,7 +211,7 @@ def rcv_available_recovery_workflow(node, protocol, correlation_id, reply_key):
     action, _ = Workflow.objects.get_or_create(
         node=node,
         correlation_id=correlation_id,
-        dpn_object_id=node_action.dpn_object_id
+        dpn_object_id=recover_init_action.dpn_object_id
     )
 
     # if the action was cancelled, you had your chance buddy!
@@ -221,6 +221,7 @@ def rcv_available_recovery_workflow(node, protocol, correlation_id, reply_key):
     if action.step == COMPLETE:
         raise DPNWorkflowError("Trying to restart a completed transaction.")
 
+    action.action = RECOVERY
     action.protocol = protocol
     action.reply_key = reply_key
 
