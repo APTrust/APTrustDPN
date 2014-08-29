@@ -124,8 +124,8 @@ def replication_available_reply_handler(msg, body):
     send_available_workflow(
         node=req.headers['from'],
         id=req.headers['correlation_id'],
-        protocol=req.body['protocol'],
-        confirm=req.body['message_att'],
+        protocol=body['protocol'],
+        confirm=body['message_att'],
         reply_key=req.headers['reply_key']
     )
 
@@ -176,8 +176,8 @@ def replication_location_reply_handler(msg, body):
     action = receive_transfer_workflow(
         node=req.headers['from'], 
         id=req.headers['correlation_id'], 
-        protocol=req.body['protocol'], 
-        loc=req.body['location']
+        protocol=body['protocol'], 
+        loc=body['location']
     )
 
     # call the task responsible to transfer the content
@@ -267,10 +267,10 @@ def registry_item_create_handler(msg, body):
     }
 
     # check if entry already exists
-    form_params = dict(data=req.body)
+    form_params = dict(data=body)
     try:
         form_params['instance'] = RegistryEntry.objects.get(
-            dpn_object_id=req.body['dpn_object_id'])
+            dpn_object_id=body['dpn_object_id'])
     except:
         pass
 
@@ -398,7 +398,7 @@ def recovery_available_reply_handler(msg, body):
 
     rcv_available_recovery_workflow(
         node=req.headers['from'],
-        protocol=req.body['protocol'],
+        protocol=body['protocol'],
         correlation_id=req.headers['correlation_id'],
         reply_key=req.headers['reply_key']
     )
