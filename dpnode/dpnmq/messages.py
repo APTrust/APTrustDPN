@@ -15,7 +15,7 @@ from dpnode.settings import DPN_TTL, DPN_NODE_NAME, DPN_EXCHANGE
 from dpnode.settings import DPN_LOCAL_KEY, DPN_MSG_TTL
 from dpnode.exceptions import DPNMessageError
 
-from dpnmq import forms
+from . import forms
 from .utils import dpn_strftime, str_expire_on
 
 logger = logging.getLogger('dpnmq.console')
@@ -243,3 +243,9 @@ class RecoveryTransferReply(DPNMessage):
     directive = 'recovery-transfer-reply'
     body_form = forms.RecoveryTransferReplyForm
     sequence = 3
+
+class RecoveryTransferStatus(DPNMessage):
+
+    directive = 'recovery-transfer-status'
+    body_form = forms.RecoveryTransferStatusForm
+    sequence = 4

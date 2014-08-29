@@ -13,6 +13,7 @@ from dpn_workflows.handlers import send_available_workflow, receive_cancel_workf
 from dpn_workflows.handlers import receive_transfer_workflow, receive_verify_reply_workflow
 from dpn_workflows.handlers import rcv_available_recovery_workflow
 
+from dpn_workflows.models import Workflow, VERIFY_REPLY, SUCCESS, FAILED
 from dpn_workflows.tasks.inbound import respond_to_replication_query, transfer_content
 from dpn_workflows.tasks.inbound import delete_until_transferred, recover_and_check_integrity
 from dpn_workflows.tasks.outbound import verify_fixity_and_reply, respond_to_recovery_query
@@ -424,7 +425,7 @@ def recovery_transfer_request_handler(msg, body):
     # Request seems correct, send response with location to start the transfer
     respond_to_recovery_transfer.apply_async((req,))
 
-@local_router.registry('recovery-transfer-reply')
+@local_router.register('recovery-transfer-reply')
 def recovery_transfer_reply(msg, body):
     """
     Accepts a Recovery Transfer Reply and produces a Recovery
@@ -445,3 +446,48 @@ def recovery_transfer_reply(msg, body):
 
     # Recover the bag and check integrity of the bag with fixity value
     recover_and_check_integrity.apply_async((req,))
+
+@local_router.register('recovery-transfer-status')
+def recovery_transfer_status(msg, body):
+    """
+    Accepts a Recovery Transfer Status and updates workflow action
+
+    :param msg: kombu.transport.base.Message instance
+    :param body: Decoded JSON of the message payload.
+    """
+
+    try:
+        req = messages.RecoveryTransferStatus(msg.headers, body)
+        req.validate()
+        msg.ack()
+    except TypeError as err:
+        msg.reject()
+        raise DPNMessageError("Received bad message body: %s"
+            % err)
+
+    correlation_id = req.headers['correlation_id']
+    node_from = req.headers['from']
+
+    try:
+        action = Workflow.objects.get(
+            correlation_id=correlation_id,
+            node=node_from            
+        )
+    except Workflow.DoesNotExist as err:
+        raise DPNMessageError('Workflow action with correlation_id %s and node %s does not exist' 
+                              % correlation_id, node_from)
+
+    # update to current step
+    action.step = VERIFY_REPLY
+
+    # check message response
+    if body['message_att'] == 'nak':
+        action.state = FAILED
+        action.note = body['message_error']
+    elif body['message_att'] == 'ack':
+        action.state = SUCCESS
+    elif body['message_att'] == 'retry':
+        pass # NOTE: ask Scott about this and how to do it
+    
+    # save action
+    action.save()

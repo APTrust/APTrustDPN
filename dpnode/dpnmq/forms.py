@@ -430,8 +430,16 @@ class RecoveryTransferReplyForm(_DPNBaseForm):
         choices=_format_choices(VALID_DPN_PROTOCOLS))
     location = forms.CharField(min_length=1)
     
-# Forms dealing with Models
+class RecoveryTransferStatusForm(RepTransferReplyForm):
+    """
+    Handles DPN Recovery Transfer Status Message Body
+    https://wiki.duraspace.org/display/DPN/Content+Recovery+Message+4
+    """
+    message_name = forms.ChoiceField(
+        choices=_format_choices(['recovery-transfer-status']))
 
+
+# Forms dealing with Models
 class _RegistryEntryForm(forms.ModelForm):
     """
     Handles any registry item message body.
@@ -506,7 +514,6 @@ class _RegistryEntryForm(forms.ModelForm):
     class Meta:
         model = RegistryEntry
         exclude = ['state',]
-
 
 class RegistryItemCreateForm(_RegistryEntryForm):
     """

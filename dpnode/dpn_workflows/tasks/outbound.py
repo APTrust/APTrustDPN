@@ -476,7 +476,7 @@ def choose_node_and_recover(correlation_id, dpn_obj_id, action):
     available_actions = Workflow.objects.filter(
         correlation_id=correlation_id,
         dpn_object_id=dpn_obj_id
-    )#.exclude(node=DPN_NODE_NAME)
+    ).exclude(node=DPN_NODE_NAME)
 
     # update step in own node workflow action
     action.step = TRANSFER_REQUEST

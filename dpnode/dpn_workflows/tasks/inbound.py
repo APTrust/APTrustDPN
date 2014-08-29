@@ -21,14 +21,14 @@ from ..utils import remove_bag, download_bag, generate_fixity
 
 from ..models import SUCCESS, FAILED, CANCELLED
 from ..models import COMPLETE, TRANSFER, VERIFY
-from ..models import TRANSFER_STATUS
+from ..models import TRANSFER_STATUS, Workflow
 from ..tasks.outbound import send_transfer_status
 
-from dpnode.exceptions import DPNWorkflowError, DPNWorkflowError
+from dpnode.exceptions import DPNWorkflowError
 from dpnode.settings import DPN_XFER_OPTIONS, DPN_MAX_SIZE
 from dpnode.settings import DPN_REPLICATION_ROOT, DPN_DEFAULT_XFER_PROTOCOL
 
-from dpnmq.messages import ReplicationAvailableReply
+from dpnmq.messages import ReplicationAvailableReply, RecoveryTransferStatus
 from dpnmq.utils import str_expire_on, dpn_strftime
 
 from dpn_registry.models import RegistryEntry
@@ -183,6 +183,16 @@ def recover_and_check_integrity(req):
 
     correlation_id = req.headers['correlation_id']
     node_from = req.headers['from']
+    headers = dict(correlation_id=correlation_id)
+    body = {
+        'ack': {
+            'message_att': 'ack',
+            'fixity_algorithm': ALGORITHM
+        },
+        'nak': {
+            'message_att': 'nak'
+        }
+    }
 
     # check if workflow record exist in local registry
     try:
@@ -197,7 +207,7 @@ def recover_and_check_integrity(req):
     try:
         registry_entry = RegistryEntry.objects.get(dpn_object_id=action.dpn_object_id)
     except DPNWorkflowError as err:
-        raise DPNWorkflowError("Registry entry with dpn_object_id %s was not found." % dpn_object_id)
+        raise DPNWorkflowError("Registry entry with dpn_object_id %s was not found." % action.dpn_object_id)
 
     # set step as transfering
     action.step = TRANSFER_STATUS
@@ -212,20 +222,28 @@ def recover_and_check_integrity(req):
         # check if fixity value match with the stored in database
         if fixity_value == registry_entry.fixity_value:
             action.status = SUCCESS
+            rsp_body = body['ack']
+            rsp_body['fixity_value'] = fixity_value
             print(
                 '%s bag recovered successfully. Correlation_id -> %s Fixity Value -> %s' % 
                 (filename, correlation_id, fixity_value)
             )
         else:
-            action.node = "Fixity values don't match. %s != %s" % (fixity_value, registry_entry.fixity_value)
+            action.note = "Fixity values don't match. (requesting node) %s != %s" % (registry_entry.fixity_value, fixity_value)
             action.state = FAILED
+            rsp_body = body['nak']
+            rsp_body['message_error'] = action.note
 
     except OSError as err:
-        action.note = "%s protocol -> %s" % (err, protocol)
-        action.state = FAILED
         print('ERROR, recover with correlation_id %s has failed.' % (correlation_id))
+        action.note = "%s protocol -> %s" % (err, req.body['protocol'])
+        action.state = FAILED
+        rsp_body = body['nak']
+        rsp_body['message_error'] = action.note
     
     # save action
     action.save()
 
-    # TODO: send Recovery Transfer Status
+    # send transfer status
+    rsp = RecoveryTransferStatus(headers, rsp_body)
+    rsp.send(req.headers['reply_key'])
