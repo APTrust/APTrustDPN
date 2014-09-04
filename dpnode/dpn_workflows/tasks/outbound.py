@@ -281,10 +281,14 @@ def verify_fixity_and_reply(req):
     # }
 
     body = dict(message_att=message_att)
-
     rsp = ReplicationVerificationReply(headers, body)
     rsp.send(req.headers['reply_key'])
 
+    # make sure to copy the bag to the settings.DPN_REPLICATION_ROOT folder
+    # to have that accesible in case of recovery request
+    ingested_bag = os.path.join(DPN_REPLICATION_ROOT, os.path.basename(action.location))
+    if not os.path.isfile(ingested_bag):
+        shutil.copy2(local_bag_path, DPN_REPLICATION_ROOT)
 
 # Recovery Workflow Tasks
 @app.task
