@@ -185,9 +185,9 @@ class RegistryEntryCreatedHandlerTestCase(BasicHandlerTestCase):
     def test_registry_entry_created_handler(self):
         self._test_basic_handling(handlers.registry_entry_created_handler)
         # these are actual entries sent from other nodes during test.
-        for entry in fixtures.REGISTRY_ITEM_CREATE.copy():
+        for entry in fixtures.REGISTRY_ITEM_CREATE:
             msg = Message(Mock(), entry, headers=fixtures.make_headers())
-            handlers.registry_item_create_handler(msg, entry)
+            handlers.registry_item_create_handler(msg, entry.copy())
 
         registry_entries = RegistryEntry.objects.all()
         exp = len(fixtures.REGISTRY_ITEM_CREATE)
