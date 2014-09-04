@@ -12,7 +12,7 @@ from dpnmq import handlers
 from dpnmq.tests import fixtures
 from dpn_registry.models import RegistryEntry, NodeEntry
 from dpnode.exceptions import DPNMessageError, DPNWorkflowError
-
+from dpnode.exceptions import DPNOutboundError
 
 def _msg():
     return Message(Mock(), "{}")
@@ -182,7 +182,6 @@ class RegistryItemCreateHandlerTestCase(BasicHandlerTestCase):
         self.assertEqual(1, entries.count())
 
 class RegistryEntryCreatedHandlerTestCase(BasicHandlerTestCase):
-
     def test_registry_entry_created_handler(self):
         self._test_basic_handling(handlers.registry_entry_created_handler)
         # these are actual entries sent from other nodes during test.
@@ -208,3 +207,51 @@ class RegistryListDaterangeReplyHanderTestCase(TestCase):
                          (exp, entries.count()))
 
 # TODO check for new handler tests.
+
+class RecoveryInitQueryHandlerTestCase(BasicHandlerTestCase):
+    def test_recovery_init_query_handler(self):
+        handler = handlers.recovery_init_query_handler
+        tst_data = fixtures.REC_INIT_QUERY.copy()
+        msg = Message(Mock(), tst_data, headers=fixtures.make_headers())
+        
+        self._test_basic_handling(handler)
+        try:
+            handler(msg, tst_data)
+        except Exception as err:
+            self.fail(
+                "Unexpected exception handling a recovery init query: %s" % err)
+
+class RecoveryHandlerErrorTestCase(BasicHandlerTestCase):
+    def _test_recovery_handler(self, handler, tst_data, error):
+        msg = Message(Mock(), tst_data, headers=fixtures.make_headers())
+        self._test_basic_handling(handler)
+        self.assertRaises(error, handler, msg, tst_data)
+        
+class RecoveryAvailableReplyHandlerTestCase(RecoveryHandlerErrorTestCase):
+    def test_recovery_available_reply_handler(self):
+        self._test_recovery_handler(
+            handler = handlers.recovery_available_reply_handler, 
+            tst_data = fixtures.REC_AVAILABLE_REPLY_ACK.copy(), 
+            error = DPNWorkflowError)
+    
+class RecoveryTransferRequestHandlerTestCase(RecoveryHandlerErrorTestCase):
+    def test_recovery_transfer_request_handler(self):
+        self._test_recovery_handler(
+            handler = handlers.recovery_transfer_request_handler, 
+            tst_data = fixtures.REC_TRANSFER_REQUEST.copy(), 
+            error = DPNOutboundError)
+            
+class RecoveryTransferReplyHandlerTestCase(RecoveryHandlerErrorTestCase):
+    def test_recovery_transfer_reply_handler(self):
+        self._test_recovery_handler(
+            handler = handlers.recovery_transfer_reply_handler, 
+            tst_data = fixtures.REC_TRANSFER_REPLY.copy(), 
+            error = DPNWorkflowError)
+        
+class RecoveryTransferStatusHandlerTestCase(RecoveryHandlerErrorTestCase):
+    def test_recovery_transfer_status_handler(self):
+        self._test_recovery_handler(
+            handler = handlers.recovery_transfer_status_handler, 
+            tst_data = fixtures.REC_TRANSFER_STATUS_ACK.copy(), 
+            error = DPNMessageError)
+                        

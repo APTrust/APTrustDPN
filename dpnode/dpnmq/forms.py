@@ -435,6 +435,7 @@ class RecoveryTransferStatusForm(RepTransferReplyForm):
     Handles DPN Recovery Transfer Status Message Body
     https://wiki.duraspace.org/display/DPN/Content+Recovery+Message+4
     """
+    # TODO: Figure it out how to change this when we implement retry messages.
     message_name = forms.ChoiceField(
         choices=_format_choices(['recovery-transfer-status']))
 

@@ -321,32 +321,35 @@ def respond_to_recovery_query(init_request):
     validate_sequence(sequence_info)
     
     # Verifies that the sender node is either a First or a Replication Node
-    node = Node.objects.get(name=node_from) 
-    entry = RegistryEntry.objects.get(dpn_object_id=dpn_object_id)
+    try:
+        node = Node.objects.get(name=node_from) 
+        entry = RegistryEntry.objects.get(dpn_object_id=dpn_object_id)
+        
+        if node.name == entry.first_node_name or node in entry.replicating_nodes.all():
+            supported_protocols = [val for val in init_request.body['protocol']
+                                   if val in DPN_XFER_OPTIONS]
     
-    if node.name == entry.first_node_name or node in entry.replicating_nodes.all():
-        supported_protocols = [val for val in init_request.body['protocol']
-                               if val in DPN_XFER_OPTIONS]
-
-        if supported_protocols:
-            # Verifies that the content is available
-            basefile = "{0}.{1}".format(dpn_object_id, DPN_BAGS_FILE_EXT)
-            local_bagfile = os.path.join(DPN_REPLICATION_ROOT, basefile)
-            
-            if os.path.isfile(local_bagfile):
-                body = {
-                    "available_at": dpn_strftime(datetime.now()),
-                    "message_att": "ack",
-                    "protocol": supported_protocols[0],
-                    "cost": 0
-                }
+            if supported_protocols:
+                # Verifies that the content is available
+                basefile = "{0}.{1}".format(dpn_object_id, DPN_BAGS_FILE_EXT)
+                local_bagfile = os.path.join(DPN_REPLICATION_ROOT, basefile)
+                
+                if os.path.isfile(local_bagfile):
+                    body = {
+                        "available_at": dpn_strftime(datetime.now()),
+                        "message_att": "ack",
+                        "protocol": supported_protocols[0],
+                        "cost": 0
+                    }
+                else:
+                    note = "The content is not available"
             else:
-                note = "The content is not available"
+                note = "The protocol is not supported"
         else:
-            note = "The protocol is not supported"
-    else:
-        note = "Current node is not listed either as first node or replicating node."
-    
+            note = "Current node is not listed either as first node or replicating node."
+    except Node.DoesNotExist:
+        note = "The node does not exists"
+        
     # If working with just one server, the action has been stored in the database
     action, _ = Workflow.objects.get_or_create(
         correlation_id=correlation_id, 

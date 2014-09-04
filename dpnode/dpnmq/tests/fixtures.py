@@ -350,3 +350,56 @@ REGISTRY_LIST_DATERANGE = {
     "date_range": ["2013-09-22T18:06:55Z", "2013-09-22T18:08:55Z"],
     "reg_sync_list": REG_SYNC_LIST
 }
+
+
+# Recovery Fixtures
+
+REC_INIT_QUERY = {
+    "message_name": "recovery-init-query",
+    "protocol": settings.DPN_XFER_OPTIONS,
+    "dpn_object_id": "some-uuid-that-actually-looks-like-a-uuid"
+}
+
+REC_AVAILABLE_REPLY_ACK = {
+    "message_name": "recovery-available-reply",
+    "available_at": "2013-01-18T09:49:28Z",
+    "message_att": "ack",
+    "protocol": settings.DPN_DEFAULT_XFER_PROTOCOL,
+    "cost": 0
+}
+
+REC_AVAILABLE_REPLY_NAK = {
+    "message_name": "recovery-available-reply",
+    "message_att": "nak"
+}
+
+REC_TRANSFER_REQUEST = {
+    "message_name": "recovery-transfer-request",
+    "message_att": "ack",
+    "protocol": settings.DPN_DEFAULT_XFER_PROTOCOL,
+}
+
+REC_TRANSFER_REPLY = {
+    "message_name": "recovery-transfer-reply",
+    "protocol": settings.DPN_DEFAULT_XFER_PROTOCOL,
+    "location": settings.DPN_RECOVER_LOCATION[settings.DPN_DEFAULT_XFER_PROTOCOL]
+}
+
+REC_TRANSFER_STATUS_ACK = {
+    "message_name": "recovery-transfer-status",
+    "message_att": "ack",
+    "fixity_algorithm": "sha256",
+    "fixity_value": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+}
+
+REC_TRANSFER_STATUS_NAK = {
+    "message_name": "recovery-transfer-status",
+    "message_att": "nak",
+    "message_error": "Test error message"
+}
+
+REC_TRANSFER_STATUS_RETRY = {
+    "message_name": "recovery-transfer-status",
+    "message_att": "retry",
+    "message_error": "Test error message"
+}
