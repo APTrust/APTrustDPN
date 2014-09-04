@@ -256,7 +256,7 @@ class RegistryItemCreateFormTestCase(DPNBodyFormTest):
     def test_save(self):
         # pulled from actual node values sent to the broker
         for data in fixtures.REGISTRY_ITEM_CREATE[1:]:
-            form = RegistryItemCreateForm(data)
+            form = RegistryItemCreateForm(data.copy())
             self.assertTrue(form.is_valid(), form.errors)
             form.save()
             self.assertTrue(RegistryEntry.objects.get(dpn_object_id=data["dpn_object_id"]), "Object not found in registry!")

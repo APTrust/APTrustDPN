@@ -228,21 +228,28 @@ REG_ENTRIES = [
     },
 
 ]
+
+# NOTE make sure to use .copy() when using these in tests so it doesn't modify
+# the values and caus errors.
 REGISTRY_ITEM_CREATE = [
     {
         "message_name": "registry-item-create",
         "dpn_object_id": "bedff031-9946-4fff-a268-9fd9f8396a12",
-        "local_id": "jq927jp4517", "first_node_name": "sdr",
+        "local_id": "jq927jp4517",
+        "first_node_name": "sdr",
         "replicating_node_names": ["aptrust", "chron", "tdr", "sdr"],
-        "version_number": 1, "previous_version_object_id": "null",
+        "version_number": 1,
+        "previous_version_object_id": "null",
         "forward_version_object_id": "null",
         "first_version_object_id": "dedff031-9946-4fff-a268-9fd9f8396f15",
         "fixity_algorithm": "sha256",
         "fixity_value": "d03687de6db3a0639b1a7d14eba4c6713ac9c7852fed47f3b160765bb5757f27",
         "last_fixity_date": "2014-07-22T21:40:37Z",
         "creation_date": "2014-07-22T21:40:37Z",
-        "last_modified_date": "2014-07-22T21:40:37Z", "bag_size": 20480,
-        "brightening_object_id": [], "rights_object_id": [],
+        "last_modified_date": "2014-07-22T21:40:37Z",
+        "bag_size": 20480,
+        "brightening_object_id": [],
+        "rights_object_id": [],
         "object_type": "data"
     },
     {

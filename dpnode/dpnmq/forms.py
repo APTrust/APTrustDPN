@@ -12,7 +12,7 @@ from django.db.models.query import QuerySet
 
 from dpnmq.utils import dpn_strftime
 from dpnode.settings import DPN_DATE_FORMAT, DPN_FIXITY_CHOICES, PROTOCOL_LIST
-from dpn_registry.models import RegistryEntry, TYPE_CHOICES, NodeEntry
+from dpn_registry.models import RegistryEntry, TYPE_CHOICES, NodeEntry, Node
 
 # NOTE Fundging this to create a valid list for multiple choice fields
 VALID_DPN_PROTOCOLS = PROTOCOL_LIST
@@ -470,7 +470,11 @@ class _RegistryEntryForm(forms.ModelForm):
     last_fixity_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT,])
     creation_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT,])
     last_modified_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT,])
-    # object_type = forms.ChoiceField(choices=OBJECT_TYPES)
+
+    def clean(self):
+        for node in self.initial.get("replicating_nodes", []):
+            Node.objects.get_or_create(name=node)
+        return super(_RegistryEntryForm, self).clean()
 
     def __init__(self, data={}, *args, **kwargs):
         # Sanitize null field values.

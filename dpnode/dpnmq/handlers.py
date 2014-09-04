@@ -242,7 +242,7 @@ def registry_item_create_handler(msg, body):
         # pre-populate nodes or it will not validate.
         # TODO re-examine this! seems hacky but I have to deliver in an hour.
         # TODO likely  use message body form eventuall since that already validates
-        for name in body.get("replicating_node_names", None):
+        for name in body.get("replicating_node_names", []):
             Node.objects.get_or_create(**{"name": name})
         req = messages.RegistryItemCreate(msg.headers, body)
         req.validate()
