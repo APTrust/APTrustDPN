@@ -56,10 +56,10 @@ def create_registry_entry(correlation_id):
         fixity_value = generate_fixity(local_bag_path)
         now = datetime.now()
 
-        registry = RegistryEntry.objects.create(
-            dpn_object_id=ingest.object_id,
+        # attributes to update in registry entry
+        attributes = dict(
             first_node_name=DPN_NODE_NAME,
-            version_number=1, 
+            version_number=1,
             fixity_algorithm=DPN_FIXITY_CHOICES[0],
             fixity_value=fixity_value,
             last_fixity_date=now,
@@ -68,13 +68,34 @@ def create_registry_entry(correlation_id):
             bag_size=os.path.getsize(local_bag_path)
         )
 
+        # convert this to get_or_create
+        try:
+            registry_entry = RegistryEntry.objects.get(dpn_object_id=ingest.object_id)            
+            
+            # in case entry already exists, update its attributes
+            for attr, value in attributes.iteritems():
+                setattr(registry_entry, attr, value)
+
+            # set flag created to false
+            created = False
+        except RegistryEntry.DoesNotExist as err:
+            attributes['dpn_object_id'] = ingest.object_id
+            registry_entry = RegistryEntry(**attributes)            
+            created = True
+
+        # validate and save
+        registry_entry.full_clean()
+        registry_entry.save()
+
         # now save replication nodes and own node
         for node in [a.node for a in replicating_nodes] + [DPN_NODE_NAME]:
             node, created = Node.objects.get_or_create(name=node)
-            registry.replicating_nodes.add(node)
+            registry_entry.replicating_nodes.add(node)
 
-        logger.info("Registry entry successfully created for transaction with correlation_id: %s" % correlation_id)
-        return registry
+        _status = "created" if created else "updated"
+        logger.info("Registry entry successfully %s for transaction with correlation_id: %s" % 
+                    (_status, correlation_id))
+        return registry_entry
     else:
         logger.info("Registry entry not created. The bag was not transferred by any node.")
         return None
