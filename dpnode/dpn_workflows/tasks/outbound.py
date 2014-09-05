@@ -394,7 +394,7 @@ def respond_to_recovery_transfer(transfer_request):
             correlation_id=correlation_id, 
             node=node_from,
             action=RECOVERY,
-            step = TRANSFER_REQUEST
+            step=AVAILABLE_REPLY
         )
         action.step = TRANSFER_REPLY
     except Exception as e:
