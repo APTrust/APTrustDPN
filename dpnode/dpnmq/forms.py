@@ -473,7 +473,7 @@ class _RegistryEntryForm(forms.ModelForm):
 
     def clean(self):
         for node in self.initial.get("replicating_nodes", []):
-            Node.objects.get_or_create(name=node)
+            obj, created = Node.objects.get_or_create(name=node)
         return super(_RegistryEntryForm, self).clean()
 
     def __init__(self, data={}, *args, **kwargs):
