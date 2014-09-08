@@ -426,7 +426,7 @@ def recovery_transfer_request_handler(msg, body):
     respond_to_recovery_transfer.apply_async((req,))
 
 @local_router.register('recovery-transfer-reply')
-def recovery_transfer_reply(msg, body):
+def recovery_transfer_reply_handler(msg, body):
     """
     Accepts a Recovery Transfer Reply and produces a Recovery
     Transfer Reply
@@ -448,7 +448,7 @@ def recovery_transfer_reply(msg, body):
     recover_and_check_integrity.apply_async((req,))
 
 @local_router.register('recovery-transfer-status')
-def recovery_transfer_status(msg, body):
+def recovery_transfer_status_handler(msg, body):
     """
     Accepts a Recovery Transfer Status and updates workflow action
 
@@ -475,7 +475,7 @@ def recovery_transfer_status(msg, body):
         )
     except Workflow.DoesNotExist as err:
         raise DPNMessageError('Workflow action with correlation_id %s and node %s does not exist' 
-                              % correlation_id, node_from)
+                              % (correlation_id, node_from))
 
     # update to current step
     action.step = VERIFY_REPLY

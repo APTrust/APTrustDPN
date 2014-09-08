@@ -91,7 +91,7 @@ def download_bag(node, location, protocol):
 
     print("Trying to transfer via %s protocol" % protocol)
 
-    if protocol == 'https':        
+    if protocol == 'https':
         basefile = os.path.basename(location)
         local_bagfile = os.path.join(DPN_REPLICATION_ROOT, basefile)
 
@@ -106,7 +106,6 @@ def download_bag(node, location, protocol):
         return local_bagfile
 
     elif protocol == 'rsync':
-
         filename = os.path.basename(location.split(":")[1])
         dst = os.path.join(DPN_REPLICATION_ROOT, filename)
         command = ["rsync", "-Lav", "--compress",

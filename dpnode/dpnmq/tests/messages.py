@@ -5,13 +5,15 @@
 from django.test import TestCase
 
 from dpnode.settings import DPN_NODE_NAME, DPN_LOCAL_KEY
-from dpnode.exceptions import DPNMessageError
 from dpnmq.tests import fixtures
 from dpnmq.forms import RepInitQueryForm
 from dpnmq.forms import RepAvailableReplyForm, RepLocationReplyForm
 from dpnmq.forms import RepLocationCancelForm, RepTransferReplyForm
 from dpnmq.forms import RegistryItemCreateForm, RepVerificationReplyForm
 from dpnmq.forms import RegistryEntryCreatedForm
+from dpnmq.forms import RecoveryInitQueryForm, RecoveryAvailableReplyForm
+from dpnmq.forms import RecoveryTransferRequestForm, RecoveryTransferReplyForm
+from dpnmq.forms import RecoveryTransferStatusForm
 from dpnmq import messages
 
 # #####################################
@@ -45,17 +47,17 @@ class TestDPNMessage(TestCase):
         # NOTE Actual validation covered in forms.
         # Only testing expected failure.
         msg = messages.DPNMessage()
-        self.assertRaises(DPNMessageError, msg.validate_headers)
+        self.assertRaises(messages.DPNMessageError, msg.validate_headers)
 
     def test_send(self):
         # Unsure how to test positive send.  For now testing only if it throws an
         # Error if it does not validate.
         msg = messages.DPNMessage()
-        self.assertRaises(DPNMessageError, msg.send, "broadcast")
+        self.assertRaises(messages.DPNMessageError, msg.send, "broadcast")
 
     def test_validate_body(self):
         msg = messages.DPNMessage()
-        self.assertRaises(DPNMessageError, msg.validate_body)
+        self.assertRaises(messages.DPNMessageError, msg.validate_body)
 
     def test_set_body(self):
         msg = messages.DPNMessage()
@@ -78,81 +80,56 @@ class TestDPNMessage(TestCase):
         for k, v in good_args.items():
             self.assertTrue(msg.body[k] == v)
 
-
 class TestDPNMessageImplementations(TestCase):
     def _test_expected_defaults(self, msg, exp):
         self.assertTrue(msg.body["message_name"], exp["message_name"])
         self.assertTrue(msg.headers["sequence"] == exp["sequence"])
         self.assertTrue(isinstance(msg.body_form(), exp["body_form"]))
 
-    def test_rep_init_query(self):
-        msg = messages.ReplicationInitQuery()
+    def _test_message(self, msg, form):
         exp = {
-            "message_name": messages.ReplicationInitQuery.directive,
-            "body_form": RepInitQueryForm,
-            "sequence": messages.ReplicationInitQuery.sequence
+            "message_name": msg.directive,
+            "body_form": form,
+            "sequence": msg.sequence
         }
-        self._test_expected_defaults(msg, exp)
+        self._test_expected_defaults(msg(), exp)
+    
+    def test_rep_init_query(self):
+        self._test_message(messages.ReplicationInitQuery, RepInitQueryForm)
 
     def test_rep_avail_reply(self):
-        msg = messages.ReplicationAvailableReply()
-        exp = {
-            "message_name": messages.ReplicationAvailableReply.directive,
-            "body_form": RepAvailableReplyForm,
-            "sequence": messages.ReplicationAvailableReply.sequence
-        }
-        self._test_expected_defaults(msg, exp)
+        self._test_message(messages.ReplicationAvailableReply, RepAvailableReplyForm)
 
     def test_rep_loc_reply(self):
-        msg = messages.ReplicationLocationReply()
-        exp = {
-            "message_name": messages.ReplicationLocationReply.directive,
-            "body_form": RepLocationReplyForm,
-            "sequence": messages.ReplicationLocationReply.sequence
-        }
-        self._test_expected_defaults(msg, exp)
+        self._test_message(messages.ReplicationLocationReply, RepLocationReplyForm)
 
     def test_rep_loc_cancel(self):
-        msg = messages.ReplicationLocationCancel()
-        exp = {
-            "message_name": messages.ReplicationLocationCancel.directive,
-            "body_form": RepLocationCancelForm,
-            "sequence": messages.ReplicationLocationCancel.sequence
-        }
-        self._test_expected_defaults(msg, exp)
+        self._test_message(messages.ReplicationLocationCancel, RepLocationCancelForm)
 
     def test_rep_transfer_reply(self):
-        msg = messages.ReplicationTransferReply()
-        exp = {
-            "message_name": messages.ReplicationTransferReply.directive,
-            "body_form": RepTransferReplyForm,
-            "sequence": messages.ReplicationTransferReply.sequence
-        }
-        self._test_expected_defaults(msg, exp)
+        self._test_message(messages.ReplicationTransferReply, RepTransferReplyForm)
 
     def test_rep_verification_reply(self):
-        msg = messages.ReplicationVerificationReply()
-        exp = {
-            "message_name": messages.ReplicationVerificationReply.directive,
-            "body_form": RepVerificationReplyForm,
-            "sequence": messages.ReplicationVerificationReply.sequence
-        }
-        self._test_expected_defaults(msg, exp)
+        self._test_message(messages.ReplicationVerificationReply, RepVerificationReplyForm)
 
     def test_reg_item_create(self):
-        msg = messages.RegistryItemCreate()
-        exp = {
-            "message_name": messages.RegistryItemCreate.directive,
-            "body_form": RegistryItemCreateForm,
-            "sequence": messages.RegistryItemCreate.sequence
-        }
-        self._test_expected_defaults(msg, exp)
+        self._test_message(messages.RegistryItemCreate, RegistryItemCreateForm)
 
     def test_reg_entry_created(self):
-        msg = messages.RegistryEntryCreated()
-        exp = {
-            "message_name": messages.RegistryEntryCreated.directive,
-            "body_form": RegistryEntryCreatedForm,
-            "sequence": messages.RegistryEntryCreated.sequence
-        }
-        self._test_expected_defaults(msg, exp)
+        self._test_message(messages.RegistryEntryCreated, RegistryEntryCreatedForm)
+    
+    def test_rec_init_query(self):
+        self._test_message(messages.RecoveryInitQuery, RecoveryInitQueryForm)
+    
+    def test_rec_available_reply(self):
+        self._test_message(messages.RecoveryAvailableReply, RecoveryAvailableReplyForm)
+    
+    def test_rec_transfer_request(self):
+        self._test_message(messages.RecoveryTransferRequest, RecoveryTransferRequestForm)
+    
+    def test_rec_transfer_reply(self):
+        self._test_message(messages.RecoveryTransferReply, RecoveryTransferReplyForm)
+    
+    def test_rec_transfer_status(self):
+        self._test_message(messages.RecoveryTransferStatus, RecoveryTransferStatusForm)
+    

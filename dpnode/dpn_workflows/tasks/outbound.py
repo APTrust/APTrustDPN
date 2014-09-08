@@ -140,30 +140,6 @@ def choose_and_send_location(correlation_id):
                 action.step = TRANSFER
                 action.save()
 
-    # queue the task responsible to create registry entry 
-    # with a countdown giving time to replicating nodes
-    # to transfer the bag. If broker connection is lost, retry
-    # sending the task for 5 minutes each 10
-    retry_seconds = 0
-    five_mins = 5*60
-
-    while retry_seconds < five_mins:
-        try:
-            reg_delay = (DPN_NUM_XFERS * DPN_MSG_TTL.get("replication-transfer-reply", DPN_TTL)) 
-            create_registry_entry.apply_async(
-                (correlation_id, ),
-                countdown=reg_delay,
-                link=broadcast_item_creation.subtask()
-            )
-            retry_seconds = five_mins
-        except OSError as err:
-            logger.info("Error trying to send registry task to queue. Message: %s" % err)
-            print('Retrying in 10 seconds')
-            
-            time.sleep(10)
-            retry_seconds += 10
-
-
 # transfer has finished, that means you boy are ready to notify 
 # first node the bag has been already replicated
 @app.task
@@ -281,10 +257,22 @@ def verify_fixity_and_reply(req):
     # }
 
     body = dict(message_att=message_att)
-
     rsp = ReplicationVerificationReply(headers, body)
     rsp.send(req.headers['reply_key'])
 
+    # make sure to copy the bag to the settings.DPN_REPLICATION_ROOT folder
+    # to have it accesible in case of recovery request
+    ingested_bag = os.path.join(DPN_REPLICATION_ROOT, os.path.basename(action.location))
+    if not os.path.isfile(ingested_bag):
+        shutil.copy2(local_bag_path, DPN_REPLICATION_ROOT)
+
+    # This task will create or update a registry entry
+    # for a given correlation_id. It is also linked with
+    # the sending of a item creation message
+    create_registry_entry.apply_async(
+        (correlation_id, ),
+        link=broadcast_item_creation.subtask()
+    )
 
 # Recovery Workflow Tasks
 @app.task
@@ -321,32 +309,35 @@ def respond_to_recovery_query(init_request):
     validate_sequence(sequence_info)
     
     # Verifies that the sender node is either a First or a Replication Node
-    node = Node.objects.get(name=node_from) 
-    entry = RegistryEntry.objects.get(dpn_object_id=dpn_object_id)
+    try:
+        node = Node.objects.get(name=node_from) 
+        entry = RegistryEntry.objects.get(dpn_object_id=dpn_object_id)
+        
+        if node.name == entry.first_node_name or node in entry.replicating_nodes.all():
+            supported_protocols = [val for val in init_request.body['protocol']
+                                   if val in DPN_XFER_OPTIONS]
     
-    if node.name == entry.first_node_name or node in entry.replicating_nodes.all():
-        supported_protocols = [val for val in init_request.body['protocol']
-                               if val in DPN_XFER_OPTIONS]
-
-        if supported_protocols:
-            # Verifies that the content is available
-            basefile = "{0}.{1}".format(dpn_object_id, DPN_BAGS_FILE_EXT)
-            local_bagfile = os.path.join(DPN_REPLICATION_ROOT, basefile)
-            
-            if os.path.isfile(local_bagfile):
-                body = {
-                    "available_at": dpn_strftime(datetime.now()),
-                    "message_att": "ack",
-                    "protocol": supported_protocols[0],
-                    "cost": 0
-                }
+            if supported_protocols:
+                # Verifies that the content is available
+                basefile = "{0}.{1}".format(dpn_object_id, DPN_BAGS_FILE_EXT)
+                local_bagfile = os.path.join(DPN_REPLICATION_ROOT, basefile)
+                
+                if os.path.isfile(local_bagfile):
+                    body = {
+                        "available_at": dpn_strftime(datetime.now()),
+                        "message_att": "ack",
+                        "protocol": supported_protocols[0],
+                        "cost": 0
+                    }
+                else:
+                    note = "The content is not available"
             else:
-                note = "The content is not available"
+                note = "The protocol is not supported"
         else:
-            note = "The protocol is not supported"
-    else:
-        note = "Current node is not listed either as first node or replicating node."
-    
+            note = "Current node is not listed either as first node or replicating node."
+    except Node.DoesNotExist:
+        note = "The node does not exists"
+        
     # If working with just one server, the action has been stored in the database
     action, _ = Workflow.objects.get_or_create(
         correlation_id=correlation_id, 
@@ -403,7 +394,7 @@ def respond_to_recovery_transfer(transfer_request):
             correlation_id=correlation_id, 
             node=node_from,
             action=RECOVERY,
-            step = TRANSFER_REQUEST
+            step=AVAILABLE_REPLY
         )
         action.step = TRANSFER_REPLY
     except Exception as e:

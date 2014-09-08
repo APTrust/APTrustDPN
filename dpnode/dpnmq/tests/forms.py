@@ -9,7 +9,6 @@ import json
 from datetime import datetime
 
 from django.test import TestCase
-
 from dpnode.settings import DPN_DEFAULT_XFER_PROTOCOL, DPN_NODE_LIST
 from dpn_registry.models import RegistryEntry, Node
 from dpnmq.utils import dpn_strftime, str_expire_on, dpn_strptime
@@ -19,6 +18,9 @@ from dpnmq.forms import RepLocationCancelForm, RepTransferReplyForm
 from dpnmq.forms import RegistryItemCreateForm, RepVerificationReplyForm
 from dpnmq.forms import RegistryEntryCreatedForm, RegistryDateRangeSyncForm
 from dpnmq.forms import RegistryListDateRangeForm, RegistryEntryCreatedForm
+from dpnmq.forms import RecoveryInitQueryForm, RecoveryAvailableReplyForm
+from dpnmq.forms import RecoveryTransferRequestForm, RecoveryTransferReplyForm
+from dpnmq.forms import RecoveryTransferStatusForm
 from dpnmq.tests import fixtures
 
 
@@ -252,7 +254,7 @@ class RegistryItemCreateFormTestCase(DPNBodyFormTest):
         self._test_validation(frm, self.good_body, bad_body,
                               ['replicating_node_names'])
         self._test_dpn_data(frm, self.good_body)
-
+    
     def test_save(self):
         # pulled from actual node values sent to the broker
         for data in fixtures.REGISTRY_ITEM_CREATE[1:]:
@@ -325,3 +327,93 @@ class RegistryListDaterangeFormTestCase(DPNBodyFormTest):
             self.assertEqual(dt, good_body["date_range"][idx])
         self.assertEqual(len(data['reg_sync_list']),
                          len(good_body['reg_sync_list']))
+
+
+# Recovery Tests
+
+class RecInitQueryFormTestCase(DPNBodyFormTest):
+    def test_data(self):
+        good_body = fixtures.REC_INIT_QUERY.copy()
+        bad_body = {
+            "message_name": ["", None],
+            "protocol": [[], [None, ], ["", ], ""],
+            "dpn_object_id": [None, ""]
+        }
+        frm = RecoveryInitQueryForm
+        self._test_validation(frm, good_body, bad_body)
+        self._test_dpn_data(frm, good_body)
+
+class RecAvailableReplyFormTestCase(DPNBodyFormTest):
+    def test_data(self):
+        frm = RecoveryAvailableReplyForm
+        good_body_ack = fixtures.REC_AVAILABLE_REPLY_ACK.copy()
+        bad_body_ack = {
+            "message_name": ["", None, 88342],
+            "available_at": ["", None, "2013-01-05T09:49:28-800"],
+            "message_att": ["", None, 88342, True, "nak"],
+            "protocol": ["", None, "scp", 28343],
+            "cost": ["", None, "test", -1, 1.0]
+        }
+        self._test_validation(frm, good_body_ack, bad_body_ack)
+        self._test_dpn_data(frm, good_body_ack)
+
+        good_body_nak = fixtures.REC_AVAILABLE_REPLY_NAK.copy()
+        bad_body_nak = {
+            "message_name": ["", None, 88342],
+            "message_att": ["no", False, 23434, "ack"],
+        }
+        self._test_validation(frm, good_body_nak, bad_body_nak)#, ["available_at"])
+        self._test_dpn_data(frm, good_body_nak)
+
+class RecTransferRequestFormTestCase(DPNBodyFormTest):
+    def test_data(self):
+        good_body = fixtures.REC_TRANSFER_REQUEST.copy()
+        bad_body = {
+            "message_name": ["", None],
+            "message_att": ["", None, 88342, True, "nak"],
+            "protocol": [[], [None, ], ["", ], "", "ftp"]
+        }
+        frm = RecoveryTransferRequestForm
+        self._test_validation(frm, good_body, bad_body)
+        self._test_dpn_data(frm, good_body)
+
+class RecTransferReplyFormTestCase(DPNBodyFormTest):
+    def test_data(self):
+        good_body = fixtures.REC_TRANSFER_REPLY.copy()
+        bad_body = {
+            "message_name": ["", None],
+            "protocol": [[], [None, ], ["", ], "", "ftp"],
+            "location": ["", None]
+        }
+        frm = RecoveryTransferReplyForm
+        self._test_validation(frm, good_body, bad_body)
+        self._test_dpn_data(frm, good_body)
+
+class RecTransferStatusFormTestCase(DPNBodyFormTest):
+    def test_data(self):
+        good_body = fixtures.REC_TRANSFER_STATUS_ACK.copy()
+        bad_body = {
+            "message_name": ["", None],
+            "message_att": ["", None, 88342, True, "nak"],
+            "fixity_algorithm": ["", None],
+            "fixity_value": ["", None]
+        }
+        frm = RecoveryTransferStatusForm
+        self._test_validation(frm, good_body, bad_body)
+        self._test_dpn_data(frm, good_body)
+        
+        good_body_nak = fixtures.REC_TRANSFER_STATUS_NAK.copy()
+        bad_body_nak = {
+            "message_name": ["", None, 88342],
+            "message_att": ["no", False, 23434, "ack"],
+            "message_error": [],
+        }
+        self._test_validation(frm, good_body_nak, bad_body_nak,
+                              ['message_error'])
+        self._test_dpn_data(frm, good_body_nak)
+        
+        # TODO:Test retry message
+
+
+
+
