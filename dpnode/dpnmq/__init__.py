@@ -12,8 +12,9 @@ DPNMQ is a django app to handle AMQP messaging within the Digital Preservation N
 __version_info__ = (0, 1, 0, "dev")
 
 # Dot-connect all but the last. Last is dash-connected if not None.
-__version__ = '.'.join([ str(i) for i in __version_info__[:-1] ])
+__version__ = '.'.join([str(i) for i in __version_info__[:-1]])
 if __version_info__[-1] is not None:
     __version__ += ('-%s' % (__version_info__[-1],))
 
-CHECKSUM_TYPES = [ 'CRC32', 'MD2', 'MD4', 'MD5', 'SHA1', 'SHA256', 'SHA384', 'SHA512']
+CHECKSUM_TYPES = ['CRC32', 'MD2', 'MD4', 'MD5', 'SHA1', 'SHA256', 'SHA384',
+                  'SHA512']

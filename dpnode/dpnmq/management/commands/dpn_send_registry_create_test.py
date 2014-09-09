@@ -1,22 +1,21 @@
-from random import randint
 from datetime import datetime
 
 from django.core.management.base import BaseCommand
-
 from kombu.utils import uuid
 
 from dpnode.settings import DPN_BROADCAST_KEY
 from dpnmq.messages import RegistryItemCreate
 from dpnmq.utils import dpn_strftime
 
+
 class Command(BaseCommand):
     help = 'Sends a single registry-item-create broadcast message.'
 
     def handle(self, *args, **options):
         headers = {
-        	'correlation_id': uuid(),
-        	'sequence': 0,
-        	'date': dpn_strftime(datetime.now()),
+        'correlation_id': uuid(),
+        'sequence': 0,
+        'date': dpn_strftime(datetime.now()),
         }
         body = {
             "message_name": "registry-item-create",
@@ -34,7 +33,8 @@ class Command(BaseCommand):
             "creation_date": "2013-01-05T09:49:28-0800",
             "last_modified_date": "2013-01-05T09:49:28-0800",
             "bag_size": 65536,
-            "brightening_object_id": ["a02de3cd-a74b-4cc6-adec-16f1dc65f726", "C92de3cd-a789-4cc6-adec-16a40c65f726",],
+            "brightening_object_id": ["a02de3cd-a74b-4cc6-adec-16f1dc65f726",
+                                      "C92de3cd-a789-4cc6-adec-16a40c65f726", ],
             "rights_object_id": ["0df688d4-8dfb-4768-bee9-639558f40488", ],
             "object_type": "data",
         }

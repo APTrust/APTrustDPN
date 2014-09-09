@@ -1,13 +1,12 @@
-from random import randint
 from datetime import datetime
 
 from django.core.management.base import BaseCommand
-
 from kombu.utils import uuid
 
 from dpnode.settings import DPN_BROADCAST_KEY
 from dpnmq.messages import ReplicationInitQuery
 from dpnmq.utils import dpn_strftime
+
 
 class Command(BaseCommand):
     help = 'Sends a single broadcast message.'
@@ -15,9 +14,9 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         msg = ReplicationInitQuery()
         headers = {
-        	'correlation_id': uuid(),
-        	'sequence': 0,
-        	'date': dpn_strftime(datetime.now())
+        'correlation_id': uuid(),
+        'sequence': 0,
+        'date': dpn_strftime(datetime.now())
         }
         msg.set_headers(**headers)
         body = {

@@ -17,11 +17,12 @@ Custom test runner to allow for testing celery delayed and async tasts as well
 as AMQP broker tests.
 """
 
+
 def _set_test_overrides():
     settings.DPN_BROKER_URL = "memory://"
 
-class DPNodeTestSuiteRunner(CeleryTestSuiteRunner):
 
+class DPNodeTestSuiteRunner(CeleryTestSuiteRunner):
     def setup_test_environment(self, **kwargs):
         super(DPNodeTestSuiteRunner, self).setup_test_environment(**kwargs)
         _set_test_overrides()

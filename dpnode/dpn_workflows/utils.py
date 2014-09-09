@@ -1,23 +1,22 @@
 import os
-import sys
 import copy
 import ctypes
 import random
 import hashlib
 import logging
-import requests
 import platform
 import subprocess
 
-from uuid import uuid4
+import requests
 
 from dpnode.settings import DPN_REPLICATION_ROOT, DPN_FIXITY_CHOICES
-from dpnode.settings import DPN_BAGS_FILE_EXT, DPN_NUM_XFERS
-
+from dpnode.settings import DPN_NUM_XFERS
 from dpn_workflows.models import PROTOCOL_DB_VALUES
 from dpn_workflows.models import SequenceInfo
 
+
 logger = logging.getLogger('dpnmq.console')
+
 
 def available_storage(path):
     """
@@ -29,9 +28,9 @@ def available_storage(path):
     if platform.system() == 'Windows':
         available_bytes = ctypes.c_ulonglong(0)
         ctypes.windll.kernel32.GetDiskFreeSpaceExW(
-            ctypes.c_wchar_p(path), 
-            None, 
-            None, 
+            ctypes.c_wchar_p(path),
+            None,
+            None,
             ctypes.pointer(available_bytes)
         )
 
@@ -40,8 +39,9 @@ def available_storage(path):
         # using statvfs for Unix-based OS
         storage = os.statvfs(path)
         free_bytes = storage.f_bavail * storage.f_frsize
-    
+
     return free_bytes
+
 
 def choose_nodes(node_list):
     """
@@ -51,33 +51,38 @@ def choose_nodes(node_list):
     :param node_list: A list of acknowledge or available nodes 
     :returns: two appropiate nodes to replicate with.
     """
-    
+
     # TODO: define a way or ranking to choose nodes
     # Doing random for now
 
-    return random.sample(node_list, DPN_NUM_XFERS) 
+    return random.sample(node_list, DPN_NUM_XFERS)
     # TODO: change number to 2, now is 1 for testing purposes
-    
-def store_sequence(id,node_name,sequence_num):
+
+
+def store_sequence(id, node_name, sequence_num):
     try:
         sequence = SequenceInfo.objects.get(correlation_id=id)
-        sequence.sequence = "%s,%s" % (sequence.sequence,sequence_num)
+        sequence.sequence = "%s,%s" % (sequence.sequence, sequence_num)
         return sequence
     except SequenceInfo.DoesNotExist:
-        sequence = SequenceInfo(correlation_id=id,node=node_name,sequence=str(sequence_num))
+        sequence = SequenceInfo(correlation_id=id, node=node_name,
+                                sequence=str(sequence_num))
         sequence.save()
         return sequence
-    
+
+
 def validate_sequence(sequence_info):
     sequence = sequence_info.sequence.split(',')
     prev_num = -1
-    
+
     for num in sequence:
         if int(num) <= prev_num:
-            raise "Worklow sequence is out of sync in transaction %s from %s!" % (sequence_info.correlation_id, sequence_info.node)
+            raise "Worklow sequence is out of sync in transaction %s from %s!" % (
+            sequence_info.correlation_id, sequence_info.node)
         prev_num = int(num)
-    
+
     return True
+
 
 def download_bag(node, location, protocol):
     """
@@ -98,7 +103,7 @@ def download_bag(node, location, protocol):
         # TODO: catch exceptions. Need to define behavior in case of errors (same to rsync)
         r = requests.get(location, stream=True)
         with open(local_bagfile, 'wb') as f:
-            for chunk in r.iter_content(chunk_size=1024): 
+            for chunk in r.iter_content(chunk_size=1024):
                 if chunk:
                     f.write(chunk)
                     f.flush()
@@ -122,6 +127,7 @@ def download_bag(node, location, protocol):
     else:
         raise NotImplementedError
 
+
 def generate_fixity(bag_path, algorithm='sha256'):
     """
     Returns the fixity value for a given bag file
@@ -135,7 +141,7 @@ def generate_fixity(bag_path, algorithm='sha256'):
     if algorithm not in DPN_FIXITY_CHOICES:
         raise NotImplementedError
 
-    if algorithm == 'sha256':        
+    if algorithm == 'sha256':
         hasher = hashlib.sha256()
         with open(bag_path, 'rb') as f:
             buf = f.read(blocksize)
@@ -144,7 +150,8 @@ def generate_fixity(bag_path, algorithm='sha256'):
                 buf = f.read(blocksize)
         return hasher.hexdigest()
 
-    # TODO: implement hashing checksum for other algorithms
+        # TODO: implement hashing checksum for other algorithms
+
 
 def protocol_str2db(protocol_str):
     """
@@ -157,6 +164,7 @@ def protocol_str2db(protocol_str):
         return PROTOCOL_DB_VALUES[protocol_str]
     except KeyError as err:
         raise KeyError('Mapping protocol key not found %s' % err)
+
 
 def remove_bag(bag_path):
     """
@@ -174,6 +182,7 @@ def remove_bag(bag_path):
 
     return True
 
+
 class ModelToDict(object):
     """
     Utilty class to generate a dictionary from a given instance
@@ -188,7 +197,7 @@ class ModelToDict(object):
 
     """
 
-    def __init__(self, instance, fields=[], exclude=[], n_override={}, 
+    def __init__(self, instance, fields=[], exclude=[], n_override={},
                  v_override={}, relations={}, null_value='null'):
         """
         :param instance: Model instance
@@ -205,7 +214,7 @@ class ModelToDict(object):
         self.instance = instance
 
         for field in (fields or self.get_model_fields()):
-            
+
             # verify field name override
             if field in n_override.keys():
                 key = n_override[field]
@@ -221,7 +230,8 @@ class ModelToDict(object):
             # verify field value override
             if field in v_override.keys():
                 override_field = getattr(instance, v_override[field])
-                self[key] = override_field() if callable(override_field) else override_field
+                self[key] = override_field() if callable(
+                    override_field) else override_field
                 continue
 
             if model_field.get_internal_type() == 'ForeignKey':
@@ -231,7 +241,8 @@ class ModelToDict(object):
                         flat_field = relations[field]['fields'][0]
                         self[key] = getattr(instance_attr, flat_field)
                     else:
-                        self[key] = ModelToDict(instance_attr, relations[field]['fields']).as_dict()
+                        self[key] = ModelToDict(instance_attr, relations[field][
+                            'fields']).as_dict()
                 else:
                     if instance_attr:
                         self[key] = getattr(instance_attr, 'pk')
@@ -244,17 +255,21 @@ class ModelToDict(object):
                     if flat == True:
                         flat_fields = [relations[field]['fields'][0]]
                     else:
-                        flat_fields = relations[field]['fields'] or self.get_model_fields(model_field)
+                        flat_fields = relations[field][
+                                          'fields'] or self.get_model_fields(
+                            model_field)
                 else:
                     flat = True
                     flat_fields = ['pk']
 
                 if instance_attr:
-                    self[key] = list(instance_attr.all().values_list(*flat_fields, flat=flat))
+                    self[key] = list(
+                        instance_attr.all().values_list(*flat_fields,
+                                                        flat=flat))
                 else:
                     self[key] = null_value
 
-            else: 
+            else:
                 # now that we have the ending key, assign it as attribute
                 self[key] = instance_attr
 
@@ -268,4 +283,5 @@ class ModelToDict(object):
 
     def get_model_fields(self, model=None):
         model = model or self.instance
-        return [f.name for f in model._meta.fields] + [f.name for f in model._meta.many_to_many]
+        return [f.name for f in model._meta.fields] + [f.name for f in
+                                                       model._meta.many_to_many]

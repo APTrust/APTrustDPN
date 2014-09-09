@@ -14,19 +14,18 @@ from kombu import Connection
 from dpnode.settings import DPN_TTL, DPN_NODE_NAME, DPN_EXCHANGE
 from dpnode.settings import DPN_LOCAL_KEY, DPN_MSG_TTL
 from dpnode.exceptions import DPNMessageError
-
 from . import forms
 from .utils import dpn_strftime, str_expire_on
+
 
 logger = logging.getLogger('dpnmq.console')
 
 
 class DPNMessage(object):
-
     directive = None
     body_form = None
     header_form = forms.MsgHeaderForm
-    sequence = 1000 # Default to a bad sequence.
+    sequence = 1000  # Default to a bad sequence.
 
     def __init__(self, headers_dict=None, body_dict=None):
         """
@@ -42,9 +41,9 @@ class DPNMessage(object):
             self.set_body(**body_dict)
 
     def set_headers(self, reply_key=DPN_LOCAL_KEY,
-        ttl=None, correlation_id=None, sequence=None, date=None,
-        **kwargs):
-        self.headers = { 
+                    ttl=None, correlation_id=None, sequence=None, date=None,
+                    **kwargs):
+        self.headers = {
             'from': kwargs.get('from', DPN_NODE_NAME),
             'reply_key': reply_key,
             'correlation_id': correlation_id,
@@ -59,9 +58,9 @@ class DPNMessage(object):
     def _set_date(self):
         now = datetime.now()
         if self.headers["date"] == None:
-          self.headers["date"] = dpn_strftime(now)
+            self.headers["date"] = dpn_strftime(now)
         if self.headers["ttl"] == None:
-          self.headers["ttl"] = str_expire_on(now, self._get_ttl())
+            self.headers["ttl"] = str_expire_on(now, self._get_ttl())
 
     def validate_headers(self):
         frm = self.header_form(self.headers.copy())
@@ -75,19 +74,20 @@ class DPNMessage(object):
         :param rt_key:  String of the routingkey to send this message to.
 
         """
-        self._set_date() # Set date just before it's sent.
+        self._set_date()  # Set date just before it's sent.
         self.validate()
         # TODO change this to a connection pool
-        try: # importing from settings to allow for testsuite overrides
+        try:  # importing from settings to allow for testsuite overrides
             with Connection(settings.DPN_BROKER_URL) as conn:
                 with conn.Producer(serializer='json') as producer:
                     producer.publish(self.body, headers=self.headers,
-                                exchange=DPN_EXCHANGE, routing_key=rt_key)
+                                     exchange=DPN_EXCHANGE, routing_key=rt_key)
 
                 conn.close()
             self._log_send_msg(rt_key)
         except OSError:
-            logger.error("Error sending message, Unable to connect to %s" % settings.DPN_BROKER_URL)
+            logger.error(
+                "Error sending message, Unable to connect to %s" % settings.DPN_BROKER_URL)
 
     def _log_send_msg(self, rt_key):
         """
@@ -98,12 +98,12 @@ class DPNMessage(object):
         :return: None
 
         """
-        logger.info("SENT %s to %s->%s with id: %s, sequence: %s" % 
-                                (self.directive,
-                                DPN_EXCHANGE,
-                                rt_key,
-                                self.headers['correlation_id'],
-                                self.headers['sequence']))
+        logger.info("SENT %s to %s->%s with id: %s, sequence: %s" %
+                    (self.directive,
+                     DPN_EXCHANGE,
+                     rt_key,
+                     self.headers['correlation_id'],
+                     self.headers['sequence']))
 
 
     def _set_message_name(self, message_name=None):
@@ -113,14 +113,14 @@ class DPNMessage(object):
         """
         if not message_name:
             message_name = self.directive
-        
+
         if not 'message_name' in self.body:
             self.body['message_name'] = message_name
-        
+
         # TODO: also fix the error message
         if self.body.get('message_name', None) != self.directive:
-            raise DPNMessageError('Passed %s message_name for %s' 
-                % (message_name, self.directive))
+            raise DPNMessageError('Passed %s message_name for %s'
+                                  % (message_name, self.directive))
 
     def validate_body(self):
         if not self.body_form:
@@ -147,49 +147,48 @@ class DPNMessage(object):
 
 
 class ReplicationInitQuery(DPNMessage):
-
     directive = 'replication-init-query'
     body_form = forms.RepInitQueryForm
     sequence = 0
 
+
 class ReplicationAvailableReply(DPNMessage):
-    
     directive = "replication-available-reply"
     body_form = forms.RepAvailableReplyForm
     sequence = 1
 
+
 class ReplicationLocationReply(DPNMessage):
-    
     directive = 'replication-location-reply'
     body_form = forms.RepLocationReplyForm
     sequence = 2
 
+
 class ReplicationLocationCancel(DPNMessage):
-    
     directive = 'replication-location-cancel'
     body_form = forms.RepLocationCancelForm
     sequence = 3
 
+
 class ReplicationTransferReply(DPNMessage):
-    
     directive = 'replication-transfer-reply'
     body_form = forms.RepTransferReplyForm
     sequence = 4
 
+
 class ReplicationVerificationReply(DPNMessage):
-    
     directive = 'replication-verify-reply'
     body_form = forms.RepVerificationReplyForm
     sequence = 5
 
-class RegistryItemCreate(DPNMessage):
 
+class RegistryItemCreate(DPNMessage):
     directive = 'registry-item-create'
     body_form = forms.RegistryItemCreateForm
     sequence = 0
 
-class RegistryEntryCreated(DPNMessage):
 
+class RegistryEntryCreated(DPNMessage):
     directive = 'registry-entry-created'
     body_form = forms.RegistryEntryCreatedForm
     sequence = 1
@@ -205,14 +204,14 @@ class RegistryEntryCreated(DPNMessage):
         else:
             raise DPNMessageError("Attribute must be ack or nak!")
 
-class RegistryDateRangeSync(DPNMessage):
 
+class RegistryDateRangeSync(DPNMessage):
     directive = 'registry-daterange-sync-request'
     body_form = forms.RegistryDateRangeSyncForm
     sequence = 0
 
-class RegistryListDateRangeReply(DPNMessage):
 
+class RegistryListDateRangeReply(DPNMessage):
     directive = 'registry-list-daterange-reply'
     body_form = forms.RegistryListDateRangeForm
     sequence = 1
@@ -221,31 +220,30 @@ class RegistryListDateRangeReply(DPNMessage):
 # Recovery Content Messages
 # -------------------------
 class RecoveryInitQuery(DPNMessage):
-    
     directive = 'recovery-init-query'
     body_form = forms.RecoveryInitQueryForm
     sequence = 0
-    
+
+
 class RecoveryAvailableReply(DPNMessage):
-    
     directive = 'recovery-available-reply'
     body_form = forms.RecoveryAvailableReplyForm
     sequence = 1
 
+
 class RecoveryTransferRequest(DPNMessage):
-    
     directive = 'recovery-transfer-request'
     body_form = forms.RecoveryTransferRequestForm
     sequence = 2
 
+
 class RecoveryTransferReply(DPNMessage):
-    
     directive = 'recovery-transfer-reply'
     body_form = forms.RecoveryTransferReplyForm
     sequence = 3
 
-class RecoveryTransferStatus(DPNMessage):
 
+class RecoveryTransferStatus(DPNMessage):
     directive = 'recovery-transfer-status'
     body_form = forms.RecoveryTransferStatusForm
     sequence = 4

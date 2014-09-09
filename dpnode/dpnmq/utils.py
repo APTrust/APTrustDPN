@@ -12,14 +12,16 @@ from datetime import datetime, timedelta
 
 from dpnode.settings import DPN_DATE_FORMAT, DPN_TTL
 
+
 BYTE_SYMBOLS = {
-    'customary'     : ('B', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'),
-    'customary_ext' : ('byte', 'kilo', 'mega', 'giga', 'tera', 'peta', 'exa',
-                       'zetta', 'iotta'),
-    'iec'           : ('Bi', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi', 'Yi'),
-    'iec_ext'       : ('byte', 'kibi', 'mebi', 'gibi', 'tebi', 'pebi', 'exbi',
-                       'zebi', 'yobi'),
+    'customary': ('B', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'),
+    'customary_ext': ('byte', 'kilo', 'mega', 'giga', 'tera', 'peta', 'exa',
+                      'zetta', 'iotta'),
+    'iec': ('Bi', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi', 'Yi'),
+    'iec_ext': ('byte', 'kibi', 'mebi', 'gibi', 'tebi', 'pebi', 'exbi',
+                'zebi', 'yobi'),
 }
+
 
 def dpn_strftime(dt):
     """
@@ -32,6 +34,7 @@ def dpn_strftime(dt):
 
     return dt.strftime(DPN_DATE_FORMAT)
 
+
 def dpn_strptime(dt_string):
     """
     Parses a datetime object from a DPN formatted Datetime string as configured
@@ -42,6 +45,7 @@ def dpn_strptime(dt_string):
     """
     return datetime.strptime(dt_string, DPN_DATE_FORMAT)
 
+
 def is_string(obj):
     """
     Tests if an object is a string or not.
@@ -49,10 +53,11 @@ def is_string(obj):
     :param obj:  object to be tested.
     :return:  Boolean of test result
     """
-    try: 
+    try:
         return isinstance(obj, str) and obj != ""
     except TypeError:
         return False
+
 
 def expire_on(date, ttl=DPN_TTL):
     """
@@ -64,6 +69,7 @@ def expire_on(date, ttl=DPN_TTL):
     """
     return date + timedelta(0, ttl)
 
+
 def str_expire_on(date, ttl=DPN_TTL):
     """
     Returns a string of the DPN format Datetime for the date provided advanded
@@ -74,7 +80,8 @@ def str_expire_on(date, ttl=DPN_TTL):
     :return:  String of the formatted datetime.
     """
     return dpn_strftime(expire_on(date, ttl))
-    
+
+
 def human_to_bytes(str):
     """
     Attempts to parse a human readable byte representation based
@@ -99,10 +106,11 @@ def human_to_bytes(str):
             letter = letter.upper()
         else:
             raise ValueError("can't interpret %r" % init)
-    prefix = {sset[0]:1}
+    prefix = {sset[0]: 1}
     for i, str in enumerate(sset[1:]):
-        prefix[str] = 1 << (i+1)*10
+        prefix[str] = 1 << (i + 1) * 10
     return int(num * prefix[letter])
+
 
 def json_loads(body):
     """
@@ -116,6 +124,7 @@ def json_loads(body):
 
     return json.loads(body)
 
+
 def serialize_dict_date(dicc):
     """
     Serializes the date values to the DPN Date Format for a given dictionary
@@ -127,7 +136,7 @@ def serialize_dict_date(dicc):
     new_dict = {}
     for key, value in dicc.items():
         if isinstance(value, datetime):
-            value = dpn_strftime(value)        
+            value = dpn_strftime(value)
         new_dict[key] = value
 
     return new_dict

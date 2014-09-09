@@ -8,8 +8,10 @@
 # ------------------------------
 # register some signals handlers
 # ------------------------------
-from celery import current_app as celery
 from celery.signals import after_task_publish
+
+from celery import current_app as celery
+
 
 @after_task_publish.connect
 def update_sent_state(sender=None, body=None, **kwargs):

@@ -6,28 +6,25 @@
             - C. A. R. Hoare
 """
 
-
 import os
 import logging
-
 from datetime import datetime
 from itertools import groupby
 
 from dpnode.celery import app
 from dpnode.settings import DPN_BAGS_FILE_EXT, DPN_INGEST_DIR_OUT
 from dpnode.settings import DPN_NODE_NAME, DPN_FIXITY_CHOICES
-
 from dpn_workflows.models import IngestAction, COMPLETE, SUCCESS
 from dpn_workflows.utils import generate_fixity
-
 from dpn_registry.forms import RegistryEntryForm
 from dpn_registry.models import RegistryEntry, Node, NodeEntry
-
 from dpnmq.utils import dpn_strptime
 from dpnmq.messages import RegistryListDateRangeReply
 from dpnmq.forms import NodeEntryForm
 
+
 logger = logging.getLogger('dpnmq.console')
+
 
 @app.task
 def create_registry_entry(correlation_id):
@@ -46,13 +43,14 @@ def create_registry_entry(correlation_id):
         raise err
 
     replicating_nodes = ingest.sendfileaction_set.filter(
-        chosen_to_transfer=True, 
+        chosen_to_transfer=True,
         step=COMPLETE,
         state=SUCCESS
     )
-    
-    if replicating_nodes.count() > 0:        
-        local_bag_path = os.path.join(DPN_INGEST_DIR_OUT, "%s.%s" % (ingest.object_id, DPN_BAGS_FILE_EXT))
+
+    if replicating_nodes.count() > 0:
+        local_bag_path = os.path.join(DPN_INGEST_DIR_OUT, "%s.%s" % (
+        ingest.object_id, DPN_BAGS_FILE_EXT))
         fixity_value = generate_fixity(local_bag_path)
         now = datetime.now()
 
@@ -63,15 +61,17 @@ def create_registry_entry(correlation_id):
             fixity_algorithm=DPN_FIXITY_CHOICES[0],
             fixity_value=fixity_value,
             last_fixity_date=now,
-            creation_date=now, # TODO: creation date of bag or ?
-            last_modified_date=now, # same here, which modification date? from bag meta data?
+            creation_date=now,  # TODO: creation date of bag or ?
+            last_modified_date=now,
+            # same here, which modification date? from bag meta data?
             bag_size=os.path.getsize(local_bag_path)
         )
 
         # convert this to get_or_create
         try:
-            registry_entry = RegistryEntry.objects.get(dpn_object_id=ingest.object_id)            
-            
+            registry_entry = RegistryEntry.objects.get(
+                dpn_object_id=ingest.object_id)
+
             # in case entry already exists, update its attributes
             for attr, value in attributes.iteritems():
                 setattr(registry_entry, attr, value)
@@ -80,7 +80,7 @@ def create_registry_entry(correlation_id):
             created = False
         except RegistryEntry.DoesNotExist as err:
             attributes['dpn_object_id'] = ingest.object_id
-            registry_entry = RegistryEntry(**attributes)            
+            registry_entry = RegistryEntry(**attributes)
             created = True
 
         # validate and save
@@ -93,12 +93,15 @@ def create_registry_entry(correlation_id):
             registry_entry.replicating_nodes.add(node)
 
         _status = "created" if created else "updated"
-        logger.info("Registry entry successfully %s for transaction with correlation_id: %s" % 
-                    (_status, correlation_id))
+        logger.info(
+            "Registry entry successfully %s for transaction with correlation_id: %s" %
+            (_status, correlation_id))
         return registry_entry
     else:
-        logger.info("Registry entry not created. The bag was not transferred by any node.")
+        logger.info(
+            "Registry entry not created. The bag was not transferred by any node.")
         return None
+
 
 @app.task
 def reply_with_item_list(req):
@@ -113,7 +116,7 @@ def reply_with_item_list(req):
     entries = RegistryEntry.objects.filter(
         creation_date__range=unpack_date(req.body['date_range'])
     )
-    
+
     headers = {
         'correlation_id': req.headers['correlation_id'],
         'sequence': 1
@@ -126,6 +129,7 @@ def reply_with_item_list(req):
 
     rsp = RegistryListDateRangeReply(headers, body)
     rsp.send(req.headers['reply_key'])
+
 
 @app.task
 def save_registries_from(node, req):
@@ -140,7 +144,7 @@ def save_registries_from(node, req):
 
     entry_list = req.body['reg_sync_list']
     node, created = Node.objects.get_or_create(name=node)
-    
+
     for entry_dict in entry_list:
         entry_dict.update({'node': node.pk})
 
@@ -148,12 +152,14 @@ def save_registries_from(node, req):
         # profiles once DPN approves that in the spec.
         for name in entry_dict["replicating_node_names"]:
             Node.objects.get_or_create(**{"name": name})
-        
+
         node_entry = NodeEntryForm(data=entry_dict)
         if node_entry.is_valid():
             node_entry.save()
         else:
-            print("Unable to create node registry entry: %s" % node_entry.errors)
+            print(
+                "Unable to create node registry entry: %s" % node_entry.errors)
+
 
 @app.task
 def solve_registry_conflicts():
@@ -161,9 +167,9 @@ def solve_registry_conflicts():
     Reads registry entries of other nodes stored in local 
     to check and solves conflicts with own node registry entries
     """
-    
+
     local_entries = RegistryEntry.objects.all()
-    
+
     # get entries group by dpn_object_id and check if the entries are equal
     entries_query = NodeEntry.objects.all().order_by('dpn_object_id')
     grouped_entries = groupby(entries_query, lambda e: e.dpn_object_id)
@@ -178,14 +184,15 @@ def solve_registry_conflicts():
         entries_list = list(entries)
         first_node_name = entries_list[0].first_node_name
         first_node_entry = _first_node_entry(entries_list, first_node_name)
-        
+
         # if I'm the first node of the entry, do nothing
         if first_node_name == DPN_NODE_NAME:
             # NOTE: should we verify if entry exist in local registry?
-            continue # do nothing
+            continue  # do nothing
 
         if not first_node_entry:
-            logger.info("First node has not responded. Skipping entry with dpn_object_id %s" % dpn_obj_id)
+            logger.info(
+                "First node has not responded. Skipping entry with dpn_object_id %s" % dpn_obj_id)
             continue
         else:
             entry_one_data = first_node_entry.to_message_dict()
@@ -195,13 +202,15 @@ def solve_registry_conflicts():
             if local_entry.to_message_dict() != entry_one_data:
                 # if entries are not equal, update our local with the first
                 # node entry, because first node entry is always the right one
-                entry_form = RegistryEntryForm(instance=local_entry, data=entry_one_data)
+                entry_form = RegistryEntryForm(instance=local_entry,
+                                               data=entry_one_data)
                 if entry_form.is_valid():
                     entry_form.save()
                 else:
                     # NOTE: should we mark it as flagged?
-                    logger.info("Unable to update entry. Data -> %s is not valid. Error message -> %s" 
-                                % (entry_one_data, entry_form.errors))
+                    logger.info(
+                        "Unable to update entry. Data -> %s is not valid. Error message -> %s"
+                        % (entry_one_data, entry_form.errors))
             # else? do nothing, just continue
             continue
 
@@ -211,8 +220,9 @@ def solve_registry_conflicts():
             if local_entry.is_valid:
                 local_entry.save()
             else:
-                logger.info("Unable to save entry. Data -> %s is not valid. Error message -> %s" 
-                            % (entry_one_data, local_entry.errors))
+                logger.info(
+                    "Unable to save entry. Data -> %s is not valid. Error message -> %s"
+                    % (entry_one_data, local_entry.errors))
 
     # remove all entries in temporal table
     entries_query.delete()

@@ -6,6 +6,7 @@
 """
 
 from datetime import datetime
+import logging
 
 from kombu.mixins import ConsumerMixin
 from kombu import Queue, Exchange
@@ -15,8 +16,8 @@ from dpnode.exceptions import DPNMessageError
 from dpnmq.handlers import broadcast_router, local_router
 from dpnmq.utils import dpn_strptime, dpn_strftime, json_loads
 
-import logging
 logger = logging.getLogger('dpnmq.console')
+
 
 class DPNConsumer(ConsumerMixin):
     def __init__(self, conn, exchng, bcast_queue, bcast_rtkey, local_queue,
@@ -64,7 +65,7 @@ class DPNConsumer(ConsumerMixin):
         if not self._is_alive(msg, current_time):
             msg.ack()
             raise DPNMessageError(
-                "Message TTL has expired. Message headers details %s | body details %s. Current time: %s" % 
+                "Message TTL has expired. Message headers details %s | body details %s. Current time: %s" %
                 (msg.headers, msg.body, current_time)
             )
 
@@ -73,7 +74,8 @@ class DPNConsumer(ConsumerMixin):
         try:
             message_name = decoded_body['message_name']
         except KeyError:
-            raise DPNMessageError("Invalid message received with no 'message_body' set!")
+            raise DPNMessageError(
+                "Invalid message received with no 'message_body' set!")
 
         router.dispatch(message_name, msg, decoded_body)
 
@@ -126,7 +128,8 @@ class DPNConsumer(ConsumerMixin):
             data = json_loads(msg.body)
             data.update(msg.headers)
             fields = ['message_name', 'from', 'correlation_id', 'sequence']
-            parts = ["%s: %s" % (field, data[field]) for field in fields if field in data]
+            parts = ["%s: %s" % (field, data[field]) for field in fields if
+                     field in data]
             if not parts:
                 return "Could Not Find Values in %s" % data
             return "RECIEVED %s" % (", ".join(parts),)
@@ -160,4 +163,5 @@ class DPNConsumer(ConsumerMixin):
 
         except KeyError:
             msg.ack()
-            raise DPNMessageError("Invalid message received with no 'date' or 'ttl' set!")
+            raise DPNMessageError(
+                "Invalid message received with no 'date' or 'ttl' set!")

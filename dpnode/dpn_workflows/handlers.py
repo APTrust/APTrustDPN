@@ -18,6 +18,7 @@ from .utils import protocol_str2db
 from dpnode.settings import DPN_NODE_NAME
 from dpnode.exceptions import DPNWorkflowError
 
+
 def receive_available_workflow(node=None, protocol=None, id=None):
     """
     Initiates or restarts a RecieveFileAction.
@@ -52,8 +53,9 @@ def receive_available_workflow(node=None, protocol=None, id=None):
 
     return action
 
+
 def send_available_workflow(node=None, id=None, protocol=None,
-                             confirm=None, reply_key=None):
+                            confirm=None, reply_key=None):
     """
     Initiates or restarts a SendFileAction based on a nodes reply to
     my initial query for replication.
@@ -100,6 +102,7 @@ def send_available_workflow(node=None, id=None, protocol=None,
     action.save()
     return action
 
+
 def receive_transfer_workflow(node=None, id=None, protocol=None, loc=None):
     """
     Updates the ReceiveFileAction with the trasfer step and a success state
@@ -115,16 +118,17 @@ def receive_transfer_workflow(node=None, id=None, protocol=None, loc=None):
         action = ReceiveFileAction.objects.get(node=node, correlation_id=id)
     except ReceiveFileAction.DoesNotExist as err:
         raise DPNWorkflowError(err)
-    
+
     action.protocol = protocol_str2db(protocol)
     action.location = loc
-    
+
     action.step = TRANSFER
     action.state = SUCCESS
 
     action.full_clean()
     action.save()
     return action
+
 
 def receive_cancel_workflow(node, correlation_id):
     """
@@ -144,9 +148,11 @@ def receive_cancel_workflow(node, correlation_id):
         raise DPNWorkflowError(err)
 
     if action.state == CANCELLED:
-        raise DPNWorkflowError("Trying to cancel an already cancelled transaction.")
+        raise DPNWorkflowError(
+            "Trying to cancel an already cancelled transaction.")
 
     return action
+
 
 def receive_verify_reply_workflow(req):
     """
@@ -163,19 +169,20 @@ def receive_verify_reply_workflow(req):
     # means fixity value is correct. So saving ReceiveFileAction as complete
     message_att = req.body['message_att']
     correlation_id = req.headers['correlation_id']
-    action = None # prevent error in return
+    action = None  # prevent error in return
 
     if message_att == 'ack':
         try:
-            action = ReceiveFileAction.objects.get(correlation_id=correlation_id)
+            action = ReceiveFileAction.objects.get(
+                correlation_id=correlation_id)
         except ReceiveFileAction.DoesNotExist as err:
-            raise DPNWorkflowError("Received bad correlation id %s: %s" 
-                % (correlation_id, err))
+            raise DPNWorkflowError("Received bad correlation id %s: %s"
+                                   % (correlation_id, err))
 
         action.step = COMPLETE
         action.state = SUCCESS
         action.save()
-        
+
     elif message_att == 'retry':
         print("Retrying transfer is not implemented yet")
         # NOTE: which state and step should go for retry transfer?
@@ -186,6 +193,7 @@ def receive_verify_reply_workflow(req):
         pass
 
     return action
+
 
 def rcv_available_recovery_workflow(node, protocol, correlation_id, reply_key):
     """
@@ -206,7 +214,8 @@ def rcv_available_recovery_workflow(node, protocol, correlation_id, reply_key):
             node=DPN_NODE_NAME
         )
     except Workflow.DoesNotExist:
-        raise DPNWorkflowError("The dpn_object_id that you provided does not exists.")
+        raise DPNWorkflowError(
+            "The dpn_object_id that you provided does not exists.")
 
     action, _ = Workflow.objects.get_or_create(
         node=node,

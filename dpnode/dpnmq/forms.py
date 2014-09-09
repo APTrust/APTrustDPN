@@ -4,7 +4,8 @@ I'm an idealist. I don't know where I'm going, but I'm on my way.
 - Carl Sandburg
 
 """
-import json, datetime
+import json
+import datetime
 
 from django import forms
 from django.db import models
@@ -46,6 +47,7 @@ def _remap_keys(map, data, remove):
                 data.pop(current, None)
     return data
 
+
 def map_to_fields(map, data, remove=False):
     """
     This function takes a list of json to field mappings and modifies the data
@@ -59,6 +61,7 @@ def map_to_fields(map, data, remove=False):
     :return: Dict of modified data.
     """
     return _remap_keys(map, data, remove)
+
 
 def map_to_json(map, data, remove=False):
     """
@@ -74,6 +77,7 @@ def map_to_json(map, data, remove=False):
     rev_field_map = [(field, json) for (json, field) in map]
     return _remap_keys(rev_field_map, data, remove)
 
+
 def none_to_null(value):
     """
     Returns the string null if value is None to comply with odd DPN requirements
@@ -86,6 +90,7 @@ def none_to_null(value):
         return 'null'
     return value
 
+
 def null_to_none(value):
     """
     Returns None if the input value is the string null to coply with odd DPN
@@ -97,6 +102,7 @@ def null_to_none(value):
     if value == 'null':
         return None
     return value
+
 
 # Formatters & Validators
 # -----------------------
@@ -111,13 +117,13 @@ def _format_choices(choices):
     """
     return [(item, item) for item in choices]
 
+
 # Message Forms
 # -------------
 # I'm using these forms as a convienent means to validate and clean json from
 # DPN messages.
 
 class _DPNBaseForm(forms.Form):
-
     # List of Tuples mapping any mappings of json keys for input or output
     # that must be transformed to field names.
     field_map = []
@@ -139,11 +145,12 @@ class _DPNBaseForm(forms.Form):
             if type(v) is datetime.datetime:
                 data[k] = dpn_strftime(v)
             if v is None:
-                data[k] = "null" # wierd requirement in dpn to use a string.
+                data[k] = "null"  # wierd requirement in dpn to use a string.
         return data
 
     def as_dpn_json(self):
         return json.dumps(self.as_dpn_dict())
+
 
 class MsgHeaderForm(_DPNBaseForm):
     """
@@ -156,8 +163,9 @@ class MsgHeaderForm(_DPNBaseForm):
     reply_key = forms.CharField(min_length=1)
     correlation_id = forms.CharField(min_length=1)
     sequence = forms.IntegerField(min_value=0)
-    date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT,])
-    ttl = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT,])
+    date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT, ])
+    ttl = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT, ])
+
 
 class RepInitQueryForm(_DPNBaseForm):
     """
@@ -170,6 +178,7 @@ class RepInitQueryForm(_DPNBaseForm):
     protocol = forms.MultipleChoiceField(
         choices=_format_choices(VALID_DPN_PROTOCOLS))
     dpn_object_id = forms.CharField(min_length=1)
+
 
 class RepAvailableReplyForm(_DPNBaseForm):
     """
@@ -199,6 +208,7 @@ class RepAvailableReplyForm(_DPNBaseForm):
             data.pop("protocol")
         return data
 
+
 class RepLocationReplyForm(_DPNBaseForm):
     """
     Handles DPN Replication Location Reply messages.
@@ -209,6 +219,7 @@ class RepLocationReplyForm(_DPNBaseForm):
     protocol = forms.ChoiceField(choices=_format_choices(VALID_DPN_PROTOCOLS))
     location = forms.CharField(min_length=1)
 
+
 class RepLocationCancelForm(_DPNBaseForm):
     """
     Hangles DPN Replication Cancel messages.
@@ -216,7 +227,8 @@ class RepLocationCancelForm(_DPNBaseForm):
     """
     message_name = forms.ChoiceField(
         choices=_format_choices(['replication-location-cancel']))
-    message_att = forms.ChoiceField(choices=_format_choices(['nak',]))
+    message_att = forms.ChoiceField(choices=_format_choices(['nak', ]))
+
 
 class RepTransferReplyForm(_DPNBaseForm):
     """
@@ -260,10 +272,12 @@ class RepTransferReplyForm(_DPNBaseForm):
             data.pop("message_error")
         return data
 
+
 class RepVerificationReplyForm(_DPNBaseForm):
     message_name = forms.ChoiceField(
         choices=_format_choices(['replication-verify-reply']))
-    message_att = forms.ChoiceField(choices=_format_choices(ACKS + ['retry',]))
+    message_att = forms.ChoiceField(choices=_format_choices(ACKS + ['retry', ]))
+
 
 class RegistryEntryCreatedForm(_DPNBaseForm):
     """
@@ -291,6 +305,7 @@ class RegistryEntryCreatedForm(_DPNBaseForm):
             data.pop("message_error")
         return data
 
+
 class RegistryDateRangeSyncForm(_DPNBaseForm):
     """
     Handles registry daterange sync request message body.
@@ -299,11 +314,12 @@ class RegistryDateRangeSyncForm(_DPNBaseForm):
     """
     message_name = forms.ChoiceField(
         choices=_format_choices(['registry-daterange-sync-request']))
-    start_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT,])
-    end_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT,])
+    start_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT, ])
+    end_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT, ])
 
     def __init__(self, data={}, *args, **kwargs):
-        date_range = data.get("date_range", []) or [] # in case none passed explicity
+        date_range = data.get("date_range",
+            []) or []  # in case none passed explicity
         # handle both normal data or dpn json data
         if "start_date" not in data and len(date_range) == 2:
             data['start_date'] = self._parse_date(date_range, 0)
@@ -319,10 +335,11 @@ class RegistryDateRangeSyncForm(_DPNBaseForm):
     def _parse_date(self, dates, idx):
         try:
             return dates[idx]
-        except IndexError: # for bad lengths
+        except IndexError:  # for bad lengths
             return None
-        except TypeError: # for non lists
+        except TypeError:  # for non lists
             return None
+
 
 class RegistryListDateRangeForm(RegistryDateRangeSyncForm):
     """
@@ -364,6 +381,7 @@ class RecoveryInitQueryForm(_DPNBaseForm):
         choices=_format_choices(VALID_DPN_PROTOCOLS))
     dpn_object_id = forms.CharField(min_length=1)
 
+
 class RecoveryAvailableReplyForm(_DPNBaseForm):
     """
     Hangles DPN Recovery Available Reply Message Body
@@ -371,7 +389,7 @@ class RecoveryAvailableReplyForm(_DPNBaseForm):
     """
     message_name = forms.ChoiceField(
         choices=_format_choices(['recovery-available-reply']))
-    available_at = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT,],
+    available_at = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT, ],
                                        required=False)
     message_att = forms.ChoiceField(choices=_format_choices(ACKS))
     protocol = forms.ChoiceField(choices=_format_choices(VALID_DPN_PROTOCOLS),
@@ -384,18 +402,20 @@ class RecoveryAvailableReplyForm(_DPNBaseForm):
         prtcl = cleaned_data.get("protocol")
         avai = cleaned_data.get("available_at")
         cos = cleaned_data.get("cost")
-        if att == "nak": 
+        if att == "nak":
             if prtcl != "":
                 raise forms.ValidationError("Protocol is invalid for a nak.")
             if avai is not None:
-                raise forms.ValidationError("Available_at is invalid for a nak.")
+                raise forms.ValidationError(
+                    "Available_at is invalid for a nak.")
             if cos is not None:
                 raise forms.ValidationError("Cost is invalid for a nak.")
-        if att == "ack": 
+        if att == "ack":
             if prtcl == "":
                 raise forms.ValidationError("Protocol is required in an ack.")
             if avai is None:
-                raise forms.ValidationError("Available_at is required for a ack.")
+                raise forms.ValidationError(
+                    "Available_at is required for a ack.")
             if cos is None:
                 raise forms.ValidationError("Cost is required for a ack.")
         return cleaned_data
@@ -408,6 +428,7 @@ class RecoveryAvailableReplyForm(_DPNBaseForm):
             data.pop("cost")
         return data
 
+
 class RecoveryTransferRequestForm(_DPNBaseForm):
     """
     Handles DPN Recovery Transfer Request Message Body
@@ -418,7 +439,8 @@ class RecoveryTransferRequestForm(_DPNBaseForm):
     protocol = forms.ChoiceField(
         choices=_format_choices(VALID_DPN_PROTOCOLS))
     message_att = forms.ChoiceField(choices=_format_choices(ACKS[:1]))
-    
+
+
 class RecoveryTransferReplyForm(_DPNBaseForm):
     """
     Handles DPN Recovery Transfer Reply Message Body
@@ -429,7 +451,8 @@ class RecoveryTransferReplyForm(_DPNBaseForm):
     protocol = forms.ChoiceField(
         choices=_format_choices(VALID_DPN_PROTOCOLS))
     location = forms.CharField(min_length=1)
-    
+
+
 class RecoveryTransferStatusForm(RepTransferReplyForm):
     """
     Handles DPN Recovery Transfer Status Message Body
@@ -468,9 +491,9 @@ class _RegistryEntryForm(forms.ModelForm):
         'replication_node_names', 'rights_object_id',
     ]
 
-    last_fixity_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT,])
-    creation_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT,])
-    last_modified_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT,])
+    last_fixity_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT, ])
+    creation_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT, ])
+    last_modified_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT, ])
 
     def clean(self):
         for node in self.initial.get("replicating_nodes", []):
@@ -479,7 +502,8 @@ class _RegistryEntryForm(forms.ModelForm):
 
     def __init__(self, data={}, *args, **kwargs):
         # Sanitize null field values.
-        for fieldname in [name for name in self.default_null if name in data.keys()]:
+        for fieldname in [name for name in self.default_null if
+                          name in data.keys()]:
             if data[fieldname] == "null" or data[fieldname] == "":
                 data[fieldname] = None
 
@@ -518,7 +542,8 @@ class _RegistryEntryForm(forms.ModelForm):
 
     class Meta:
         model = RegistryEntry
-        exclude = ['state',]
+        exclude = ['state', ]
+
 
 class RegistryItemCreateForm(_RegistryEntryForm):
     """
@@ -531,13 +556,14 @@ class RegistryItemCreateForm(_RegistryEntryForm):
         # adding this to prevent an error about entry with this 
         # dpn_object_id already exists
         try:
-            kwargs['instance'] = RegistryEntry.objects.get(dpn_object_id=data['dpn_object_id'])
+            kwargs['instance'] = RegistryEntry.objects.get(
+                dpn_object_id=data['dpn_object_id'])
         except:
             pass
         super(RegistryItemCreateForm, self).__init__(data, *args, **kwargs)
 
-class NodeEntryForm(_RegistryEntryForm):
 
+class NodeEntryForm(_RegistryEntryForm):
     class Meta:
         model = NodeEntry
-        exclude = ['state',]
+        exclude = ['state', ]
