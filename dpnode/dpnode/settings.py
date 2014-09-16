@@ -1,5 +1,6 @@
-# Set a reasonable Project Path setting so I dont' have to use hard coded paths.
 
+# Set a reasonable Project Path setting so I dont' have to use hard coded paths.
+import os
 PROJECT_PATH = os.path.dirname(os.path.abspath(__file__))
 
 # Django settings for dpnode project.
