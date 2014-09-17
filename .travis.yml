@@ -36,9 +36,10 @@ install:
 
 before_script:
   - psql -c "CREATE DATABASE travisdb;" -U postgres
+  - python dpnode/manage.py syncdb --noinput
 
 script:
-  - python manage.py syncdb --noinput
+  - python dpnode/manage.py test
 
 notifications:
   email:
