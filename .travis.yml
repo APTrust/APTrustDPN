@@ -23,7 +23,7 @@ branches:
     - develop
 
 before_install:
-  - cp dpnode/localsettings_dist.py dpnode/localsettings.py
+  - cp dpnode/dpnode/localsettings_dist.py dpnode/dpnode/localsettings.py
   - export DJANGO_SETTINGS_MODULE=dpnode.settings
   - export PYTHONPATH=$HOME/builds/APTrust/APTrustDPN
   - export PIP_USE_MIRRORS=true
