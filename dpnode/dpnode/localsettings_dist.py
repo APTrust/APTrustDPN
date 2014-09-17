@@ -6,12 +6,6 @@ DEBUG = False # Always make False by default.
 TEMPLATE_DEBUG = DEBUG
 TRAVIS_ENV = False
 
-# Travis-ci settings
-if 'TRAVIS' in os.environ:
-    DEBUG = True
-    TEMPLATE_DEBUG = True
-    TRAVIS_ENV = True
-
 # CELERY WORKER CONFIG
 BROKER_URL = 'amqp://guest:guest@localhost:5672/'
 # CELERYD_CONCURRENCY = 8 # set # of max concurrent workers or defaults to cpus
@@ -32,19 +26,6 @@ DATABASES = {
         'PORT': '', # Set to empty string for default. Not used with sqlite3.
     }
 }
-
-# Use for travis-ci tests only
-if TRAVIS_ENV:
-    DATABASES = {
-        'default': {
-            'ENGINE':   'django.db.backends.postgresql_psycopg2',
-            'NAME':     'travisdb',  # Must match travis.yml setting
-            'USER':     'postgres',
-            'PASSWORD': '',
-            'HOST':     'localhost',
-            'PORT':     '',
-        }
-    }
 
 # Make this unique, and don't share it with anybody.
 # Useful tool for this at http://www.miniwebtool.com/django-secret-key-generator/
@@ -223,3 +204,19 @@ LOGGING = {
             },
     },
 }
+
+# Travis-ci settings
+if 'TRAVIS' in os.environ:
+    DEBUG = True
+    TEMPLATE_DEBUG = True
+    DATABASES = {
+        'default': {
+            'ENGINE':   'django.db.backends.postgresql_psycopg2',
+            'NAME':     'travisdb',  # Must match travis.yml setting
+            'USER':     'postgres',
+            'PASSWORD': '',
+            'HOST':     'localhost',
+            'PORT':     '',
+        }
+    }
+    SECRET_KEY = 'travis^+ej(nd681q9+9tsblti0-zq4$+8+lvfrnfv!)&ayqoum6uu9$'
