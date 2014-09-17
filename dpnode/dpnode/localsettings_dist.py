@@ -4,6 +4,13 @@ PROJECT_PATH = os.path.dirname(os.path.abspath(__file__))
 
 DEBUG = False # Always make False by default.
 TEMPLATE_DEBUG = DEBUG
+TRAVIS_ENV = False
+
+# Travis-ci settings
+if 'TRAVIS' in os.environ:
+    DEBUG = True
+    TEMPLATE_DEBUG = True
+    TRAVIS_ENV = True
 
 # CELERY WORKER CONFIG
 BROKER_URL = 'amqp://guest:guest@localhost:5672/'
@@ -25,6 +32,19 @@ DATABASES = {
         'PORT': '', # Set to empty string for default. Not used with sqlite3.
     }
 }
+
+# Use for travis-ci tests only
+if TRAVIS_ENV:
+    DATABASES = {
+        'default': {
+            'ENGINE':   'django.db.backends.postgresql_psycopg2',
+            'NAME':     'travisdb',  # Must match travis.yml setting
+            'USER':     'postgres',
+            'PASSWORD': '',
+            'HOST':     'localhost',
+            'PORT':     '',
+        }
+    }
 
 # Make this unique, and don't share it with anybody.
 # Useful tool for this at http://www.miniwebtool.com/django-secret-key-generator/
@@ -108,7 +128,7 @@ DPN_MAX_SIZE = 1099511627776 # 1 TB
 DPN_INGEST_DIR_OUT = os.path.join(PROJECT_PATH, '../dpn_bags_dir')
 
 # Directory to store files that are going to be recovered by other node.
-DPN_RECOVERY_DIR_OUT = os.path.join(PROJECT_PATH, '../dpn_recovery_dir_out') 
+DPN_RECOVERY_DIR_OUT = os.path.join(PROJECT_PATH, '../dpn_recovery_dir_out')
 
 DPN_BAGS_FILE_EXT = 'tar' # Default DPN bag file extension
 
