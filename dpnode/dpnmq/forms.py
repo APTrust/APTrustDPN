@@ -495,10 +495,23 @@ class _RegistryEntryForm(forms.ModelForm):
     creation_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT, ])
     last_modified_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT, ])
 
-    def clean(self):
+    def _make_nodes(self):
+        """
+        Creates the Node model entries for related fields.
+
+        NOTE: This is a hack to fix related nodes not getting created.
+        """
         for node in self.initial.get("replicating_nodes", []):
+            print("CREATING %s", node)
             obj, created = Node.objects.get_or_create(name=node)
+
+    def clean(self):
+        self._make_nodes()
         return super(_RegistryEntryForm, self).clean()
+
+    def save(self, *args, **kwargs):
+        self._make_nodes()
+        super(_RegistryEntryForm, self).save(*args, **kwargs)
 
     def __init__(self, data={}, *args, **kwargs):
         # Sanitize null field values.
@@ -519,7 +532,7 @@ class _RegistryEntryForm(forms.ModelForm):
         super(_RegistryEntryForm, self).__init__(data, *args, **kwargs)
 
     def as_dpn_dict(self):
-        data = map_to_json(self.field_map, self.cleaned_data)
+        data = map_to_json(self.field_map, self.clean())
         # Convert None fields to 'null'
         for fieldname in self.default_null:
             if data[fieldname] == None or data[fieldname] == "":
