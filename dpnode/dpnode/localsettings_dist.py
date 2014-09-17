@@ -106,16 +106,16 @@ DPN_FIXITY_CHOICES = ['sha256',]
 DPN_MAX_SIZE = 1099511627776 # 1 TB
 
 # Directory to be monitored for new added bags
-DPN_INGEST_DIR_OUT = os.path.join(PROJECT_PATH, '../dpn_bags_dir')
+DPN_INGEST_DIR_OUT = os.path.join(PROJECT_PATH, '../../bags/outgoing')
 
 # Directory to store files that are going to be recovered by other node.
-DPN_RECOVERY_DIR_OUT = os.path.join(PROJECT_PATH, '../dpn_recovery_dir_out')
+DPN_RECOVERY_DIR_OUT = os.path.join(PROJECT_PATH, '../../bags/recovery_out')
 
 DPN_BAGS_FILE_EXT = 'tar' # Default DPN bag file extension
 
 # Absolute filesystem path to the directory where bags will be replicated.
 # Example: "/home/media/dpn.aptrust/bags.root/"
-DPN_REPLICATION_ROOT = ''
+DPN_REPLICATION_ROOT = os.path.join(PROJECT_PATH, '../../bags/receiving')
 
 DPN_BASE_LOCATION = {
     'https': 'https://dpn.aptrust.org/outbound/',

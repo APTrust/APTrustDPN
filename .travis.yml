@@ -36,6 +36,8 @@ install:
 
 before_script:
   - psql -c "CREATE DATABASE travisdb;" -U postgres
+  - mkdir bags
+  - mkdir bags/{outgoing,recovery_out,receiving}
   - python dpnode/manage.py syncdb --noinput
 
 script:
