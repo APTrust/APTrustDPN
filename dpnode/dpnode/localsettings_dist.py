@@ -98,6 +98,7 @@ DPN_NODE_LIST = [
     'hathi',
     'sdr',
     'chron',
+    'tdr',
 ]
 # List of allowable fixity algorithms used in DPN.
 DPN_FIXITY_CHOICES = ['sha256',]
