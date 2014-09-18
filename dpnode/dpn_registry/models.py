@@ -34,7 +34,6 @@ TYPE_CHOICES = (
 # We need this overriding because RegistryItemCreate message dict
 # has attributes that doesn't match with RegistryEntryModel fields
 NAMES_OVERRIDE = {
-    'lastfixity_date'       : 'last_fixity_date',
     'replicating_nodes'     : 'replicating_node_names',
     'previous_version'      : 'previous_version_object_id',
     'forward_version'       : 'forward_version_object_id',

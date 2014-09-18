@@ -1,10 +1,10 @@
-'''
+"""
     "Normal people... believe that if it ain't broke, don't fix it. Engineers
     believe that if it ain't broke, it doesn't have enough features yet."
 
     - Scott Adams
 
-'''
+"""
 
 # This file contains common data to use for various tests across the application
 # related to message formats.
@@ -225,8 +225,26 @@ REG_ENTRIES = [
                              make_registry_base_objects() if
                              obj["object_type"] == "R"],
         "object_type": "data"
-    },
+    }
+]
 
+BAD_REG_ENTRIES = [
+    {
+        "dpn_object_id": "d47ac10b-58cc-4372-a567-0e02b2c3d479",
+        "local_id": "test",
+        "first_node_name": "tdr",
+        # "replicating_node_names": settings.DPN_NODE_LIST,
+        "version_number": 1,
+        "previous_version_object_id": "null",
+        "forward_version_object_id": "a395e773-668f-4a4d-876e-4a4039d86735",
+        "first_version_object_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+        "fixity_algorithm": "sha256",
+        "fixity_value": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+        # "last_fixity_date": "2013-01-18T09:49:28Z",
+        "creation_date": "2013-01-05T09:49:28Z",
+        # "last_modified_date": "2013-01-05T09:49:28Z",
+        "bag_size": 65536,        
+    }
 ]
 
 # NOTE make sure to use .copy() when using these in tests so it doesn't modify

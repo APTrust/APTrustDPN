@@ -4,7 +4,9 @@ Forms used for data updates and as a wrapper to validate or process data as
 
 from django import forms
 
+from dpnode.exceptions import DPNDataError
 from dpnode.settings import DPN_DATE_FORMAT, DPN_NODE_LIST
+
 from .models import RegistryEntry, NodeEntry, Node
 from .models import NAMES_OVERRIDE, TYPE_CHOICES
 
@@ -19,9 +21,6 @@ def _lookup_object_code(obj_type):
         return {v.lower(): k for k, v in dict(TYPE_CHOICES).items()}[obj_type]
     except KeyError:
         return None
-
-class DPNDataError(Exception):
-    pass
 
 
 class BaseEntryForm(object):
@@ -78,7 +77,7 @@ class BaseEntryForm(object):
 
 
 class RegistryEntryForm(BaseEntryForm, forms.ModelForm):
-    lastfixity_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT])
+    last_fixity_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT])
     creation_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT])
     last_modified_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT])
 
@@ -90,7 +89,7 @@ class RegistryEntryForm(BaseEntryForm, forms.ModelForm):
 
 
 class NodeEntryForm(BaseEntryForm, forms.ModelForm):
-    lastfixity_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT])
+    last_fixity_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT])
     creation_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT])
     last_modified_date = forms.DateTimeField(input_formats=[DPN_DATE_FORMAT])
 

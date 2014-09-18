@@ -1,8 +1,8 @@
-'''
+"""
     "Life is simple, it's just not easy."
 
      ~Author Unknown
-'''
+"""
 
 from django.test import TestCase
 from kombu.message import Message

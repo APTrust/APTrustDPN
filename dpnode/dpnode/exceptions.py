@@ -10,3 +10,7 @@ class DPNWorkflowError(Exception):
 
 class DPNOutboundError(Exception):
     pass
+
+
+class DPNDataError(Exception):
+    pass
