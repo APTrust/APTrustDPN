@@ -61,20 +61,21 @@ def create_registry_entry(correlation_id):
             fixity_algorithm=DPN_FIXITY_CHOICES[0],
             fixity_value=fixity_value,
             last_fixity_date=now,
-            creation_date=now,  # TODO: creation date of bag or ?
+            creation_date=now,
             last_modified_date=now,
-            # same here, which modification date? from bag meta data?
             bag_size=os.path.getsize(local_bag_path)
         )
 
-        # convert this to get_or_create
         try:
             registry_entry = RegistryEntry.objects.get(
                 dpn_object_id=ingest.object_id)
 
             # in case entry already exists, update its attributes
             for attr, value in attributes.iteritems():
-                setattr(registry_entry, attr, value)
+                # this is to prevent modifying creation_date or last_fixity_date
+                # just update last_modified_date
+                if attr not in ['creation_date', 'last_fixity_date']:
+                    setattr(registry_entry, attr, value)
 
             # set flag created to false
             created = False
