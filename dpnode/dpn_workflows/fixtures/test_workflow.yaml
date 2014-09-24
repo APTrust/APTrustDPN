@@ -1,0 +1,4 @@
+-   fields: {action: C, correlation_id: testid, dpn_object_id: some-uuid-that-actually-looks-like-a-uuid,
+        node: testfrom, note: '', reply_key: '', state: S, step: IQ}
+    model: dpn_workflows.workflow
+    pk: 1

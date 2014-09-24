@@ -1,0 +1,40 @@
+-   fields:
+        bag_size: 1048576
+        brightening_objects: []
+        creation_date: 2014-08-26 19:53:07+00:00
+        first_node_name: test-node
+        first_version: ''
+        fixity_algorithm: sha256
+        fixity_value: 30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58
+        forward_version: ''
+        last_fixity_date: 2014-08-26 19:53:07+00:00
+        last_modified_date: 2014-08-26 19:53:07+00:00
+        local_id: ''
+        object_type: D
+        previous_version: ''
+        replicating_nodes: [test-node]
+        rights_objects: []
+        state: P
+        version_number: 1
+    model: dpn_registry.registryentry
+    pk: fa6af6a6-a1bc-49db-add4-b1406a35a961
+-   fields:
+        bag_size: 1048576
+        brightening_objects: []
+        creation_date: 2014-08-26 19:53:07+00:00
+        first_node_name: test-node
+        first_version: ''
+        fixity_algorithm: sha256
+        fixity_value: 30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58
+        forward_version: ''
+        last_fixity_date: 2014-08-26 19:53:07+00:00
+        last_modified_date: 2014-08-26 19:53:07+00:00
+        local_id: ''
+        object_type: D
+        previous_version: ''
+        replicating_nodes: [testfrom]
+        rights_objects: []
+        state: P
+        version_number: 1
+    model: dpn_registry.registryentry
+    pk: some-uuid-that-actually-looks-like-a-uuid

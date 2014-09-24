@@ -1,0 +1,11 @@
+-   fields: {local_id: 2222a562-28a8-4995-8361-77b35f52c4eb, note: '', object_id: 1111a562-28a8-4995-8361-77b35f52c4eb,
+        state: S}
+    model: dpn_workflows.ingestaction
+    pk: 1912a562-28a8-4995-8361-77b35f52c4eb
+-   fields: {chosen_to_transfer: true, created_at: !!timestamp '2014-09-18 18:43:29.457131+00:00',
+        fixity_value: '01cb4046e4a8a6ce887d4f20479d8cc53ae6b56c3b1a81dcb2198850dc2c741e', ingest: 1912a562-28a8-4995-8361-77b35f52c4eb, location: '',
+        node: testfrom, note: '', protocol: R, reply_key: '', state: S, step: A,
+        updated_at: !!timestamp '2014-09-18 18:43:29.457307+00:00'}
+    model: dpn_workflows.sendfileaction
+    pk: 1
+

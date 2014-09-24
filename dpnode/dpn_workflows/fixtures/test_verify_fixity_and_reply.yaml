@@ -1,0 +1,11 @@
+-   fields: {local_id: 2222a562-28a8-4995-8361-77b35f52c4eb, note: '', object_id: 1111a562-28a8-4995-8361-77b35f52c4eb,
+        state: S}
+    model: dpn_workflows.ingestaction
+    pk: testid
+-   fields: {chosen_to_transfer: true, created_at: !!timestamp '2014-09-18 18:43:29.457131+00:00',
+        fixity_value: '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824', ingest: testid, location: 'tasks_outbound.py',
+        node: testfrom, note: '', protocol: R, reply_key: '', state: S, step: A,
+        updated_at: !!timestamp '2014-09-18 18:43:29.457307+00:00'}
+    model: dpn_workflows.sendfileaction
+    pk: 1
+

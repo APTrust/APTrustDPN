@@ -6,13 +6,12 @@ import hashlib
 import logging
 import platform
 import subprocess
-
 import requests
 
-from dpnode.settings import DPN_REPLICATION_ROOT, DPN_FIXITY_CHOICES
-from dpnode.settings import DPN_NUM_XFERS
-from dpn_workflows.models import PROTOCOL_DB_VALUES
-from dpn_workflows.models import SequenceInfo
+from django.conf import settings
+from dpn_workflows.models import (
+    PROTOCOL_DB_VALUES, SequenceInfo
+)
 
 
 logger = logging.getLogger('dpnmq.console')
@@ -55,7 +54,7 @@ def choose_nodes(node_list):
     # TODO: define a way or ranking to choose nodes
     # Doing random for now
 
-    return random.sample(node_list, DPN_NUM_XFERS)
+    return random.sample(node_list, settings.DPN_NUM_XFERS)
     # TODO: change number to 2, now is 1 for testing purposes
 
 
@@ -98,7 +97,7 @@ def download_bag(node, location, protocol):
 
     if protocol == 'https':
         basefile = os.path.basename(location)
-        local_bagfile = os.path.join(DPN_REPLICATION_ROOT, basefile)
+        local_bagfile = os.path.join(settings.DPN_REPLICATION_ROOT, basefile)
 
         # TODO: catch exceptions. Need to define behavior in case of errors (same to rsync)
         r = requests.get(location, stream=True)
@@ -112,7 +111,7 @@ def download_bag(node, location, protocol):
 
     elif protocol == 'rsync':
         filename = os.path.basename(location.split(":")[1])
-        dst = os.path.join(DPN_REPLICATION_ROOT, filename)
+        dst = os.path.join(settings.DPN_REPLICATION_ROOT, filename)
         command = ["rsync", "-Lav", "--compress",
                    "--compress-level=0", location, dst]
         try:
@@ -138,7 +137,7 @@ def generate_fixity(bag_path, algorithm='sha256'):
     """
     blocksize = 65536
 
-    if algorithm not in DPN_FIXITY_CHOICES:
+    if algorithm not in settings.DPN_FIXITY_CHOICES:
         raise NotImplementedError
 
     if algorithm == 'sha256':

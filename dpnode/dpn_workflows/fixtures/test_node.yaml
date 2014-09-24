@@ -1,0 +1,9 @@
+-   fields: {}
+    model: dpn_registry.node
+    pk: aptrust
+-   fields: {}
+    model: dpn_registry.node
+    pk: testfrom
+-   fields: {}
+    model: dpn_registry.node
+    pk: test-node
