@@ -62,12 +62,17 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="navbar-brand" href="#">APTrustDPN Node</a>
+          <a class="navbar-brand" href="{% url 'siteroot' %}">APTrustDPN Node</a>
         </div>
         <div class="navbar-collapse collapse">
-            <ul class="nav navbar-nav">
+            <ul class="nav navbar-nav navbar-right">
                 <li><a href="{% url 'admin:index' %}">Admin</a></li>
-                <li><a href="{% url 'admin:logout' %}">Logout</a></li>
+                {% if user.is_authenticated %}
+                    <li><a href="{% url 'logout' %}">Logout</a></li>
+                {% else %}
+                    <li><a href="{% url 'login' %}">Login</a></li>
+                {% endif %}
+
             </ul>
         </div><!--/.navbar-collapse -->
       </div>

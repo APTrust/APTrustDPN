@@ -79,10 +79,12 @@ WORKFLOW_STEP_CHOICES = (
 )
 
 # ACTION INFORMATION
-REPLICATION = 'P'
+RECEIVE = 'R'
+REPLICATE = 'P'
 RECOVERY = 'C'
 ACTION_CHOICES = (
-    (REPLICATION, 'Replication'),
+    (RECEIVE, 'Receive'),
+    (REPLICATE, 'Replicate'),
     (RECOVERY, 'Recovery')
 )
 

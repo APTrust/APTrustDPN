@@ -22,8 +22,12 @@ urlpatterns = patterns('',
                        # Grappelli URLs
                        url(r'^grappelli/', include('grappelli.urls')),
 
+                       # Default Root
+                       url(r'^$', 'dpn_registry.views.index', name="siteroot"),
+
                        # Login URL
-                       url(r'^accounts/login/', 'django.contrib.auth.views.login', {'template_name': 'login.html'}, name="login"),
+                       url(r'^%s$' % settings.LOGIN_URL, 'django.contrib.auth.views.login', {'template_name': 'login.html'}, name="login"),
+                       url(r'^%s$' % settings.LOGOUT_URL, 'django.contrib.auth.views.logout', {'template_name': 'logout.html'}, name="logout"),
 
                        # Registry URLs
                        url(r'^registry/', include('dpn_registry.urls', namespace="registry")),
