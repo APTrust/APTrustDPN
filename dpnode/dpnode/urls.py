@@ -21,6 +21,9 @@ urlpatterns = patterns('',
 
                        # Grappelli URLs
                        url(r'^grappelli/', include('grappelli.urls')),
+
+                       # Registry URLs
+                       url(r'^registry/', include('dpn_registry.urls')),
 )
 
 if settings.DEBUG:
