@@ -22,8 +22,11 @@ urlpatterns = patterns('',
                        # Grappelli URLs
                        url(r'^grappelli/', include('grappelli.urls')),
 
+                       # Login URL
+                       url(r'^accounts/login/', 'django.contrib.auth.views.login', {'template_name': 'login.html'}, name="login"),
+
                        # Registry URLs
-                       url(r'^registry/', include('dpn_registry.urls')),
+                       url(r'^registry/', include('dpn_registry.urls', namespace="registry")),
 )
 
 if settings.DEBUG:
