@@ -294,7 +294,7 @@ class RespondToRecoveryQuery(TestCase):
         good_req = Message(KombuMock(), self.body, headers = self.headers)
         dif_actions = self._test_respond_to_recovery_query(good_req, SUCCESS)
            
-        self.assertFalse(dif_actions, dif_actions)
+        self.assertFalse(dif_actions, "Field Validation Failed")
     
     def test_respond_to_recovery_query_bad_node(self):
         self._test_respond_to_recovery_query_bad_header(
@@ -313,7 +313,7 @@ class RespondToRecoveryQuery(TestCase):
             "The protocol is not supported"
         )
             
-class RespondToRecoveryQuery(TestCase):
+class RespondToRecoveryTransfer(TestCase):
     # RecoveryInitQuery
     fixtures = ["test_workflow_available_reply.yaml"]
     
@@ -380,11 +380,13 @@ class RespondToRecoveryQuery(TestCase):
           
     def test_respond_to_recovery_transfer_good(self):
         good_req = Message(KombuMock(), self.body, headers = self.headers)
+        dif = False
         try:
             dif = self._test_respond_to_recovery_transfer(good_req, SUCCESS)
-            self.assertFalse(dif, dif)
         except:
             self.fail("Raised error for correct flow")
+            
+        self.assertFalse(dif, "Field Validation Failed")
         
 class ChooseNodeAndRecover(TestCase):
     # Fixtures:
@@ -436,10 +438,12 @@ def different_workflow(expected, actual):
         "state"
     ]
     for attr in attr_list:
-        if getattr(expected, attr) != getattr(actual, attr):
+        expected_attr = getattr(expected, attr)
+        actual_attr = getattr(actual, attr)
+        if expected_attr != actual_attr:
             return "{0} is not equal, expected: {1}, actual: {2}".format(
                 attr,
-                getattr(expected, attr),
-                getattr(actual, attr)
+                expected_attr,
+                actual_attr
             )
                   
