@@ -23,9 +23,25 @@
       </li>
     </ul>
 
+        <div class="panel panel-info">
+        <div class="panel-heading">Local Node Storage</div>
+
+            <ul class="list-group">
+              <li class="list-group-item">
+                <span class="badge">{{ local_totals.bag_size__count }}</span>
+                Object Count:
+              </li>
+              <li class="list-group-item">
+                <span class="badge">{{ local_totals.bag_size__sum|filesizeformat }}</span>
+                Total Size Stored:
+              </li>
+            </ul>
+
+        </div>
+
 <h2>Stats by First Node</h2>
     {% for node in node_totals %}
-        <div class="panel panel-primary">
+        <div class="panel panel-success">
         <div class="panel-heading">{{ node.first_node_name }}</div>
 
             <ul class="list-group">
