@@ -1,6 +1,7 @@
 from django.db.models import Sum, Max, Avg, Count
 from django.shortcuts import render_to_response
 from django.contrib.auth.decorators import login_required
+from django.template import RequestContext
 
 from dpn_registry.models import RegistryEntry
 
@@ -14,4 +15,6 @@ def index(request):
         'count': entries.count(),
         'totals': totals,
         'node_totals': node_totals,
-    })
+        },
+        context_instance=RequestContext(request)
+    )
