@@ -502,7 +502,7 @@ class _RegistryEntryForm(forms.ModelForm):
         NOTE: This is a hack to fix related nodes not getting created.
         """
         for node in self.initial.get("replicating_nodes", []):
-            print("CREATING %s", node)
+            print("CREATING %s" % node)
             obj, created = Node.objects.get_or_create(name=node)
 
     def clean(self):
