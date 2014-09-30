@@ -10,7 +10,7 @@ def index(request):
     entries = RegistryEntry.objects.all()
     totals = entries.aggregate(Sum('bag_size'), Max('bag_size'), Avg('bag_size'))
 
-    node_totals = entries.values('first_node_name' ).order_by('first_node_name').annotate(Sum('bag_size'), Max('bag_size'), Avg('bag_size'), Count("bag_size"))
+    node_totals = entries.values('first_node_name').annotate(Sum('bag_size'), Max('bag_size'), Avg('bag_size'), Count("bag_size"))
     return render_to_response("index.html", {
         'count': entries.count(),
         'totals': totals,
