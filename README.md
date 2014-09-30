@@ -53,3 +53,4 @@ requirements_dev.txt in addition to the normal requirements.
 
 More to come.
 
+[![Build Status](https://travis-ci.org/APTrust/APTrustDPN.svg?branch=develop)](https://travis-ci.org/APTrust/APTrustDPN)
