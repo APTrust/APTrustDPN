@@ -67,10 +67,12 @@
         <div class="navbar-collapse collapse">
             <ul class="nav navbar-nav navbar-right">
                 <li><a href="{% url 'admin:index' %}">Admin</a></li>
-                {% if user.is_authenticated %}
-                    <li><a href="{% url 'logout' %}">Logout</a></li>
-                {% else %}
-                    <li><a href="{% url 'login' %}">Login</a></li>
+                {% if user %}
+                    {% if user.is_authenticated %}
+                        <li><a href="{% url 'logout' %}">Logout</a></li>
+                    {% else %}
+                        <li><a href="{% url 'login' %}">Login</a></li>
+                    {% endif %}
                 {% endif %}
 
             </ul>
@@ -89,7 +91,7 @@
 
         <div id="page-header">
              {% block content-header  %}
-                <h1>{% block content-title %}{% endblock %} -- {{ user.is_authenticated }}</h1>
+                <h1>{% block content-title %}{% endblock %}</h1>
             {% endblock %}
         </div> <!-- /#content-header -->
 

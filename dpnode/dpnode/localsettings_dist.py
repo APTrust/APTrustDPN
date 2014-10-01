@@ -68,6 +68,10 @@ STATICFILES_DIRS = (
     os.path.normpath(os.path.join(PROJECT_PATH, "../../assets")),
 )
 
+# URL paths for login. Must be strings, cannot be named paths.
+LOGIN_URL = 'login'
+LOGOUT_URL = 'logout'
+LOGIN_REDIRECT_URL = '/'
 
 # DPN MQ SETTINGS
 DPN_NODE_NAME = "aptrust" # brief name of node as configured in Federation.
