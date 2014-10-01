@@ -3,7 +3,7 @@
 {% block content-title %}DPN Registry Summary{% endblock %}
 
 {% block content-body %}
-<h2>DPN Registry Stats</h2>
+<h2>Total Registry Stats</h2>
     <ul class="list-group">
       <li class="list-group-item">
         <span class="badge">{{ count }}</span>
@@ -23,23 +23,26 @@
       </li>
     </ul>
 
+    <h2>Storage Stats at Each Node</h2>
+    {% for node in local_totals %}
         <div class="panel panel-info">
-        <div class="panel-heading">Local Node Storage</div>
+        <div class="panel-heading"><storng>{{ node.name }}</strong></div>
 
             <ul class="list-group">
               <li class="list-group-item">
-                <span class="badge">{{ local_totals.bag_size__count }}</span>
-                Object Count:
+                <span class="badge">{{ node.bag_count }}</span>
+                Bag Count:
               </li>
               <li class="list-group-item">
-                <span class="badge">{{ local_totals.bag_size__sum|filesizeformat }}</span>
+                <span class="badge">{{ node.total_size|filesizeformat }}</span>
                 Total Size Stored:
               </li>
             </ul>
 
         </div>
+    {% endfor %}
 
-<h2>Stats by First Node</h2>
+<h2>Deposit Stats by First Node</h2>
     {% for node in node_totals %}
         <div class="panel panel-success">
         <div class="panel-heading">{{ node.first_node_name }}</div>
