@@ -4,20 +4,24 @@
 
 {% block content-body %}
 
-{% if form.errors %}
-<p>Your username and password didn't match. Please try again.</p>
-{% endif %}
-
 <form method="post" action="{% url 'django.contrib.auth.views.login' %}" class="form-horizontal" role="form">
 
     {% csrf_token %}
 
-    {{ form.as_p }}
+{% for field in form %}
+    <div class="form-group">
+        {{ field.label_tag }}
+        {{ field }}
+        {% if field.errors %}
+            <div class="text-danger">{{ field.errors }}</div>
+        {% endif %}
+    </div>
+{% endfor %}
 
-
-<input type="submit" value="login" />
-<input type="hidden" name="next" value="{{ next }}" />
-
+<div>
+    <input type="submit" class="btn btn-default" value="login" />
+    <input type="hidden" name="next" value="{{ next }}" />
+</div>
 </form>
 
 {% endblock %}
