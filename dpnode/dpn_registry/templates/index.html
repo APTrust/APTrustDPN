@@ -7,11 +7,11 @@
     <ul class="list-group">
       <li class="list-group-item">
         <span class="badge">{{ count }}</span>
-        DPN Object Count:
+        Bag Count:
       </li>
       <li class="list-group-item">
         <span class="badge">{{ totals.bag_size__sum|filesizeformat }}</span>
-        Total Size Stored:
+        Total Storage:
       </li>
       <li class="list-group-item">
         <span class="badge">{{ totals.bag_size__avg|filesizeformat }}</span>
@@ -22,39 +22,43 @@
         Largest Bag:
       </li>
     </ul>
-
+<div class="container-fluid">
+    <div class="row">
     <h2>Storage Stats at Each Node</h2>
     {% for node in local_totals %}
-        <div class="panel panel-info">
-        <div class="panel-heading"><storng>{{ node.name }}</strong></div>
+        <div class="bs-callout bs-callout-info col-xs-6">
+            <h4 class="text-info">{{ node.name }}</h4>
 
-            <ul class="list-group">
-              <li class="list-group-item">
-                <span class="badge">{{ node.bag_count }}</span>
-                Bag Count:
-              </li>
-              <li class="list-group-item">
-                <span class="badge">{{ node.total_size|filesizeformat }}</span>
-                Total Size Stored:
-              </li>
-            </ul>
-
+                <ul class="list-group">
+                  <li class="list-group-item">
+                    <span class="badge">{{ node.bag_count }}</span>
+                    # Bags Stored:
+                  </li>
+                  <li class="list-group-item">
+                    <span class="badge">{{ node.total_size|filesizeformat }}</span>
+                    Total Size Stored:
+                  </li>
+                </ul>
         </div>
     {% endfor %}
+    </div>
+</div>
 
+<div class="container-fluid">
+    <div class="row">
 <h2>Deposit Stats by First Node</h2>
     {% for node in node_totals %}
-        <div class="panel panel-success">
-        <div class="panel-heading">{{ node.first_node_name }}</div>
+        <div class="bs-callout bs-callout-warning col-xs-6">
+        <h4 class="text-warning">{{ node.first_node_name }}</h4>
 
             <ul class="list-group">
               <li class="list-group-item">
                 <span class="badge">{{ node.bag_size__count }}</span>
-                DPN Object Count:
+                # Bags Sent:
               </li>
               <li class="list-group-item">
                 <span class="badge">{{ node.bag_size__sum|filesizeformat }}</span>
-                Total Size Stored:
+                Total Size Sent:
               </li>
               <li class="list-group-item">
                 <span class="badge">{{ node.bag_size__avg|filesizeformat }}</span>
@@ -67,8 +71,7 @@
             </ul>
 
         </div>
-
-
     {% endfor %}
+</div></div>
 
 {% endblock %}
