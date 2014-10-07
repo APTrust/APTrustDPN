@@ -8,12 +8,13 @@
 # DPN Federation.
 
 import os
-import time
+import shutil
 import random
 import logging
-import shutil
+
 from uuid import uuid4
 from datetime import datetime
+from django.conf import settings
 
 from dpn_workflows.models import (
     STARTED, SUCCESS, FAILED, CANCELLED, COMPLETE, 
@@ -31,15 +32,12 @@ from dpnmq.messages import (
     RecoveryTransferRequest, RecoveryTransferReply
 )
 from dpnode.celery import app
-from dpn_workflows.tasks.registry import create_registry_entry
-from dpnode.exceptions import DPNOutboundError, DPNWorkflowError
-from django.conf import settings
 from dpnmq.utils import str_expire_on, dpn_strftime
 from dpn_registry.models import Node, RegistryEntry
-
+from dpn_workflows.tasks.registry import create_registry_entry
+from dpnode.exceptions import DPNOutboundError, DPNWorkflowError
 
 logger = logging.getLogger('dpnmq.console')
-
 
 @app.task
 def initiate_ingest(dpn_object_id, size):
@@ -72,9 +70,11 @@ def initiate_ingest(dpn_object_id, size):
         "dpn_object_id": dpn_object_id
     }
 
-    sequence_info = store_sequence(headers['correlation_id'], 
-                                   settings.DPN_NODE_NAME,
-                                   headers['sequence'])
+    sequence_info = store_sequence(
+        headers['correlation_id'], 
+        settings.DPN_NODE_NAME,
+        headers['sequence']
+    )
     validate_sequence(sequence_info)
 
     try:
