@@ -15,7 +15,7 @@ python:
 services: postgresql
 
 env:
-  - DJANGO=1.5
+  - DJANGO=1.7
 
 branches:
   only:
