@@ -5,17 +5,16 @@
 
 """
 import os
+import sys
 import mock
-import logging
 import platform
-from datetime import datetime
 
 from django.test import TestCase
 
 from dpn_workflows.utils import (
     available_storage, choose_nodes, store_sequence,
     validate_sequence, download_bag, generate_fixity,
-    protocol_str2db, remove_bag, ModelToDict
+    protocol_str2db, remove_bag
 )
 from dpn_workflows.models import SequenceInfo, PROTOCOL_DB_VALUES
 
@@ -37,7 +36,12 @@ class DPNWorkflowUtilsTest(TestCase):
             'newlines', 'peek', 'raw', 'read', 'read1', 'readable',
             'readinto', 'readline', 'readlines', 'seek', 'seekable', 'tell',
             'truncate', 'writable', 'write', 'writelines']
-    
+
+    def _stdout2null(self):
+        """
+        This will send prints output to null instead of terminal
+        """
+        sys.stdout = open(os.devnull, 'w')
     
     def _test_sequence(self, sequence_num, sequence):
         self.assertEqual(self.id, sequence.correlation_id, 
@@ -123,6 +127,9 @@ class DPNWorkflowUtilsTest(TestCase):
         bad_protocol = "ftp"
         https = "https"
         rsync = "rsync"
+
+        # muting prints 
+        self._stdout2null()
 
         self.assertRaises(NotImplementedError,
             download_bag, self.node, https_location, bad_protocol)
