@@ -41,7 +41,7 @@ before_script:
   - python dpnode/manage.py syncdb --noinput
 
 script:
-  - python dpnode/manage.py test
+  - cd dpnode && python manage.py test
 
 notifications:
   email:
