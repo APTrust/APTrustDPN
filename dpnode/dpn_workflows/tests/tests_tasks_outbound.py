@@ -22,38 +22,6 @@ from dpnmq.messages import ReplicationLocationReply
 
 from dpnode.exceptions import DPNOutboundError
 
-class InitiateIngestTest(TestCase):
-
-    def test_good_action(self):
-        """Tests the successful request."""
-        oid = uuid4()
-        correlation_id = outbound.initiate_ingest(oid, 5023432)
-        
-        try:
-            action = Workflow.objects.get(correlation_id=correlation_id)
-        except Exception as e:
-            self.fail("initiate_ingest did not created a valid ingest action")    
-            
-        self.assertTrue(
-            correlation_id, 
-            "initiate_ingest did not return a correlation_id for a valid uuid"
-        )
-        
-        self.assertEqual(
-            correlation_id, 
-            action.correlation_id, 
-            "Correlation_id for created action did not matched returned id"
-        )
-
-    @skip("incorrect test, action returns a string. refactor")
-    def test_bad_action(self):
-        """Item id 0 should always fail."""
-        oid = 0
-        action = outbound.initiate_ingest(oid, 342342342)
-        self.failIfEqual(action.correlation_id, oid)
-        self.failUnlessEqual(action.object_id, oid)
-        self.failUnlessEqual(action.state, FAILED)
-
 class ChooseAndSendLocationTest(TestCase):
     fixtures = ["test_workflow.yaml", "test_node.yaml"]
     
@@ -235,7 +203,9 @@ class RespondToRecoveryQuery(TestCase):
                 state = state
             )
                 
-            actual_action = Workflow.objects.filter(state = state)[0]
+            actual_action = Workflow.objects.filter(
+                state=state
+            ).order_by("id")[0]
             
             return different_workflow(expected_action, actual_action)
     
