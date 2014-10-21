@@ -12,9 +12,10 @@ from datetime import datetime
 from itertools import groupby
 
 from dpnode.celery import app
-from dpnode.settings import DPN_BAGS_FILE_EXT, DPN_INGEST_DIR_OUT
-from dpnode.settings import DPN_NODE_NAME, DPN_FIXITY_CHOICES
-from dpn_workflows.models import IngestAction, COMPLETE, SUCCESS
+from django.conf import settings
+from dpn_workflows.models import (
+    Workflow, SUCCESS, VERIFY_REPLY, RECEIVE, IngestAction, COMPLETE
+)
 from dpn_workflows.utils import generate_fixity
 from dpn_registry.forms import RegistryEntryForm
 from dpn_registry.models import RegistryEntry, Node, NodeEntry
@@ -35,30 +36,39 @@ def create_registry_entry(correlation_id):
     :param correlation_id: String of the correlation_id used in IngestAction
 
     """
-    try:
-        ingest = IngestAction.objects.get(
-            correlation_id=correlation_id
-        )
-    except IngestAction.DoesNotExist as err:
-        raise err
-
+    
+    """
+    TODO: delete this part
     replicating_nodes = ingest.sendfileaction_set.filter(
         chosen_to_transfer=True,
         step=COMPLETE,
         state=SUCCESS
     )
-
+    """
+    
+    replicating_nodes = Workflow.objects.filter(
+        correlation_id=correlation_id,
+        step=VERIFY_REPLY,
+        action=RECEIVE,
+        state=COMPLETE
+    )
+    
     if replicating_nodes.count() > 0:
-        local_bag_path = os.path.join(DPN_INGEST_DIR_OUT, "%s.%s" % (
-        ingest.object_id, DPN_BAGS_FILE_EXT))
+        dpn_object_id = replicating_nodes[0].dpn_object_id
+        local_bag_path = os.path.join(
+            settings.DPN_INGEST_DIR_OUT, "%s.%s" % (
+                dpn_object_id, 
+                settings.DPN_BAGS_FILE_EXT
+            )
+        )
         fixity_value = generate_fixity(local_bag_path)
         now = datetime.now()
 
         # attributes to update in registry entry
         attributes = dict(
-            first_node_name=DPN_NODE_NAME,
+            first_node_name=settings.DPN_NODE_NAME,
             version_number=1,
-            fixity_algorithm=DPN_FIXITY_CHOICES[0],
+            fixity_algorithm=settings.DPN_FIXITY_CHOICES[0],
             fixity_value=fixity_value,
             last_fixity_date=now,
             creation_date=now,
@@ -68,7 +78,8 @@ def create_registry_entry(correlation_id):
 
         try:
             registry_entry = RegistryEntry.objects.get(
-                dpn_object_id=ingest.object_id)
+                dpn_object_id=dpn_object_id
+            )
 
             # in case entry already exists, update its attributes
             for attr, value in attributes.iteritems():
@@ -80,7 +91,7 @@ def create_registry_entry(correlation_id):
             # set flag created to false
             created = False
         except RegistryEntry.DoesNotExist as err:
-            attributes['dpn_object_id'] = ingest.object_id
+            attributes['dpn_object_id'] = dpn_object_id
             registry_entry = RegistryEntry(**attributes)
             created = True
 
@@ -89,7 +100,7 @@ def create_registry_entry(correlation_id):
         registry_entry.save()
 
         # now save replication nodes and own node
-        for node in [a.node for a in replicating_nodes] + [DPN_NODE_NAME]:
+        for node in [a.node for a in replicating_nodes] + [settings.DPN_NODE_NAME]:
             node, created = Node.objects.get_or_create(name=node)
             registry_entry.replicating_nodes.add(node)
 
@@ -187,7 +198,7 @@ def solve_registry_conflicts():
         first_node_entry = _first_node_entry(entries_list, first_node_name)
 
         # if I'm the first node of the entry, do nothing
-        if first_node_name == DPN_NODE_NAME:
+        if first_node_name == settings.DPN_NODE_NAME:
             # NOTE: should we verify if entry exist in local registry?
             continue  # do nothing
 

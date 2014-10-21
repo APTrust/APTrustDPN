@@ -182,6 +182,13 @@ def remove_bag(bag_path):
     return True
 
 
+def update_workflow(workflow, step, action):
+    if workflow:
+        workflow.step = step
+        workflow.action = action
+        workflow.save()
+    
+
 class ModelToDict(object):
     """
     Utilty class to generate a dictionary from a given instance

@@ -8,10 +8,11 @@
 
 # Handles various workflow steps as defined by the DPN MQ control flow messages
 
-from .models import AVAILABLE, TRANSFER, AVAILABLE_REPLY
-from .models import SUCCESS, FAILED, CANCELLED, COMPLETE, RECOVERY
-from .models import ReceiveFileAction, SendFileAction, IngestAction
-from .models import Workflow
+from .models import (
+    INIT_QUERY, TRANSFER, AVAILABLE_REPLY, SUCCESS, FAILED, CANCELLED, COMPLETE, 
+    RECOVERY, RECEIVE, LOCATION_REPLY, VERIFY_REPLY, ReceiveFileAction, 
+    SendFileAction, IngestAction, Workflow
+)
 
 from .utils import protocol_str2db
 
@@ -19,7 +20,12 @@ from dpnode.settings import DPN_NODE_NAME
 from dpnode.exceptions import DPNWorkflowError
 
 
-def receive_available_workflow(node=None, protocol=None, id=None):
+def receive_available_workflow(
+    node=None, 
+    protocol=None, 
+    correlation_id=None, 
+    dpn_object_id=None
+):
     """
     Initiates or restarts a RecieveFileAction.
 
@@ -31,21 +37,31 @@ def receive_available_workflow(node=None, protocol=None, id=None):
     :param id:  String of correlation id for transaction.
     :return:  RecieveFileAction object
     """
-    action, created = ReceiveFileAction.objects.get_or_create(
+    
+    '''
+        QUESTION: state validation
+        action, created = ReceiveFileAction.objects.get_or_create(
         node=node,
-        correlation_id=id
+        correlation_id=correlation_id
     )
-
-    # if the action was cancelled, you had your chance buddy!
+    # The action state will never be cancelled nor complete
     if action.state == CANCELLED:
         raise DPNWorkflowError("Trying to restart cancelled transaction.")
 
     if action.step == COMPLETE:
         raise DPNWorkflowError("Trying to restart a completed transaction.")
-
+    '''
+    
+    action, _ = Workflow.objects.get_or_create(
+        node=node,
+        correlation_id=correlation_id,
+        dpn_object_id=dpn_object_id
+    )
+    
+    action.action = RECEIVE
     action.protocol = protocol
 
-    action.step = AVAILABLE
+    action.step = INIT_QUERY
     action.state = SUCCESS
 
     action.clean_fields()
@@ -54,8 +70,13 @@ def receive_available_workflow(node=None, protocol=None, id=None):
     return action
 
 
-def send_available_workflow(node=None, id=None, protocol=None,
-                            confirm=None, reply_key=None):
+def send_available_workflow(
+    node=None, 
+    id=None, 
+    protocol=None,
+    confirm=None, 
+    reply_key=None
+):
     """
     Initiates or restarts a SendFileAction based on a nodes reply to
     my initial query for replication.
@@ -67,6 +88,8 @@ def send_available_workflow(node=None, id=None, protocol=None,
     :param reply_key: String of node direct reply key.
     :return: SendFileAction
     """
+    '''
+    QUESTION: ask for cancelled and complet states validation
     try:
         iAction = IngestAction.objects.get(correlation_id=id)
     except IngestAction.DoesNotExist as err:
@@ -81,25 +104,30 @@ def send_available_workflow(node=None, id=None, protocol=None,
         raise DPNWorkflowError("Attempting to restart cancelled workflow")
     if action.step == COMPLETE:
         raise DPNWorkflowError("Attempting to restart completed workflow")
-
-    action.step = AVAILABLE
+    '''
+    
+    try:
+        action = Workflow.objects.get(correlation_id=id, node=node)
+    except Workflow.DoesNotExist as err:
+        raise DPNWorkflowError(err)
+    
+    action.state = RECEIVE
+    action.step = AVAILABLE_REPLY
     action.state = FAILED
     action.note = "Did not receive proper ack."
 
     if confirm == 'ack':
         action.protocol = protocol_str2db(protocol)
         action.reply_key = reply_key
-        action.step = AVAILABLE
         action.state = SUCCESS
         action.note = None
 
     elif confirm == 'nak':
-        action.step = CANCELLED
-        action.state = CANCELLED
         action.note = "Received a NAK reponse from node: %s" % node
 
     action.full_clean()
     action.save()
+    
     return action
 
 
@@ -113,20 +141,31 @@ def receive_transfer_workflow(node=None, id=None, protocol=None, loc=None):
     :param loc: Bag location string (url)
     :return: ReceiveFileAction instance
     """
-
+    
+    '''
+    TODO: Delete this part
     try:
         action = ReceiveFileAction.objects.get(node=node, correlation_id=id)
     except ReceiveFileAction.DoesNotExist as err:
         raise DPNWorkflowError(err)
-
-    action.protocol = protocol_str2db(protocol)
+    '''
+    
+    try:
+        action = Workflow.objects.get(correlation_id=id, node=node)
+    except Workflow.DoesNotExist as err:
+        raise DPNWorkflowError(err)
+    
+    # TODO: Check if this could be deleted, the action has the protocol already
+    #action.protocol = protocol_str2db(protocol)
     action.location = loc
 
-    action.step = TRANSFER
+    action.action = RECEIVE
+    action.step = LOCATION_REPLY
     action.state = SUCCESS
 
     action.full_clean()
     action.save()
+    
     return action
 
 
@@ -136,19 +175,19 @@ def receive_cancel_workflow(node, correlation_id):
 
     :param correlation_id:  String of correlation id for transaction.
     :param node:  String of node name
-    :return: ReceiveFileAction instance
+    :return: Workflow instance
 
     """
     try:
-        action = ReceiveFileAction.objects.get(
+        action = Workflow.objects.get(
             node=node,
             correlation_id=correlation_id
         )
-    except ReceiveFileAction.DoesNotExist as err:
+    except Workflow.DoesNotExist as err:
         raise DPNWorkflowError(err)
 
     if action.state == CANCELLED:
-        raise DPNWorkflowError(
+        raise Workflow(
             "Trying to cancel an already cancelled transaction.")
 
     return action
@@ -172,15 +211,24 @@ def receive_verify_reply_workflow(req):
     action = None  # prevent error in return
 
     if message_att == 'ack':
+        '''
+        TODO: Delete this part
+        
         try:
             action = ReceiveFileAction.objects.get(
                 correlation_id=correlation_id)
         except ReceiveFileAction.DoesNotExist as err:
             raise DPNWorkflowError("Received bad correlation id %s: %s"
                                    % (correlation_id, err))
-
-        action.step = COMPLETE
-        action.state = SUCCESS
+        '''
+        try:
+            action = Workflow.objects.get(correlation_id=correlation_id)
+        except Workflow.DoesNotExist as err:
+            raise DPNWorkflowError("Received bad correlation id %s: %s"
+                                   % (correlation_id, err))
+        action.step = VERIFY_REPLY
+        action.action = RECEIVE
+        action.state = COMPLETE
         action.save()
 
     elif message_att == 'retry':

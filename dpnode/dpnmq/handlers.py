@@ -7,25 +7,40 @@
 
 import logging
 
-from dpnode.exceptions import DPNMessageError
-from dpn_workflows.handlers import send_available_workflow, \
-    receive_cancel_workflow
-from dpn_workflows.handlers import receive_transfer_workflow, \
-    receive_verify_reply_workflow
-from dpn_workflows.handlers import rcv_available_recovery_workflow
-from dpn_workflows.models import Workflow, VERIFY_REPLY, SUCCESS, FAILED
-from dpn_workflows.tasks.inbound import respond_to_replication_query, \
-    transfer_content
-from dpn_workflows.tasks.inbound import delete_until_transferred, \
-    recover_and_check_integrity
-from dpn_workflows.tasks.outbound import verify_fixity_and_reply, \
-    respond_to_recovery_query
-from dpn_workflows.tasks.outbound import respond_to_recovery_transfer
-from dpn_workflows.tasks.registry import reply_with_item_list, \
-    save_registries_from
-from dpn_registry.models import RegistryEntry, Node
 from . import messages
 from .forms import RegistryItemCreateForm
+from dpnode.exceptions import DPNMessageError
+from dpn_registry.models import RegistryEntry, Node
+
+from dpn_workflows.utils import update_workflow
+from dpn_workflows.models import (
+    Workflow, VERIFY_REPLY, SUCCESS, FAILED, REPLICATE, TRANSFER_REPLY
+)
+from dpn_workflows.handlers import (
+    send_available_workflow,
+    receive_cancel_workflow
+)
+from dpn_workflows.handlers import ( 
+    receive_transfer_workflow,
+    receive_verify_reply_workflow,
+    rcv_available_recovery_workflow
+)
+from dpn_workflows.tasks.inbound import (
+    transfer_content, 
+    delete_until_transferred, 
+    recover_and_check_integrity
+)
+from dpn_workflows.tasks.outbound import ( 
+    respond_to_replication_query,
+    verify_fixity_and_reply,
+    respond_to_recovery_query,
+    respond_to_recovery_transfer
+) 
+from dpn_workflows.tasks.registry import (
+    reply_with_item_list,
+    save_registries_from
+)
+
 
 logger = logging.getLogger('dpnmq.console')
 
@@ -183,19 +198,21 @@ def replication_location_reply_handler(msg, body):
         msg.reject()
         raise DPNMessageError("Received bad message body: %s"
                               % err)
-
+    
+    correlation_id = req.headers['correlation_id'] 
     # now we are ready to transfer the bag
     action = receive_transfer_workflow(
         node=req.headers['from'],
-        id=req.headers['correlation_id'],
+        id=correlation_id,
         protocol=body['protocol'],
         loc=body['location']
     )
 
     # call the task responsible to transfer the content
-    task = transfer_content.apply_async((req, action))
-    action.task_id = task.task_id
-    action.save()
+    transfer_content.apply_async((req, action), task_id=correlation_id)
+    
+    # QUESTION: ask if we need the task id for anything
+    # action.task_id = task.task_id
 
 
 @local_router.register('replication-transfer-reply')

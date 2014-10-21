@@ -16,13 +16,12 @@ from ..handlers import receive_available_workflow
 from ..utils import available_storage, store_sequence
 from ..utils import validate_sequence, protocol_str2db
 from ..utils import remove_bag, download_bag, generate_fixity
-from ..models import SUCCESS, FAILED, CANCELLED
+from ..models import SUCCESS, FAILED, CANCELLED, TRANSFER_REPLY, REPLICATE
 from ..models import COMPLETE, TRANSFER, VERIFY
 from ..models import TRANSFER_STATUS, Workflow
 from ..tasks.outbound import send_transfer_status
 from dpnode.exceptions import DPNWorkflowError
-from dpnode.settings import DPN_XFER_OPTIONS, DPN_MAX_SIZE
-from dpnode.settings import DPN_REPLICATION_ROOT, DPN_DEFAULT_XFER_PROTOCOL
+from django.conf import settings
 from dpnmq.messages import ReplicationAvailableReply, RecoveryTransferStatus
 from dpnmq.utils import str_expire_on, dpn_strftime
 from dpn_registry.models import RegistryEntry
@@ -32,64 +31,6 @@ logger = logging.getLogger('dpnmq.console')
 
 __author__ = 'swt8w'
 ALGORITHM = 'sha256'
-
-# TODO: move this to outbound.py
-@app.task()
-def respond_to_replication_query(init_request):
-    """
-    Verifies if current node is available and has enough storage 
-    to replicate bags and sends a ReplicationAvailableReply.
-
-    :param init_request: ReplicationInitQuery already validated
-    """
-
-    # Prep Reply
-    headers = {
-        'correlation_id': init_request.headers['correlation_id'],
-        'date': dpn_strftime(datetime.now()),
-        'ttl': str_expire_on(datetime.now()),
-        'sequence': 1
-    }
-    body = {
-        'message_att': 'nak'
-    }
-
-    sequence_info = store_sequence(
-        headers['correlation_id'],
-        init_request.headers['from'],
-        headers['sequence']
-    )
-    validate_sequence(sequence_info)
-
-    bag_size = init_request.body['replication_size']
-    avail_storage = available_storage(DPN_REPLICATION_ROOT)
-    supported_protocols = [val for val in init_request.body['protocol']
-                           if val in DPN_XFER_OPTIONS]
-
-    if supported_protocols and \
-                    bag_size < avail_storage and \
-                    bag_size < DPN_MAX_SIZE:
-
-        try:
-            protocol = protocol_str2db(supported_protocols[0])
-            receive_available_workflow(
-                node=init_request.headers["from"],
-                protocol=protocol,
-                id=init_request.headers["correlation_id"]
-            )
-            body = {
-                'message_att': 'ack',
-                'protocol': DPN_DEFAULT_XFER_PROTOCOL
-            }
-        except ValidationError as err:
-            logger.info('ValidationError: %s' % err)
-            pass  # Record not created nak sent
-        except DPNWorkflowError as err:
-            logger.info('DPN Workflow Error: %s' % err)
-            pass  # Record not created, nak sent
-
-    rsp = ReplicationAvailableReply(headers, body)
-    rsp.send(init_request.headers['reply_key'])
 
 
 @app.task()
@@ -118,8 +59,10 @@ def transfer_content(req, action):
 
         # store the fixity value in DB
         action.fixity_value = fixity_value
-        action.step = VERIFY
+        action.step = TRANSFER_REPLY
+        action.action = REPLICATE
         action.state = SUCCESS
+        
         action.save()
 
         # call the task responsible to send the transferring status
@@ -131,7 +74,8 @@ def transfer_content(req, action):
         fixity_value, ALGORITHM))
 
     except OSError as err:
-        action.step = TRANSFER
+        action.step = TRANSFER_REPLY
+        action.action = REPLICATE
         action.state = FAILED
         action.note = "%s" % err
         action.save()
@@ -149,11 +93,11 @@ def delete_until_transferred(self, action):
     Removes a bag already transfered when a Cancel Content Replication
     is received as direct message in the local queue
 
-    :param action: ReceiveFileAction instance corresponding to canceling request
+    :param action: Workflow instance corresponding to canceling request
     """
 
-    if action.step == TRANSFER and action.task_id:
-        result = app.AsyncResult(action.task_id)
+    if action.step == LOCATION_REPLY:
+        result = app.AsyncResult(action.correlation_id)
         if not result.ready():
             raise self.retry(exc='Transfer not ready, retrying task',
                              countdown=60)
@@ -161,12 +105,13 @@ def delete_until_transferred(self, action):
     bag_basename = os.path.basename(action.location)
 
     # at this point, the bag has to be already transferred
-    if action.step in [TRANSFER, VERIFY, COMPLETE]:
-        local_bag_path = os.path.join(DPN_REPLICATION_ROOT, bag_basename)
+    if action.step in [LOCATION_REPLY, TRANSFER_REPLY, VERIFY_REPLY]:
+        local_bag_path = os.path.join(settings.DPN_REPLICATION_ROOT, 
+                                      bag_basename)
         remove_bag(local_bag_path)
 
-    action.step = CANCELLED
     action.state = CANCELLED
+    action.note = "Action Cancelled"
 
     action.clean_fields()
     action.save()

@@ -27,6 +27,7 @@ WORKFLOW_STATE_CHOICES = (
     (SUCCESS, 'Success'),
     (FAILED, 'Failed'),
     (CANCELLED, 'Canceled'),
+    (COMPLETE, 'Complete')
 )
 
 # PROTOCOL INFORMATION
@@ -218,7 +219,8 @@ slg_help = "Common slug used for node throughout federation."
 
 class Workflow(models.Model):
     """
-    Tracks the workflow steps and states for the actions of our node.Currently it is used only by the Recovery workflow
+    Tracks the workflow steps and states for the actions of our node.
+    Currently it is used only by the Recovery workflow
     """
 
     correlation_id = models.CharField(max_length=100, help_text=cid_help)
@@ -226,14 +228,28 @@ class Workflow(models.Model):
     action = models.CharField(max_length=1, choices=ACTION_CHOICES,
                               help_text=acti_help)
     node = models.CharField(max_length=25, help_text=node_help)
-
+    
     # Workflow Tracking
-    step = models.CharField(max_length=2, choices=WORKFLOW_STEP_CHOICES,
-                            help_text=step_help)
-    state = models.CharField(max_length=10, choices=WORKFLOW_STATE_CHOICES,
-                             help_text=stat_help)
+    step = models.CharField(
+        max_length=2, 
+        choices=WORKFLOW_STEP_CHOICES,
+        help_text=step_help
+    )
+    state = models.CharField(
+        max_length=10, 
+        choices=WORKFLOW_STATE_CHOICES,
+        help_text=stat_help
+    )
     note = models.TextField(blank=True, null=True, help_text=note_help)
-
+    protocol = models.CharField(
+        max_length=1, 
+        choices=PROTOCOL_CHOICES,
+        help_text=ptcl_help, 
+        null=True, 
+        blank=True
+    )
+    location = models.TextField(help_text=lctn_help, null=True, blank=True)
+    
     # Node reply_key
     reply_key = models.CharField(max_length=75, blank=True)
 
@@ -243,7 +259,6 @@ class Workflow(models.Model):
             'obj_id': self.dpn_object_id,
             'node': self.node
         }
-
 
     def __str__(self):
         return '%s' % self.__unicode__()

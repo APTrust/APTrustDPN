@@ -13,7 +13,7 @@ from dpn_workflows.tasks import outbound
 from dpn_workflows.models import IngestAction, SendFileAction, Workflow
 from dpn_workflows.models import (
     VERIFY, STARTED, SUCCESS, FAILED, CANCELLED, TRANSFER, COMPLETE, RECOVERY, 
-    AVAILABLE_REPLY, TRANSFER_REPLY
+    AVAILABLE_REPLY, TRANSFER_REPLY, LOCATION_REPLY, VERIFY_REPLY
 )
 
 from dpn_registry.models import RegistryEntry
@@ -30,7 +30,7 @@ class InitiateIngestTest(TestCase):
         correlation_id = outbound.initiate_ingest(oid, 5023432)
         
         try:
-            action = IngestAction.objects.get(correlation_id=correlation_id)
+            action = Workflow.objects.get(correlation_id=correlation_id)
         except Exception as e:
             self.fail("initiate_ingest did not created a valid ingest action")    
             
@@ -55,11 +55,11 @@ class InitiateIngestTest(TestCase):
         self.failUnlessEqual(action.state, FAILED)
 
 class ChooseAndSendLocationTest(TestCase):
-    fixtures = ["test_send_file_action.yaml"]
+    fixtures = ["test_workflow.yaml", "test_node.yaml"]
     
     def setUp(self):
-        self.correlation_id = "1912a562-28a8-4995-8361-77b35f52c4eb"
-        self.object_id = "1111a562-28a8-4995-8361-77b35f52c4eb"
+        self.correlation_id = "testid2"
+        self.object_id = "dpn_object_id_2"
         self.base_location = {
             'https': 'https://dpn.aptrust.org/outbound/',
             'rsync': 'dpn@dpn.aptrust.org:/outbound/',
@@ -76,18 +76,13 @@ class ChooseAndSendLocationTest(TestCase):
         except Exception as e:
             self.fail("Raised error for correct flow")
         
-        action = SendFileAction.objects.get(pk=1)
+        action = Workflow.objects.get(pk=2)
         location = '{0}{1}.{2}'.format(
             self.base_location['rsync'],
             self.object_id,
             self.file_extension
         )
         
-        self.assertTrue(
-            action.chosen_to_transfer,
-            "Action is not marked as chosen to transfer"
-        )
-    
         self.assertEqual(
             action.location, 
             location,
@@ -96,7 +91,7 @@ class ChooseAndSendLocationTest(TestCase):
         
         self.assertEqual(
             action.step, 
-            TRANSFER,
+            LOCATION_REPLY,
             "Action step differs from expected"
         )
         
@@ -130,12 +125,13 @@ class BroadcastItemCreationTest(TestCase):
             self.fail("Raised error for correct flow")
 
 class VerifyFixityAndReplyTest(TestCase):
-    fixtures = ["test_verify_fixity_and_reply.yaml"]
+    fixtures = ["test_workflow.yaml"]
     
     def setUp(self):
-        self.req = Message(KombuMock(), 
-            fixtures.REP_TRANSFER_REPLY_ACK.copy(),
-            headers=fixtures.make_headers())
+        headers = fixtures.make_headers()
+        headers["correlation_id"] = "testid3"
+        body = fixtures.REP_TRANSFER_REPLY_ACK.copy() 
+        self.req = Message(KombuMock(), body, headers=headers)
         self.fixity_value = (
             "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
         )
@@ -162,11 +158,11 @@ class VerifyFixityAndReplyTest(TestCase):
     
     def test_verify_fixity_and_reply_ack(self):
         self._test_verify_fixity_and_reply_ack(self.fixity_value)
-        action = SendFileAction.objects.all()[0]
+        action = Workflow.objects.get(pk=3)
         
         self.assertEqual(
             action.step, 
-            COMPLETE,
+            VERIFY_REPLY,
             "Action step differs from expected"
         )
         
@@ -178,11 +174,11 @@ class VerifyFixityAndReplyTest(TestCase):
      
     def test_verify_fixity_and_reply_nak(self):
         self._test_verify_fixity_and_reply_ack(self.bad_fixity_value)
-        action = SendFileAction.objects.all()[0]
+        action = Workflow.objects.get(pk=3)
         
         self.assertEqual(
             action.step, 
-            VERIFY,
+            VERIFY_REPLY,
             "Action step differs from expected"
         )
         

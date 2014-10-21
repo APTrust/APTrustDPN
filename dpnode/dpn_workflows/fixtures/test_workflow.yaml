@@ -2,3 +2,12 @@
         node: testfrom, note: '', reply_key: '', state: S, step: IQ}
     model: dpn_workflows.workflow
     pk: 1
+-   fields: {action: R, correlation_id: testid2, dpn_object_id: dpn_object_id_2,
+        node: testfrom, note: '', reply_key: '', state: S, step: AR, protocol: R}
+    model: dpn_workflows.workflow
+    pk: 2
+-   fields: {action: R, correlation_id: testid3, location: 'tasks_outbound.py',
+        dpn_object_id: 1111a562-28a8-4995-8361-77b35f52c4eb,
+        node: testfrom, note: '', reply_key: '', state: S, step: AR, protocol: R}
+    model: dpn_workflows.workflow
+    pk: 3
