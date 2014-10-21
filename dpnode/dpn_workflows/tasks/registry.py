@@ -82,7 +82,7 @@ def create_registry_entry(correlation_id):
             )
 
             # in case entry already exists, update its attributes
-            for attr, value in attributes.iteritems():
+            for attr, value in attributes.items():
                 # this is to prevent modifying creation_date or last_fixity_date
                 # just update last_modified_date
                 if attr not in ['creation_date', 'last_fixity_date']:

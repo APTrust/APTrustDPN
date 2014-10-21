@@ -10,6 +10,7 @@ import logging
 from . import messages
 from .forms import RegistryItemCreateForm
 from dpnode.exceptions import DPNMessageError
+
 from dpn_registry.models import RegistryEntry, Node
 
 from dpn_workflows.utils import update_workflow
@@ -17,33 +18,25 @@ from dpn_workflows.models import (
     Workflow, VERIFY_REPLY, SUCCESS, FAILED, REPLICATE, TRANSFER_REPLY
 )
 from dpn_workflows.handlers import (
-    send_available_workflow,
-    receive_cancel_workflow
+    send_available_workflow, receive_cancel_workflow
 )
 from dpn_workflows.handlers import ( 
-    receive_transfer_workflow,
-    receive_verify_reply_workflow,
+    receive_transfer_workflow, receive_verify_reply_workflow,
     rcv_available_recovery_workflow
 )
 from dpn_workflows.tasks.inbound import (
-    transfer_content, 
-    delete_until_transferred, 
-    recover_and_check_integrity
+    transfer_content,  delete_until_transferred, recover_and_check_integrity
 )
 from dpn_workflows.tasks.outbound import ( 
-    respond_to_replication_query,
-    verify_fixity_and_reply,
-    respond_to_recovery_query,
-    respond_to_recovery_transfer
+    respond_to_replication_query, verify_fixity_and_reply,
+    respond_to_recovery_query, respond_to_recovery_transfer
 ) 
 from dpn_workflows.tasks.registry import (
     reply_with_item_list,
     save_registries_from
 )
 
-
 logger = logging.getLogger('dpnmq.console')
-
 
 class TaskRouter:
     def __init__(self):

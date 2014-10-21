@@ -13,9 +13,7 @@ from dpn_workflows.models import (
     PROTOCOL_DB_VALUES, SequenceInfo
 )
 
-
 logger = logging.getLogger('dpnmq.console')
-
 
 def available_storage(path):
     """

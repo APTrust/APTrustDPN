@@ -4,22 +4,19 @@
     ― Jim Rohn
 
 """
-from datetime import datetime
+import os
+import sys
+import mock
+import platform
 
 from django.test import TestCase
 
-
-from dpn_workflows.utils import available_storage, choose_nodes, store_sequence
-from dpn_workflows.utils import validate_sequence, download_bag, generate_fixity
-from dpn_workflows.utils import protocol_str2db, remove_bag, ModelToDict
-
-from dpn_workflows.models import SequenceInfo
-from dpn_workflows.models import PROTOCOL_DB_VALUES
-
-import mock
-import platform
-import os
-import logging
+from dpn_workflows.utils import (
+    available_storage, choose_nodes, store_sequence,
+    validate_sequence, download_bag, generate_fixity,
+    protocol_str2db, remove_bag
+)
+from dpn_workflows.models import SequenceInfo, PROTOCOL_DB_VALUES
 
 # ####################################################
 # tests for dpn-dpn_workflows/utils.py
@@ -39,7 +36,12 @@ class DPNWorkflowUtilsTest(TestCase):
             'newlines', 'peek', 'raw', 'read', 'read1', 'readable',
             'readinto', 'readline', 'readlines', 'seek', 'seekable', 'tell',
             'truncate', 'writable', 'write', 'writelines']
-    
+
+    def _stdout2null(self):
+        """
+        This will send prints output to null instead of terminal
+        """
+        sys.stdout = open(os.devnull, 'w')
     
     def _test_sequence(self, sequence_num, sequence):
         self.assertEqual(self.id, sequence.correlation_id, 
@@ -126,6 +128,9 @@ class DPNWorkflowUtilsTest(TestCase):
         https = "https"
         rsync = "rsync"
 
+        # muting prints 
+        self._stdout2null()
+
         self.assertRaises(NotImplementedError,
             download_bag, self.node, https_location, bad_protocol)
         
@@ -135,21 +140,9 @@ class DPNWorkflowUtilsTest(TestCase):
         self.assertRaises(Exception,
             download_bag, self.node, rsync_location, rsync)
         
-    def test_generate_fixity(self):
-        test_mock = mock.MagicMock()
-        result = "916f0027a575074ce72a331777c3478d6513f786a591bd892da1a577bf2335f9"
-        with mock.patch("builtins.open", test_mock):
-            manager = test_mock.return_value.__enter__.return_value
-            reads = ['test data', '']
-            manager.read.side_effect = lambda x: reads.pop(0).encode()
-            with open("test.rar") as f:
-                self.assertEquals(result, generate_fixity("testPath"), 
-                    "The actual hash differs from the expected")
-        
     def test_remove_bag(self):
         test_mock = mock.MagicMock()
         with mock.patch("os.remove", test_mock):
             test_mock.return_value = True
             self.assertTrue(remove_bag("test.rar"),
                 "There was a problem removing the file")
-       

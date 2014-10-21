@@ -8,12 +8,13 @@
 # DPN Federation.
 
 import os
-import time
+import shutil
 import random
 import logging
-import shutil
+
 from uuid import uuid4
 from datetime import datetime
+from django.conf import settings
 
 from dpn_workflows.models import (
     SUCCESS, FAILED, CANCELLED, COMPLETE, REPLICATE, LOCATION_REPLY, VERIFY, 
@@ -31,16 +32,13 @@ from dpnmq.messages import (
 )
 from dpnode.celery import app
 from dpn_workflows.handlers import receive_available_workflow
-from dpn_workflows.tasks.registry import create_registry_entry
-from dpnode.exceptions import DPNOutboundError, DPNWorkflowError
-from django.conf import settings
 from django.core.exceptions import ValidationError
 from dpnmq.utils import str_expire_on, dpn_strftime
 from dpn_registry.models import Node, RegistryEntry
-
+from dpn_workflows.tasks.registry import create_registry_entry
+from dpnode.exceptions import DPNOutboundError, DPNWorkflowError
 
 logger = logging.getLogger('dpnmq.console')
-
 
 @app.task
 def initiate_ingest(dpn_object_id, size):
